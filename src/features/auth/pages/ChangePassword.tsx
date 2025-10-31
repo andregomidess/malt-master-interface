@@ -1,21 +1,26 @@
-import { ImageBackground, View } from 'react-native'
-import { StyleSheet } from 'react-native'
+import { ImageBackground, View, StyleSheet } from 'react-native'
 import { AuthCard } from '../components/AuthCard'
 import { Heading } from '../../../shared/components/Typography'
-import bgImage from '../../../assets/bg-malt-master.jpg'
+import { Image } from 'react-native'
 import logoImage from '../../../assets/logo2.png'
-import { Image } from 'react-native-web'
+import bgImage from '../../../assets/bg-malt-master.jpg'
 import { COLORS } from '../../../shared/styles/colors'
 import {
-  ForgotPasswordForm,
-  ForgotPasswordFormType,
-} from '../components/ForgotPasswordForm'
-import { useForgotPassword } from '../hooks/useForgotPassword'
+  ChangePasswordForm,
+  ChangePasswordFormType,
+} from '../components/ChangePasswordForm'
+import { useChangePassword } from '../hooks/useChangePassword'
+import { useParams } from 'react-router'
 
-export const ForgotPassword = () => {
-  const { mutate } = useForgotPassword()
+export const ChangePassword = () => {
+  const { mutate } = useChangePassword()
+  const { token } = useParams()
 
-  const handleSubmit = (data: ForgotPasswordFormType) => mutate(data)
+  const handleSubmit = (data: ChangePasswordFormType) =>
+    mutate({
+      token: token ?? '',
+      newPassword: data.password,
+    })
 
   return (
     <ImageBackground
@@ -32,12 +37,10 @@ export const ForgotPassword = () => {
             </Heading>
           </View>
           <Heading variant="h4" style={{ color: COLORS.text.primary }}>
-            Esqueceu sua senha?
+            Alterar senha
           </Heading>
         </View>
-        <View style={styles.formContainer}>
-          <ForgotPasswordForm onSubmit={handleSubmit} />
-        </View>
+        <ChangePasswordForm onSubmit={handleSubmit} />
       </AuthCard>
     </ImageBackground>
   )
@@ -63,10 +66,5 @@ const styles = StyleSheet.create({
   logoImage: {
     width: 55,
     height: 55,
-  },
-  formContainer: {
-    flex: 1,
-    justifyContent: 'center',
-    width: '100%',
   },
 })

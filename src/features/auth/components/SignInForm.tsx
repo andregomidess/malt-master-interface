@@ -7,28 +7,30 @@ import { Button } from '../../../shared/components/Button'
 import { BiEnvelope, BiLock } from 'react-icons/bi'
 import { InputText } from '../../../shared/components/InputText'
 import { EyeIcon, EyeOffIcon } from '../../../shared/components/Icons'
-import { SignInForm } from '../interfaces/SignIn'
 import { z } from 'zod/v3'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { Controller, useForm } from 'react-hook-form'
+import { useNavigate } from 'react-router'
 
-export interface FormSignInProps {
-  onSubmit: (body: SignInForm) => void
+export interface SignInFormProps {
+  onSubmit: (body: SignInFormType) => void
 }
 
 const schema = z.object({
   email: z.string().email('E-mail inválido').min(1, 'O e-mail é obrigatório.'),
-  password: z.string().min(8, 'A senha deve ter no mínimo 8 digitos.'),
+  password: z.string().min(1, 'A senha é obrigatória.'),
 })
 
-export const FormSignIn = ({ onSubmit }: FormSignInProps) => {
-  const [showPassword, setShowPassword] = useState(false)
+export type SignInFormType = z.infer<typeof schema>
 
+export const SignInForm = ({ onSubmit }: SignInFormProps) => {
+  const [showPassword, setShowPassword] = useState(false)
+  const navigate = useNavigate()
   const {
     control,
     handleSubmit,
     formState: { errors },
-  } = useForm<SignInForm>({
+  } = useForm<SignInFormType>({
     resolver: zodResolver(schema),
   })
 
@@ -40,7 +42,8 @@ export const FormSignIn = ({ onSubmit }: FormSignInProps) => {
           name="email"
           render={({ field: { value, onChange } }) => (
             <InputText
-              leftIcon={<BiEnvelope size={24} color={COLORS.icons} />}
+              label="E-mail"
+              leftIcon={<BiEnvelope size={20} color={COLORS.icons} />}
               placeholder="seu@email.com"
               value={value}
               onChangeText={onChange}
@@ -60,7 +63,8 @@ export const FormSignIn = ({ onSubmit }: FormSignInProps) => {
           name="password"
           render={({ field: { value, onChange } }) => (
             <InputText
-              leftIcon={<BiLock size={24} color={COLORS.icons} />}
+              label="Senha"
+              leftIcon={<BiLock size={20} color={COLORS.icons} />}
               placeholder="••••••••"
               value={value}
               onChangeText={onChange}
@@ -76,7 +80,7 @@ export const FormSignIn = ({ onSubmit }: FormSignInProps) => {
       </View>
 
       <View style={styles.optionsRow}>
-        <TouchableOpacity>
+        <TouchableOpacity onPress={() => navigate('/forgot-password')}>
           <Text style={styles.forgotLink}>Esqueci minha senha</Text>
         </TouchableOpacity>
       </View>

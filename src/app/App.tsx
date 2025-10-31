@@ -2,6 +2,7 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { isAxiosError } from 'axios'
 import { StrictMode, Suspense } from 'react'
 import { ErrorBoundary } from 'react-error-boundary'
+import { Toaster } from 'react-hot-toast'
 import { Text } from '../shared/components/Typography'
 import { AppRoutes } from './routes/AppRoutes'
 
@@ -11,6 +12,7 @@ export function App() {
   return (
     <StrictMode>
       <QueryClientProvider client={queryClient}>
+        <Toaster position="top-right" />
         <Suspense fallback={<Text>Loading...</Text>}>
           <ErrorBoundary
             fallback={<Text>Error</Text>}

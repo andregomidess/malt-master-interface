@@ -13,6 +13,7 @@ import { COLORS } from '../styles/colors'
 import { FONT_FAMILY, FONT_SIZE, FONT_WEIGHT } from '../styles/typography'
 
 interface InputTextProps extends TextInputProps {
+  label?: string
   leftIcon?: React.ReactNode
   rightIcon?: React.ReactNode
   onRightIconPress?: () => void
@@ -23,6 +24,7 @@ interface InputTextProps extends TextInputProps {
 }
 
 export const InputText: React.FC<InputTextProps> = ({
+  label,
   leftIcon,
   rightIcon,
   onRightIconPress,
@@ -36,6 +38,7 @@ export const InputText: React.FC<InputTextProps> = ({
 
   return (
     <View style={styles.wrapper}>
+      {label && <Text style={styles.label}>{label}</Text>}
       <View
         style={[
           styles.container,
@@ -85,6 +88,13 @@ const styles = StyleSheet.create({
   wrapper: {
     width: '100%',
   },
+  label: {
+    fontFamily: FONT_FAMILY.primary,
+    fontSize: FONT_SIZE.sm,
+    fontWeight: FONT_WEIGHT.medium,
+    color: COLORS.text.primary,
+    marginBottom: 8,
+  },
   container: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -93,8 +103,7 @@ const styles = StyleSheet.create({
     borderColor: COLORS.border.light,
     borderRadius: 8,
     paddingHorizontal: 16,
-    paddingVertical: 12,
-    minHeight: 56,
+    paddingVertical: 10,
   },
   containerFocused: {
     borderColor: COLORS.brand.primary,
@@ -107,7 +116,7 @@ const styles = StyleSheet.create({
   input: {
     flex: 1,
     fontFamily: FONT_FAMILY.primary,
-    fontSize: FONT_SIZE.base,
+    fontSize: FONT_SIZE.sm,
     fontWeight: FONT_WEIGHT.normal,
     color: COLORS.text.primary,
     padding: 0,

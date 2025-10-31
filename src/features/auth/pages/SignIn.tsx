@@ -6,21 +6,21 @@ import {
   TouchableOpacity,
 } from 'react-native'
 import { AuthCard } from '../components/AuthCard'
-import { FormSignIn } from '../components/FormSignIn'
+import { SignInForm, SignInFormType } from '../components/SignInForm'
 import logoImage from '../../../assets/logo2.png'
 import bgImage from '../../../assets/bg-malt-master.jpg'
 import { Heading, Text } from '../../../shared/components/Typography'
 import { useSignIn } from '../hooks/useSignIn'
-import { SignInForm } from '../interfaces/SignIn'
 import { FONT_FAMILY } from '../../../shared/styles/typography'
 import { COLORS } from '../../../shared/styles/colors'
+import { useNavigate } from 'react-router'
 
 export const SignIn = () => {
   const { mutate } = useSignIn()
 
-  const handleSubmit = (body: SignInForm) => {
-    mutate(body)
-  }
+  const navigate = useNavigate()
+
+  const handleSubmit = (body: SignInFormType) => mutate(body)
 
   return (
     <ImageBackground
@@ -41,11 +41,11 @@ export const SignIn = () => {
           </Heading>
         </View>
 
-        <FormSignIn onSubmit={handleSubmit} />
+        <SignInForm onSubmit={handleSubmit} />
 
         <View style={styles.signupRow}>
           <Text style={styles.signupText}>Não tem uma conta? </Text>
-          <TouchableOpacity>
+          <TouchableOpacity onPress={() => navigate('/create-account')}>
             <Text style={styles.signupLink}>Criar conta</Text>
           </TouchableOpacity>
         </View>

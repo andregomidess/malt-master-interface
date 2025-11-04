@@ -1,5 +1,5 @@
 export const COLORS = {
-  background: '#FEFEFD',
+  background: '#FAFAFB',
   brand: {
     primary: '#D58300',
     malt: '#8B4513',

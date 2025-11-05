@@ -13,9 +13,11 @@ import {
 import logoImage from '../../../assets/logo2.png'
 import { Image } from 'react-native-web'
 import { PiToolbox } from 'react-icons/pi'
-import { MaltIcon, HopsIcon } from '../icons'
 import { GiBubbles } from 'react-icons/gi'
 import { IoWaterOutline } from 'react-icons/io5'
+import { HopsIcon } from '../icons/HopsIcon'
+import { MaltIcon } from '../icons/MaltIcon'
+import { useNavigate, useLocation } from 'react-router'
 
 interface MenuItem {
   id: string
@@ -25,63 +27,63 @@ interface MenuItem {
 }
 
 const menuItems: MenuItem[] = [
-  { id: 'dashboard', label: 'Dashboard', icon: BiHomeAlt, path: '/' },
-  { id: 'receitas', label: 'Receitas', icon: BiBook, path: '/receitas' },
+  { id: 'dashboard', label: 'Dashboard', icon: BiHomeAlt, path: '/dashboard' },
+  { id: 'recipes', label: 'Receitas', icon: BiBook, path: '/recipes' },
   {
-    id: 'brassagens',
+    id: 'brewings',
     label: 'Brassagens',
     icon: BiHourglass,
-    path: '/brassagens',
+    path: '/brewings',
   },
   {
-    id: 'estoque',
+    id: 'stock',
     label: 'Estoque',
     icon: BiPackage,
-    path: '/estoque',
+    path: '/stock',
   },
   {
-    id: 'equipamentos',
+    id: 'equipment',
     label: 'Equipamentos',
     icon: PiToolbox,
-    path: '/equipamentos',
+    path: '/equipment',
   },
   {
-    id: 'lupulo',
+    id: 'hops',
     label: 'Lúpulo',
     icon: HopsIcon,
-    path: '/lupulo',
+    path: '/hops',
   },
   {
-    id: 'malte',
+    id: 'malt',
     label: 'Malte',
     icon: MaltIcon,
-    path: '/malte',
+    path: '/malt',
   },
   {
-    id: 'leveduras',
+    id: 'yeast',
     label: 'Leveduras',
     icon: GiBubbles,
-    path: '/leveduras',
+    path: '/yeast',
   },
   {
-    id: 'agua',
+    id: 'water',
     label: 'Água',
     icon: IoWaterOutline,
-    path: '/agua',
+    path: '/water',
   },
   {
-    id: 'avaliacoes',
+    id: 'reviews',
     label: 'Avaliações',
     icon: BiStar,
-    path: '/avaliacoes',
+    path: '/reviews',
   },
   {
-    id: 'comunidade',
+    id: 'community',
     label: 'Comunidade',
     icon: MdPeople,
-    path: '/comunidade',
+    path: '/community',
   },
-  { id: 'perfil', label: 'Perfil', icon: BiUser, path: '/perfil' },
+  { id: 'profile', label: 'Perfil', icon: BiUser, path: '/profile' },
 ]
 
 interface SidebarProps {
@@ -89,10 +91,27 @@ interface SidebarProps {
   onItemPress?: (itemId: string) => void
 }
 
-export const Sidebar = ({
-  activeItem = 'dashboard',
-  onItemPress,
-}: SidebarProps) => {
+export const Sidebar = ({ activeItem, onItemPress }: SidebarProps) => {
+  const navigate = useNavigate()
+  const location = useLocation()
+
+  const handleItemPress = (item: MenuItem) => {
+    if (onItemPress) {
+      onItemPress(item.id)
+    }
+    navigate(item.path)
+  }
+
+  const getActiveItem = () => {
+    if (activeItem) return activeItem
+
+    const currentPath = location.pathname
+    const menuItem = menuItems.find(item => item.path === currentPath)
+    return menuItem?.id || 'dashboard'
+  }
+
+  const currentActiveItem = getActiveItem()
+
   return (
     <View style={styles.container}>
       <View style={styles.logoContainer}>
@@ -105,13 +124,13 @@ export const Sidebar = ({
       <View>
         {menuItems.map(item => {
           const Icon = item.icon
-          const isActive = activeItem === item.id
+          const isActive = currentActiveItem === item.id
 
           return (
             <TouchableOpacity
               key={item.id}
               style={[styles.menuItem, isActive && styles.menuItemActive]}
-              onPress={() => onItemPress?.(item.id)}
+              onPress={() => handleItemPress(item)}
               activeOpacity={0.7}
             >
               <Icon

@@ -27,7 +27,6 @@ export function Table<T>({
 
   return (
     <View style={styles.container}>
-      {/* Header */}
       <View style={styles.thead}>
         {table.getHeaderGroups().map(headerGroup => (
           <View key={headerGroup.id} style={styles.tr}>
@@ -56,14 +55,8 @@ export function Table<T>({
             <Text style={styles.emptyText}>{emptyMessage}</Text>
           </View>
         ) : (
-          table.getRowModel().rows.map((row, index) => (
-            <View
-              key={row.id}
-              style={[
-                styles.tr,
-                index % 2 === 0 ? styles.trEven : styles.trOdd,
-              ]}
-            >
+          table.getRowModel().rows.map(row => (
+            <View key={row.id} style={styles.tr}>
               {row.getVisibleCells().map(cell => (
                 <View
                   key={cell.id}
@@ -85,16 +78,12 @@ export function Table<T>({
 const styles = StyleSheet.create({
   container: {
     borderRadius: 8,
-    borderWidth: 1,
-    borderColor: COLORS.border.light,
     backgroundColor: COLORS.neutral.white,
     overflow: 'hidden',
     width: '100%',
   },
   thead: {
-    backgroundColor: COLORS.neutral.gray[50],
-    borderBottomWidth: 2,
-    borderBottomColor: COLORS.border.default,
+    backgroundColor: COLORS.neutral.gray[100],
   },
   tbody: {
     backgroundColor: COLORS.neutral.white,
@@ -104,18 +93,10 @@ const styles = StyleSheet.create({
     minHeight: 48,
     width: '100%',
   },
-  trEven: {
-    backgroundColor: COLORS.neutral.white,
-  },
-  trOdd: {
-    backgroundColor: COLORS.neutral.gray[50],
-  },
   th: {
     paddingHorizontal: 16,
     paddingVertical: 12,
     justifyContent: 'center',
-    borderRightWidth: 1,
-    borderRightColor: COLORS.border.light,
   },
   thText: {
     fontSize: 13,
@@ -127,8 +108,6 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     paddingVertical: 12,
     justifyContent: 'center',
-    borderRightWidth: 1,
-    borderRightColor: COLORS.border.light,
   },
   tdText: {
     fontSize: 14,

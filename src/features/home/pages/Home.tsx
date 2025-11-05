@@ -1,6 +1,6 @@
 import { View, StyleSheet } from 'react-native'
 import { useMemo } from 'react'
-import { DashboardLayout } from '../components/DashboardLayout'
+import { Layout } from '../../../shared/components/Layout'
 import { ActionCard, StatCard } from '../../../shared/components/Card'
 import { Heading, Text } from '../../../shared/components/Typography'
 import { Table } from '../../../shared/components/Table'
@@ -50,22 +50,38 @@ const mockActivityData: ActivityRow[] = [
 ]
 
 const StatusBadge = ({ status }: { status: ActivityRow['status'] }) => {
-  const getStatusColor = () => {
+  const getStatusStyle = () => {
     switch (status) {
       case 'Completo':
-        return COLORS.status.success
+        return {
+          backgroundColor: '#D1F4E0',
+          color: '#0F7B4E',
+        }
       case 'Em Andamento':
-        return COLORS.status.warning
+        return {
+          backgroundColor: '#FFF4D6',
+          color: '#C77B00',
+        }
       case 'Pendente':
-        return COLORS.status.error
+        return {
+          backgroundColor: '#FFE5DB',
+          color: '#D84A1B',
+        }
       default:
-        return COLORS.neutral.gray[500]
+        return {
+          backgroundColor: COLORS.neutral.gray[100],
+          color: COLORS.neutral.gray[700],
+        }
     }
   }
 
+  const style = getStatusStyle()
+
   return (
-    <View style={[styles.statusBadge, { backgroundColor: getStatusColor() }]}>
-      <Text style={styles.statusText}>{status}</Text>
+    <View
+      style={[styles.statusBadge, { backgroundColor: style.backgroundColor }]}
+    >
+      <Text style={[styles.statusText, { color: style.color }]}>{status}</Text>
     </View>
   )
 }
@@ -101,11 +117,7 @@ export const Home = () => {
   )
 
   return (
-    <DashboardLayout
-      activeMenuItem="dashboard"
-      userName="Olá, João Silva"
-      notificationCount={3}
-    >
+    <Layout activeMenuItem="dashboard" userName="Olá, João Silva">
       <View style={styles.container}>
         <View style={styles.section}>
           <Heading variant="h4" style={styles.sectionTitle}>
@@ -195,7 +207,7 @@ export const Home = () => {
           />
         </View>
       </View>
-    </DashboardLayout>
+    </Layout>
   )
 }
 
@@ -233,14 +245,13 @@ const styles = StyleSheet.create({
   },
   statusBadge: {
     paddingHorizontal: 12,
-    paddingVertical: 4,
-    borderRadius: 12,
+    paddingVertical: 2,
+    borderRadius: 16,
     alignSelf: 'flex-start',
   },
   statusText: {
-    fontSize: 12,
+    fontSize: 13,
     fontWeight: '600',
-    color: COLORS.neutral.white,
   },
   sapButton: {
     position: 'fixed',

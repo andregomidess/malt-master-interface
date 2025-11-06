@@ -1,48 +1,121 @@
-import { View, StyleSheet, TouchableOpacity, Image } from 'react-native'
+import {
+  View,
+  StyleSheet,
+  TouchableOpacity,
+  Image,
+  Pressable,
+} from 'react-native'
+import { useState } from 'react'
 import { Text } from '../../../shared/components/Typography'
 import { COLORS } from '../../../shared/styles/colors'
-import { MdKeyboardArrowDown } from 'react-icons/md'
+import { MdKeyboardArrowDown, MdPerson, MdLogout } from 'react-icons/md'
 
 interface HeaderProps {
   userName?: string
   userAvatar?: string
   onProfilePress?: () => void
+  onLogoutPress?: () => void
 }
 
 export const Header = ({
   userName = 'Olá, João Silva',
   userAvatar,
   onProfilePress,
+  onLogoutPress,
 }: HeaderProps) => {
+  const [menuVisible, setMenuVisible] = useState(false)
+
+  const handleProfilePress = () => {
+    setMenuVisible(!menuVisible)
+  }
+
+  const handleMenuItemPress = (action: () => void) => {
+    setMenuVisible(false)
+    action()
+  }
+
   return (
-    <View style={styles.container}>
-      <View style={styles.leftSection}>
-        <Text style={styles.greeting}>{userName}</Text>
+    <>
+      <View style={styles.container}>
+        <View style={styles.leftSection}>
+          <Text style={styles.greeting}>{userName}</Text>
+        </View>
+
+        <View style={styles.rightSection}>
+          <View style={styles.profileContainer}>
+            <TouchableOpacity
+              style={styles.profileButton}
+              onPress={handleProfilePress}
+              activeOpacity={0.7}
+            >
+              {userAvatar ? (
+                <Image source={{ uri: userAvatar }} style={styles.avatar} />
+              ) : (
+                <View style={styles.avatarPlaceholder}>
+                  <Text style={styles.avatarText}>
+                    {userName
+                      .split(' ')
+                      .map(n => n[0])
+                      .join('')
+                      .substring(0, 2)}
+                  </Text>
+                </View>
+              )}
+              <MdKeyboardArrowDown
+                size={20}
+                color={COLORS.icons}
+                style={{
+                  transform: menuVisible ? 'rotate(180deg)' : 'rotate(0deg)',
+                  transition: 'transform 0.2s',
+                }}
+              />
+            </TouchableOpacity>
+          </View>
+        </View>
       </View>
 
-      <View style={styles.rightSection}>
-        <TouchableOpacity
-          style={styles.profileButton}
-          onPress={onProfilePress}
-          activeOpacity={0.7}
-        >
-          {userAvatar ? (
-            <Image source={{ uri: userAvatar }} style={styles.avatar} />
-          ) : (
-            <View style={styles.avatarPlaceholder}>
-              <Text style={styles.avatarText}>
-                {userName
-                  .split(' ')
-                  .map(n => n[0])
-                  .join('')
-                  .substring(0, 2)}
-              </Text>
+      {menuVisible && (
+        <>
+          <Pressable
+            style={styles.overlay}
+            onPress={() => setMenuVisible(false)}
+          />
+          <View style={styles.dropdownMenu}>
+            <View style={styles.dropdownContent}>
+              <TouchableOpacity
+                style={styles.menuItem}
+                onPress={() =>
+                  handleMenuItemPress(
+                    onProfilePress || (() => console.log('Ir para perfil')),
+                  )
+                }
+                activeOpacity={0.6}
+              >
+                <MdPerson size={20} color={COLORS.text.secondary} />
+                <Text style={styles.menuItemText}>Meu Perfil</Text>
+              </TouchableOpacity>
+
+              <View style={styles.menuDivider} />
+
+              <TouchableOpacity
+                style={styles.menuItem}
+                onPress={() =>
+                  handleMenuItemPress(
+                    onLogoutPress || (() => console.log('Fazer logout')),
+                  )
+                }
+                activeOpacity={0.6}
+              >
+                <MdLogout size={20} color={COLORS.status.error} />
+                <Text style={[styles.menuItemText, styles.logoutText]}>
+                  Sair
+                </Text>
+              </TouchableOpacity>
             </View>
-          )}
-          <MdKeyboardArrowDown size={20} color={COLORS.icons} />
-        </TouchableOpacity>
-      </View>
-    </View>
+          </View>
+        </>
+      )}
+    </>
   )
 }
 
@@ -71,32 +144,9 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: 16,
   },
-  notificationButton: {
+  profileContainer: {
     position: 'relative',
-    width: 40,
-    height: 40,
-    alignItems: 'center',
-    justifyContent: 'center',
-    borderRadius: 20,
-    backgroundColor: COLORS.neutral.gray[50],
-    cursor: 'pointer',
-  },
-  badge: {
-    position: 'absolute',
-    top: 4,
-    right: 4,
-    backgroundColor: COLORS.status.error,
-    borderRadius: 10,
-    minWidth: 18,
-    height: 18,
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingHorizontal: 4,
-  },
-  badgeText: {
-    fontSize: 11,
-    fontWeight: '700',
-    color: COLORS.neutral.white,
+    zIndex: 1000,
   },
   profileButton: {
     flexDirection: 'row',
@@ -107,6 +157,61 @@ const styles = StyleSheet.create({
     borderRadius: 24,
     backgroundColor: COLORS.neutral.gray[50],
     cursor: 'pointer',
+  },
+  overlay: {
+    position: 'fixed',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    zIndex: 9998,
+    backgroundColor: 'rgba(0, 0, 0, 0.1)',
+  },
+  dropdownMenu: {
+    position: 'fixed',
+    top: 60,
+    right: 20,
+    zIndex: 9999,
+  },
+  dropdownContent: {
+    backgroundColor: COLORS.neutral.white,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: COLORS.border.light,
+    minWidth: 200,
+    paddingVertical: 4,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.15,
+    shadowRadius: 12,
+    elevation: 8,
+  },
+  menuItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+    paddingVertical: 10,
+    paddingHorizontal: 16,
+    cursor: 'pointer',
+    backgroundColor: 'transparent',
+  },
+  menuItemHover: {
+    backgroundColor: COLORS.neutral.gray[50],
+  },
+  menuItemText: {
+    fontSize: 14,
+    fontWeight: '500',
+    color: COLORS.text.primary,
+    flex: 1,
+  },
+  logoutText: {
+    color: COLORS.status.error,
+  },
+  menuDivider: {
+    height: 1,
+    backgroundColor: COLORS.border.light,
+    marginVertical: 4,
+    marginHorizontal: 8,
   },
   avatar: {
     width: 32,

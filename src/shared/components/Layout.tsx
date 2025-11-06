@@ -3,13 +3,13 @@ import { ReactNode } from 'react'
 import { Sidebar } from '../../features/home/components/Sidebar'
 import { Header } from '../../features/home/components/Header'
 import { COLORS } from '../styles/colors'
+import { useNavigate } from 'react-router'
 
 interface DashboardLayoutProps {
   children: ReactNode
   activeMenuItem?: string
   userName?: string
   userAvatar?: string
-  onProfilePress?: () => void
 }
 
 export const Layout = ({
@@ -17,8 +17,8 @@ export const Layout = ({
   activeMenuItem,
   userName,
   userAvatar,
-  onProfilePress,
 }: DashboardLayoutProps) => {
+  const navigate = useNavigate()
   return (
     <View style={styles.container}>
       <Sidebar activeItem={activeMenuItem} />
@@ -27,7 +27,8 @@ export const Layout = ({
         <Header
           userName={userName}
           userAvatar={userAvatar}
-          onProfilePress={onProfilePress}
+          onProfilePress={() => navigate('/profile')}
+          onLogoutPress={() => navigate('/sign-in')}
         />
 
         <ScrollView

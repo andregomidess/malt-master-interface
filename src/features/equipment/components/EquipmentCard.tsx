@@ -29,7 +29,6 @@ interface EquipmentCardProps {
 }
 
 export const EquipmentCard = ({ equipment, onEdit }: EquipmentCardProps) => {
-  // Configuração de cores por tipo
   const typeConfig = {
     [EquipmentType.KETTLE]: {
       label: equipmentTypeLabels[EquipmentType.KETTLE],
@@ -54,7 +53,6 @@ export const EquipmentCard = ({ equipment, onEdit }: EquipmentCardProps) => {
   const config = typeConfig[equipment.type]
   const Icon = config.icon
 
-  // Verificar características especiais
   const isHighCapacity = equipment.totalCapacity > 50
   const isHighPower =
     equipment.type === EquipmentType.KETTLE &&
@@ -101,7 +99,6 @@ export const EquipmentCard = ({ equipment, onEdit }: EquipmentCardProps) => {
       </View>
 
       <View style={styles.content}>
-        {/* Descrição */}
         {equipment.description && (
           <View style={styles.descriptionContainer}>
             <Text style={styles.description} numberOfLines={2}>
@@ -110,7 +107,6 @@ export const EquipmentCard = ({ equipment, onEdit }: EquipmentCardProps) => {
           </View>
         )}
 
-        {/* Capacidade */}
         <View style={styles.capacityRow}>
           <View style={styles.capacityItem}>
             <Text style={styles.label}>Capacidade Total:</Text>
@@ -125,7 +121,6 @@ export const EquipmentCard = ({ equipment, onEdit }: EquipmentCardProps) => {
           </View>
         </View>
 
-        {/* Informações específicas por tipo */}
         {equipment.type === EquipmentType.KETTLE && (
           <View style={styles.specificInfo}>
             <Text style={styles.sectionTitle}>Características:</Text>

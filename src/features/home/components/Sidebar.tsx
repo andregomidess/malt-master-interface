@@ -1,14 +1,13 @@
 import { View, StyleSheet, TouchableOpacity } from 'react-native'
 import { Heading, Text } from '../../../shared/components/Typography'
 import { COLORS } from '../../../shared/styles/colors'
-import { MdPeople } from 'react-icons/md'
 import {
+  BiBeer,
   BiBook,
   BiHomeAlt,
   BiHourglass,
   BiPackage,
   BiStar,
-  BiUser,
 } from 'react-icons/bi'
 import logoImage from '../../../assets/logo2.png'
 import { Image } from 'react-native-web'
@@ -48,16 +47,22 @@ const menuItems: MenuItem[] = [
     path: '/equipment',
   },
   {
+    id: 'beer-styles',
+    label: 'Estilos de Cerveja',
+    icon: BiBeer,
+    path: '/beer-styles',
+  },
+  {
     id: 'hops',
     label: 'Lúpulo',
     icon: HopsIcon,
     path: '/hops',
   },
   {
-    id: 'malt',
-    label: 'Malte',
+    id: 'fermentable',
+    label: 'Fermentáveis',
     icon: MaltIcon,
-    path: '/malt',
+    path: '/fermentable',
   },
   {
     id: 'yeast',
@@ -77,13 +82,13 @@ const menuItems: MenuItem[] = [
     icon: BiStar,
     path: '/reviews',
   },
-  {
-    id: 'community',
-    label: 'Comunidade',
-    icon: MdPeople,
-    path: '/community',
-  },
-  { id: 'profile', label: 'Perfil', icon: BiUser, path: '/profile' },
+  // {
+  //   id: 'community',
+  //   label: 'Comunidade',
+  //   icon: MdPeople,
+  //   path: '/community',
+  // },
+  // { id: 'profile', label: 'Perfil', icon: BiUser, path: '/profile' },
 ]
 
 interface SidebarProps {

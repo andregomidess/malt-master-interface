@@ -3,12 +3,12 @@ import { Layout } from '../../../shared/components/Layout'
 import { Heading } from '../../../shared/components/Typography'
 import { COLORS } from '../../../shared/styles/colors'
 
-export const Water = () => {
+export const Profile = () => {
   return (
-    <Layout activeMenuItem="water">
+    <Layout activeMenuItem="profile">
       <View style={styles.container}>
         <Heading variant="h3" style={styles.title}>
-          Água
+          Perfil
         </Heading>
       </View>
     </Layout>
@@ -25,4 +25,3 @@ const styles = StyleSheet.create({
     color: COLORS.text.primary,
   },
 })
-

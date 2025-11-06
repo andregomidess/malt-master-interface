@@ -6,16 +6,17 @@ import { VerifyEmail } from '../../features/auth/pages/VerifyEmail'
 import { ChangePassword } from '../../features/auth/pages/ChangePassword'
 import { Home } from '../../features/home/pages/Home'
 import { ListRecipes } from '../../features/recipes/pages/ListRecipes'
-import { Brewings } from '../../features/home/pages/Brewings'
+import { ListBrewing } from '../../features/brewing/pages/ListBrewing'
 import { ListStock } from '../../features/stock/pages/ListStock'
-import { Hops } from '../../features/home/pages/Hops'
-import { Malt } from '../../features/home/pages/Malt'
-import { Yeast } from '../../features/home/pages/Yeast'
-import { Water } from '../../features/home/pages/Water'
-import { Reviews } from '../../features/home/pages/Reviews'
-import { Community } from '../../features/home/pages/Community'
-import { Profile } from '../../features/home/pages/Profile'
+import { ListYeast } from '../../features/yeast/pages/ListYeast'
+import { ListReviews } from '../../features/reviews/pages/ListReviews'
+import { Community } from '../../features/community/pages/Community'
+import { Profile } from '../../features/profile/pages/Profile'
 import { ListEquipment } from '../../features/equipment/pages/ListEquipment'
+import { ListHops } from '../../features/hops/pages/ListHops'
+import { ListFermentable } from '../../features/malt/pages/ListFermentable'
+import { ListWater } from '../../features/water/pages/ListWater'
+import { ListBeerStyle } from '../../features/beer-style/pages/ListBeerStyle'
 
 export const AppRoutes = () => {
   return (
@@ -29,16 +30,17 @@ export const AppRoutes = () => {
         <Route path="/" element={<Home />} />
         <Route path="/dashboard" element={<Home />} />
         <Route path="/recipes" element={<ListRecipes />} />
-        <Route path="/brewings" element={<Brewings />} />
+        <Route path="/brewings" element={<ListBrewing />} />
         <Route path="/stock" element={<ListStock />} />
         <Route path="/equipment" element={<ListEquipment />} />
-        <Route path="/hops" element={<Hops />} />
-        <Route path="/malt" element={<Malt />} />
-        <Route path="/yeast" element={<Yeast />} />
-        <Route path="/water" element={<Water />} />
-        <Route path="/reviews" element={<Reviews />} />
+        <Route path="/hops" element={<ListHops />} />
+        <Route path="/fermentable" element={<ListFermentable />} />
+        <Route path="/yeast" element={<ListYeast />} />
+        <Route path="/water" element={<ListWater />} />
+        <Route path="/reviews" element={<ListReviews />} />
         <Route path="/community" element={<Community />} />
         <Route path="/profile" element={<Profile />} />
+        <Route path="/beer-styles" element={<ListBeerStyle />} />
       </Routes>
     </BrowserRouter>
   )

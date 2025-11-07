@@ -11,14 +11,14 @@ import { COLORS } from '../../../shared/styles/colors'
 import { MdKeyboardArrowDown, MdPerson, MdLogout } from 'react-icons/md'
 
 interface HeaderProps {
-  userName?: string
+  userName: string
   userAvatar?: string
   onProfilePress?: () => void
   onLogoutPress?: () => void
 }
 
 export const Header = ({
-  userName = 'Olá, João Silva',
+  userName,
   userAvatar,
   onProfilePress,
   onLogoutPress,
@@ -38,7 +38,7 @@ export const Header = ({
     <>
       <View style={styles.container}>
         <View style={styles.leftSection}>
-          <Text style={styles.greeting}>{userName}</Text>
+          <Text style={styles.greeting}>{`Olá, ${userName}`}</Text>
         </View>
 
         <View style={styles.rightSection}>

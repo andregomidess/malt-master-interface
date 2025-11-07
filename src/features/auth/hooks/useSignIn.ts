@@ -11,7 +11,8 @@ export const useSignIn = () => {
       return response.data
     },
     onSuccess: data => {
-      localStorage.setItem('token', data)
+      localStorage.setItem('token', data.accessToken)
+      localStorage.setItem('user', JSON.stringify(data.user))
 
       toast.success('Login realizado com sucesso')
       navigate('/')

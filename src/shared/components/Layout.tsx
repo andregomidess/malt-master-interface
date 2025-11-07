@@ -8,14 +8,12 @@ import { useNavigate } from 'react-router'
 interface DashboardLayoutProps {
   children: ReactNode
   activeMenuItem?: string
-  userName?: string
   userAvatar?: string
 }
 
 export const Layout = ({
   children,
   activeMenuItem,
-  userName,
   userAvatar,
 }: DashboardLayoutProps) => {
   const navigate = useNavigate()
@@ -25,7 +23,7 @@ export const Layout = ({
 
       <View style={styles.mainContent}>
         <Header
-          userName={userName}
+          userName={JSON.parse(localStorage.getItem('user') || '{}').username}
           userAvatar={userAvatar}
           onProfilePress={() => navigate('/profile')}
           onLogoutPress={() => navigate('/sign-in')}

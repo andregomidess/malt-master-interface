@@ -8,6 +8,9 @@ import { COLORS } from '../../../shared/styles/colors'
 import { ColumnDef } from '@tanstack/react-table'
 import { MdAssignment, MdBarChart, MdTimer } from 'react-icons/md'
 import { BiBookAlt, BiHourglass, BiPackage, BiPlusCircle } from 'react-icons/bi'
+import { useNavigate } from 'react-router'
+import { useUserMetrics } from '../hooks/useUserMetrics'
+import { useRecentBatches } from '../hooks/useRecentBatches'
 
 interface ActivityRow {
   date: string
@@ -15,39 +18,6 @@ interface ActivityRow {
   volume: string
   status: 'Completo' | 'Em Andamento' | 'Pendente'
 }
-
-const mockActivityData: ActivityRow[] = [
-  {
-    date: '2024-07-20',
-    recipe: 'Imperial Stout',
-    volume: '20L',
-    status: 'Completo',
-  },
-  {
-    date: '2024-07-15',
-    recipe: 'IPA Cítrica',
-    volume: '15L',
-    status: 'Completo',
-  },
-  {
-    date: '2024-07-10',
-    recipe: 'Weissbier Tradicional',
-    volume: '20L',
-    status: 'Em Andamento',
-  },
-  {
-    date: '2024-07-05',
-    recipe: 'Lager Leve',
-    volume: '25L',
-    status: 'Pendente',
-  },
-  {
-    date: '2024-06-28',
-    recipe: 'Porter Defumada',
-    volume: '20L',
-    status: 'Completo',
-  },
-]
 
 const StatusBadge = ({ status }: { status: ActivityRow['status'] }) => {
   const getStatusStyle = () => {
@@ -87,6 +57,42 @@ const StatusBadge = ({ status }: { status: ActivityRow['status'] }) => {
 }
 
 export const Home = () => {
+  const navigate = useNavigate()
+
+  const { data: userMetrics } = useUserMetrics()
+  const { data: recentBatches } = useRecentBatches()
+
+  const mapStatus = (status: string): ActivityRow['status'] => {
+    switch (status) {
+      case 'completed':
+        return 'Completo'
+      case 'planned':
+        return 'Pendente'
+      default:
+        return 'Em Andamento'
+    }
+  }
+
+  const activityData = useMemo<ActivityRow[]>(() => {
+    const batches = recentBatches?.batches ?? []
+    return batches.map(b => {
+      const recipeName =
+        (typeof b.recipe === 'object' ? b.recipe?.name : b.name) ??
+        b.batchCode ??
+        '-'
+      const volume = (b.finalVolume ?? b.plannedVolume ?? 0) + 'L'
+      const date = b.brewDate
+        ? new Date(b.brewDate).toISOString().slice(0, 10)
+        : '-'
+      return {
+        date,
+        recipe: recipeName,
+        volume,
+        status: mapStatus(b.status),
+      }
+    })
+  }, [recentBatches])
+
   const activityColumns = useMemo<ColumnDef<ActivityRow>[]>(
     () => [
       {
@@ -117,7 +123,7 @@ export const Home = () => {
   )
 
   return (
-    <Layout activeMenuItem="dashboard" userName="Olá, João Silva">
+    <Layout activeMenuItem="dashboard">
       <View style={styles.container}>
         <View style={styles.section}>
           <Heading variant="h4" style={styles.sectionTitle}>
@@ -130,7 +136,7 @@ export const Home = () => {
                 title="Criar Nova Receita"
                 description="Inscreva sua próxima cerveja"
                 icon={<BiPlusCircle size={32} color={COLORS.brand.primary} />}
-                onPress={() => console.log('Criar receita')}
+                onPress={() => navigate('/recipes/new')}
               />
             </View>
 
@@ -139,7 +145,7 @@ export const Home = () => {
                 title="Minhas Receitas"
                 description="Gerencie suas criações"
                 icon={<BiBookAlt size={32} color={COLORS.brand.primary} />}
-                onPress={() => console.log('Minhas receitas')}
+                onPress={() => navigate('/recipes')}
               />
             </View>
 
@@ -148,7 +154,7 @@ export const Home = () => {
                 title="Inventário"
                 description="Controle de ingredientes"
                 icon={<BiPackage size={32} color={COLORS.brand.primary} />}
-                onPress={() => console.log('Inventário')}
+                onPress={() => navigate('/stock')}
               />
             </View>
 
@@ -157,7 +163,7 @@ export const Home = () => {
                 title="Brassagens em Andamento"
                 description="Acompanhe seus projetos"
                 icon={<BiHourglass size={32} color={COLORS.brand.primary} />}
-                onPress={() => console.log('Brassagens')}
+                onPress={() => navigate('/brewings')}
               />
             </View>
           </View>
@@ -172,7 +178,7 @@ export const Home = () => {
             <View style={styles.statCardWrapper}>
               <StatCard
                 title="Total de Receitas"
-                value="124"
+                value={userMetrics?.data.totalRecipes ?? 0}
                 icon={<MdAssignment size={28} color={COLORS.brand.primary} />}
               />
             </View>
@@ -180,7 +186,7 @@ export const Home = () => {
             <View style={styles.statCardWrapper}>
               <StatCard
                 title="Cervejas Produzidas"
-                value="2.500L"
+                value={(userMetrics?.data.totalBeerProduced ?? 0) + 'L'}
                 icon={<MdBarChart size={28} color={COLORS.brand.primary} />}
               />
             </View>
@@ -188,7 +194,7 @@ export const Home = () => {
             <View style={styles.statCardWrapper}>
               <StatCard
                 title="Última Brassagem"
-                value="Imperial Stout"
+                value={userMetrics?.data?.lastBatch?.name ?? '-'}
                 icon={<MdTimer size={28} color={COLORS.brand.primary} />}
               />
             </View>
@@ -201,7 +207,7 @@ export const Home = () => {
           </Heading>
 
           <Table
-            data={mockActivityData}
+            data={activityData}
             columns={activityColumns}
             emptyMessage="Nenhuma atividade recente"
           />

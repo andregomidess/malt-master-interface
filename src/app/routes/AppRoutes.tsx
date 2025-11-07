@@ -17,6 +17,7 @@ import { ListHops } from '../../features/hops/pages/ListHops'
 import { ListFermentable } from '../../features/malt/pages/ListFermentable'
 import { ListWater } from '../../features/water/pages/ListWater'
 import { ListBeerStyle } from '../../features/beer-style/pages/ListBeerStyle'
+import { GuardRoute } from '../../shared/components/GuardRoute'
 
 export const AppRoutes = () => {
   return (
@@ -27,20 +28,119 @@ export const AppRoutes = () => {
         <Route path="/forgot-password" element={<ForgotPassword />} />
         <Route path="/verify-email" element={<VerifyEmail />} />
         <Route path="/change-password" element={<ChangePassword />} />
-        <Route path="/" element={<Home />} />
-        <Route path="/dashboard" element={<Home />} />
-        <Route path="/recipes" element={<ListRecipes />} />
-        <Route path="/brewings" element={<ListBrewing />} />
-        <Route path="/stock" element={<ListStock />} />
-        <Route path="/equipment" element={<ListEquipment />} />
-        <Route path="/hops" element={<ListHops />} />
-        <Route path="/fermentable" element={<ListFermentable />} />
-        <Route path="/yeast" element={<ListYeast />} />
-        <Route path="/water" element={<ListWater />} />
-        <Route path="/reviews" element={<ListReviews />} />
-        <Route path="/community" element={<Community />} />
-        <Route path="/profile" element={<Profile />} />
-        <Route path="/beer-styles" element={<ListBeerStyle />} />
+
+        <Route
+          path="/"
+          element={
+            <GuardRoute>
+              <Home />
+            </GuardRoute>
+          }
+        />
+        <Route
+          path="/dashboard"
+          element={
+            <GuardRoute>
+              <Home />
+            </GuardRoute>
+          }
+        />
+        <Route
+          path="/recipes"
+          element={
+            <GuardRoute>
+              <ListRecipes />
+            </GuardRoute>
+          }
+        />
+        <Route
+          path="/brewings"
+          element={
+            <GuardRoute>
+              <ListBrewing />
+            </GuardRoute>
+          }
+        />
+        <Route
+          path="/stock"
+          element={
+            <GuardRoute>
+              <ListStock />
+            </GuardRoute>
+          }
+        />
+        <Route
+          path="/equipment"
+          element={
+            <GuardRoute>
+              <ListEquipment />
+            </GuardRoute>
+          }
+        />
+        <Route
+          path="/hops"
+          element={
+            <GuardRoute>
+              <ListHops />
+            </GuardRoute>
+          }
+        />
+        <Route
+          path="/fermentable"
+          element={
+            <GuardRoute>
+              <ListFermentable />
+            </GuardRoute>
+          }
+        />
+        <Route
+          path="/yeast"
+          element={
+            <GuardRoute>
+              <ListYeast />
+            </GuardRoute>
+          }
+        />
+        <Route
+          path="/water"
+          element={
+            <GuardRoute>
+              <ListWater />
+            </GuardRoute>
+          }
+        />
+        <Route
+          path="/reviews"
+          element={
+            <GuardRoute>
+              <ListReviews />
+            </GuardRoute>
+          }
+        />
+        <Route
+          path="/community"
+          element={
+            <GuardRoute>
+              <Community />
+            </GuardRoute>
+          }
+        />
+        <Route
+          path="/profile"
+          element={
+            <GuardRoute>
+              <Profile />
+            </GuardRoute>
+          }
+        />
+        <Route
+          path="/beer-styles"
+          element={
+            <GuardRoute>
+              <ListBeerStyle />
+            </GuardRoute>
+          }
+        />
       </Routes>
     </BrowserRouter>
   )

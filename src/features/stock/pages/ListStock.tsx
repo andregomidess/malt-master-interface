@@ -1,5 +1,12 @@
-import { View, StyleSheet, TouchableOpacity } from 'react-native'
-import { useState } from 'react'
+import {
+  View,
+  StyleSheet,
+  TouchableOpacity,
+  ScrollView,
+  NativeSyntheticEvent,
+  NativeScrollEvent,
+} from 'react-native'
+import { useState, useRef, useCallback } from 'react'
 import { Layout } from '../../../shared/components/Layout'
 import { Heading, Text } from '../../../shared/components/Typography'
 import { InputText } from '../../../shared/components/InputText'
@@ -7,33 +14,64 @@ import { COLORS } from '../../../shared/styles/colors'
 import { BiPlus, BiSearch } from 'react-icons/bi'
 import { StockStats } from '../components/StockStats'
 import { StockCard } from '../components/StockCard'
-import {
-  mockStockData,
-  calculateStockStats,
-  filterItemsByType,
-  searchItems,
-  InventoryItemType,
-} from '../data/mockStockData'
+import { useInfiniteInventoryItems } from '../hooks/useInfiniteInventoryItems'
+import { useInventoryStats } from '../hooks/useInventoryStats'
+import { InventoryItemType } from '../interfaces/inventory'
+import toast from 'react-hot-toast'
 
 type FilterType = 'all' | InventoryItemType
 
 export const ListStock = () => {
   const [activeFilter, setActiveFilter] = useState<FilterType>('all')
   const [searchQuery, setSearchQuery] = useState('')
+  const scrollViewRef = useRef<ScrollView>(null)
 
-  const filteredByType = filterItemsByType(mockStockData, activeFilter)
-  const filteredItems = searchQuery
-    ? searchItems(filteredByType, searchQuery)
-    : filteredByType
+  const {
+    items,
+    totalItems,
+    isLoading,
+    isError,
+    error,
+    fetchNextPage,
+    hasMore,
+    isFetchingNextPage,
+  } = useInfiniteInventoryItems(activeFilter, searchQuery)
 
-  const stats = calculateStockStats(mockStockData)
+  const {
+    data: stats,
+    isLoading: isLoadingStats,
+    isError: isErrorStats,
+  } = useInventoryStats()
+
+  const handleScroll = useCallback(
+    (event: NativeSyntheticEvent<NativeScrollEvent>) => {
+      const { layoutMeasurement, contentOffset, contentSize } =
+        event.nativeEvent
+      const paddingToBottom = 20
+
+      const isCloseToBottom =
+        layoutMeasurement.height + contentOffset.y >=
+        contentSize.height - paddingToBottom
+
+      if (isCloseToBottom && hasMore && !isFetchingNextPage) {
+        fetchNextPage()
+      }
+    },
+    [hasMore, isFetchingNextPage, fetchNextPage],
+  )
 
   const handleEdit = (itemId: string) => {
     console.log('Editar item:', itemId)
+    toast('Funcionalidade de edição em desenvolvimento', {
+      icon: '🚧',
+    })
   }
 
   const handleAddItem = () => {
     console.log('Adicionar novo item ao estoque')
+    toast('Funcionalidade de adicionar item em desenvolvimento', {
+      icon: '🚧',
+    })
   }
 
   const filters = [
@@ -42,6 +80,20 @@ export const ListStock = () => {
     { id: InventoryItemType.HOP as FilterType, label: 'Lúpulos' },
     { id: InventoryItemType.YEAST as FilterType, label: 'Leveduras' },
   ]
+
+  if (isError) {
+    return (
+      <Layout activeMenuItem="stock">
+        <View style={styles.container}>
+          <View style={styles.errorContainer}>
+            <Text style={styles.errorText}>
+              Erro ao carregar inventário: {error?.message}
+            </Text>
+          </View>
+        </View>
+      </Layout>
+    )
+  }
 
   return (
     <Layout activeMenuItem="stock">
@@ -57,12 +109,22 @@ export const ListStock = () => {
           </TouchableOpacity>
         </View>
 
-        <StockStats
-          totalItems={stats.totalItems}
-          totalValue={stats.totalValue}
-          itemsNearExpiry={stats.itemsNearExpiry}
-          itemsExpired={stats.itemsExpired}
-        />
+        {isLoadingStats ? (
+          <View style={styles.loadingContainer}>
+            <Text style={styles.loadingText}>Carregando estatísticas...</Text>
+          </View>
+        ) : isErrorStats ? (
+          <View style={styles.errorContainer}>
+            <Text style={styles.errorText}>Erro ao carregar estatísticas</Text>
+          </View>
+        ) : stats ? (
+          <StockStats
+            totalItems={stats.totalItems}
+            totalValue={stats.totalValue}
+            itemsNearExpiry={stats.itemsNearExpiry}
+            itemsExpired={stats.expiredItems}
+          />
+        ) : null}
 
         <View style={styles.filtersSection}>
           <View style={styles.filterTabs}>
@@ -100,23 +162,53 @@ export const ListStock = () => {
           </View>
         </View>
 
-        <View style={styles.itemsGrid}>
-          {filteredItems.map(item => (
-            <View key={item.id} style={styles.cardWrapper}>
-              <StockCard item={item} onEdit={() => handleEdit(item.id)} />
+        <ScrollView
+          ref={scrollViewRef}
+          style={styles.scrollView}
+          contentContainerStyle={styles.scrollContent}
+          onScroll={handleScroll}
+          scrollEventThrottle={400}
+        >
+          {isLoading ? (
+            <View style={styles.loadingContainer}>
+              <Text style={styles.loadingText}>Carregando itens...</Text>
             </View>
-          ))}
-        </View>
+          ) : items.length === 0 ? (
+            <View style={styles.emptyState}>
+              <Text style={styles.emptyStateText}>
+                {searchQuery
+                  ? 'Nenhum item encontrado para a busca.'
+                  : 'Nenhum item nesta categoria.'}
+              </Text>
+            </View>
+          ) : (
+            <>
+              <View style={styles.itemsGrid}>
+                {items.map(item => (
+                  <View key={item.id} style={styles.cardWrapper}>
+                    <StockCard item={item} onEdit={() => handleEdit(item.id)} />
+                  </View>
+                ))}
+              </View>
 
-        {filteredItems.length === 0 && (
-          <View style={styles.emptyState}>
-            <Text style={styles.emptyStateText}>
-              {searchQuery
-                ? 'Nenhum item encontrado para a busca.'
-                : 'Nenhum item nesta categoria.'}
-            </Text>
-          </View>
-        )}
+              {isFetchingNextPage && (
+                <View style={styles.loadingMoreContainer}>
+                  <Text style={styles.loadingText}>
+                    Carregando mais itens...
+                  </Text>
+                </View>
+              )}
+
+              {!hasMore && items.length > 0 && (
+                <View style={styles.endMessageContainer}>
+                  <Text style={styles.endMessageText}>
+                    {items.length} de {totalItems} itens carregados
+                  </Text>
+                </View>
+              )}
+            </>
+          )}
+        </ScrollView>
       </View>
     </Layout>
   )
@@ -202,6 +294,12 @@ const styles = StyleSheet.create({
     borderWidth: 0,
     backgroundColor: 'transparent',
   },
+  scrollView: {
+    flex: 1,
+  },
+  scrollContent: {
+    paddingBottom: 24,
+  },
   itemsGrid: {
     flexDirection: 'row',
     flexWrap: 'wrap',
@@ -212,6 +310,20 @@ const styles = StyleSheet.create({
     minWidth: 280,
     maxWidth: 350,
   },
+  loadingContainer: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 48,
+  },
+  loadingText: {
+    fontSize: 14,
+    color: COLORS.text.secondary,
+  },
+  loadingMoreContainer: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 24,
+  },
   emptyState: {
     alignItems: 'center',
     justifyContent: 'center',
@@ -219,6 +331,26 @@ const styles = StyleSheet.create({
   },
   emptyStateText: {
     fontSize: 14,
+    color: COLORS.text.secondary,
+  },
+  errorContainer: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 48,
+    paddingHorizontal: 24,
+  },
+  errorText: {
+    fontSize: 14,
+    color: '#EF4444',
+    textAlign: 'center',
+  },
+  endMessageContainer: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 16,
+  },
+  endMessageText: {
+    fontSize: 12,
     color: COLORS.text.secondary,
   },
 })

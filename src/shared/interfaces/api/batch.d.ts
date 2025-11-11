@@ -13,7 +13,7 @@ export enum BatchStatus {
 export interface BatchApi {
   id: string
   recipe: EntityRef<RecipeApi>
-  user: string // não populado nas listagens atuais
+  user: string
   equipment: EntityRef<EquipmentApi> | null
 
   batchCode: string | null

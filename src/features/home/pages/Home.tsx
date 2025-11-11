@@ -75,20 +75,20 @@ export const Home = () => {
 
   const activityData = useMemo<ActivityRow[]>(() => {
     const batches = recentBatches?.batches ?? []
-    return batches.map(b => {
+    return batches.map(batch => {
       const recipeName =
-        (typeof b.recipe === 'object' ? b.recipe?.name : b.name) ??
-        b.batchCode ??
+        (typeof batch.recipe === 'object' ? batch.recipe?.name : batch.name) ??
+        batch.batchCode ??
         '-'
-      const volume = (b.finalVolume ?? b.plannedVolume ?? 0) + 'L'
-      const date = b.brewDate
-        ? new Date(b.brewDate).toISOString().slice(0, 10)
+      const volume = (batch.finalVolume ?? batch.plannedVolume ?? 0) + 'L'
+      const date = batch.brewDate
+        ? new Date(batch.brewDate).toISOString().slice(0, 10)
         : '-'
       return {
         date,
         recipe: recipeName,
         volume,
-        status: mapStatus(b.status),
+        status: mapStatus(batch.status),
       }
     })
   }, [recentBatches])

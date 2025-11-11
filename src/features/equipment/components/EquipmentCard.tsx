@@ -10,18 +10,20 @@ import {
 } from 'react-icons/gi'
 import { BsLightningChargeFill } from 'react-icons/bs'
 import { BiWorld } from 'react-icons/bi'
-import {
-  Equipment,
-  EquipmentType,
+import type {
+  EquipmentWithPublicFlag as Equipment,
   KettleEquipment,
   FermenterEquipment,
   ChillerEquipment,
+} from '../interfaces/equipment'
+import {
+  EquipmentType,
   equipmentTypeLabels,
   materialLabels,
   heatingSourceLabels,
   coolingTypeLabels,
   chillerTypeLabels,
-} from '../data/mockEquipmentData'
+} from '../interfaces/equipment'
 
 interface EquipmentCardProps {
   equipment: Equipment

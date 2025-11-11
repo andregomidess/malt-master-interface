@@ -1,5 +1,10 @@
-import { View, StyleSheet, TouchableOpacity } from 'react-native'
-import { useState } from 'react'
+import {
+  View,
+  StyleSheet,
+  TouchableOpacity,
+  ActivityIndicator,
+} from 'react-native'
+import { useState, useMemo, useRef, useCallback, useEffect } from 'react'
 import { Layout } from '../../../shared/components/Layout'
 import { Heading, Text } from '../../../shared/components/Typography'
 import { InputText } from '../../../shared/components/InputText'
@@ -8,31 +13,91 @@ import { BiPlus, BiSearch } from 'react-icons/bi'
 import { MdSort } from 'react-icons/md'
 import { EquipmentStats } from '../components/EquipmentStats'
 import { EquipmentCard } from '../components/EquipmentCard'
+import { useEquipments } from '../hooks/useEquipments'
+import { calculateEquipmentStats } from '../utils/equipmentHelpers'
 import {
-  mockEquipmentData,
-  calculateEquipmentStats,
-  filterEquipmentsByType,
-  searchEquipments,
-  sortEquipments,
   EquipmentType,
-  SortBy,
-} from '../data/mockEquipmentData'
-
-type FilterType = 'all' | EquipmentType
+  EquipmentSortBy,
+  SortOrder,
+  type FilterType,
+  type SortBy,
+  EquipmentWithPublicFlag,
+} from '../interfaces/equipment'
 
 export const ListEquipment = () => {
   const [activeFilter, setActiveFilter] = useState<FilterType>('all')
   const [searchQuery, setSearchQuery] = useState('')
   const [sortBy, setSortBy] = useState<SortBy>('name')
   const [showSortMenu, setShowSortMenu] = useState(false)
+  const observerTarget = useRef<View>(null)
 
-  const filteredByType = filterEquipmentsByType(mockEquipmentData, activeFilter)
-  const filteredBySearch = searchQuery
-    ? searchEquipments(filteredByType, searchQuery)
-    : filteredByType
-  const sortedEquipments = sortEquipments(filteredBySearch, sortBy)
+  const mapSortByToBackend = (sort: SortBy): EquipmentSortBy => {
+    switch (sort) {
+      case 'name':
+        return EquipmentSortBy.NAME
+      case 'capacity':
+        return EquipmentSortBy.CAPACITY
+      case 'date':
+        return EquipmentSortBy.CREATED_AT
+      default:
+        return EquipmentSortBy.NAME
+    }
+  }
 
-  const stats = calculateEquipmentStats(mockEquipmentData)
+  const queryParams = useMemo(
+    () => ({
+      type: activeFilter !== 'all' ? activeFilter : undefined,
+      search: searchQuery || undefined,
+      sortBy: mapSortByToBackend(sortBy),
+      order: SortOrder.DESC,
+      take: 20,
+    }),
+    [activeFilter, searchQuery, sortBy],
+  )
+
+  const {
+    data,
+    isLoading,
+    error,
+    fetchNextPage,
+    hasNextPage,
+    isFetchingNextPage,
+  } = useEquipments(queryParams)
+
+  const equipments = useMemo(() => {
+    if (!data?.pages) return []
+    return data.pages.flatMap(
+      (page: { data: EquipmentWithPublicFlag[] }) => page.data,
+    )
+  }, [data])
+
+  const sortedEquipments = equipments
+  const stats = useMemo(() => calculateEquipmentStats(equipments), [equipments])
+
+  const handleObserver = useCallback(
+    (entries: IntersectionObserverEntry[]) => {
+      const [target] = entries
+      if (target.isIntersecting && hasNextPage && !isFetchingNextPage) {
+        fetchNextPage()
+      }
+    },
+    [fetchNextPage, hasNextPage, isFetchingNextPage],
+  )
+
+  useEffect(() => {
+    const element = observerTarget.current
+    if (!element) return
+
+    const option = { threshold: 0 }
+    const observer = new IntersectionObserver(handleObserver, option)
+    // @ts-expect-error - IntersectionObserver funciona com View no React Native Web
+    observer.observe(element)
+
+    return () => {
+      // @ts-expect-error - IntersectionObserver funciona com View no React Native Web
+      observer.unobserve(element)
+    }
+  }, [handleObserver])
 
   const handleEdit = (equipmentId: string) => {
     console.log('Editar equipamento:', equipmentId)
@@ -64,7 +129,6 @@ export const ListEquipment = () => {
   return (
     <Layout activeMenuItem="equipment">
       <View style={styles.container}>
-        {/* Cabeçalho */}
         <View style={styles.header}>
           <Heading variant="h3" style={styles.title}>
             Meus Equipamentos
@@ -163,18 +227,56 @@ export const ListEquipment = () => {
           </View>
         </View>
 
-        <View style={styles.equipmentsGrid}>
-          {sortedEquipments.map(equipment => (
-            <View key={equipment.id} style={styles.cardWrapper}>
-              <EquipmentCard
-                equipment={equipment}
-                onEdit={() => handleEdit(equipment.id)}
-              />
-            </View>
-          ))}
-        </View>
+        {/* Loading */}
+        {isLoading && (
+          <View style={styles.loadingContainer}>
+            <ActivityIndicator size="large" color={COLORS.brand.primary} />
+            <Text style={styles.loadingText}>Carregando equipamentos...</Text>
+          </View>
+        )}
 
-        {sortedEquipments.length === 0 && (
+        {/* Error */}
+        {error && (
+          <View style={styles.errorContainer}>
+            <Text style={styles.errorText}>
+              Erro ao carregar equipamentos. Tente novamente.
+            </Text>
+          </View>
+        )}
+
+        {/* Lista de equipamentos */}
+        {!isLoading && !error && (
+          <>
+            <View style={styles.equipmentsGrid}>
+              {sortedEquipments.map(
+                (equipment: (typeof sortedEquipments)[0]) => (
+                  <View key={equipment.id} style={styles.cardWrapper}>
+                    <EquipmentCard
+                      equipment={equipment}
+                      onEdit={() => handleEdit(equipment.id)}
+                    />
+                  </View>
+                ),
+              )}
+            </View>
+
+            {/* Observer target para infinite scroll */}
+            <View ref={observerTarget} style={styles.observerTarget} />
+
+            {/* Loading de próxima página */}
+            {isFetchingNextPage && (
+              <View style={styles.loadingMore}>
+                <ActivityIndicator size="small" color={COLORS.brand.primary} />
+                <Text style={styles.loadingMoreText}>
+                  Carregando mais equipamentos...
+                </Text>
+              </View>
+            )}
+          </>
+        )}
+
+        {/* Empty state */}
+        {!isLoading && !error && sortedEquipments.length === 0 && (
           <View style={styles.emptyState}>
             <Text style={styles.emptyStateText}>
               {searchQuery
@@ -342,6 +444,46 @@ const styles = StyleSheet.create({
     paddingVertical: 48,
   },
   emptyStateText: {
+    fontSize: 14,
+    color: COLORS.text.secondary,
+  },
+  loadingContainer: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 48,
+    gap: 16,
+  },
+  loadingText: {
+    fontSize: 14,
+    color: COLORS.text.secondary,
+  },
+  errorContainer: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 48,
+    paddingHorizontal: 24,
+    backgroundColor: '#FEE2E2',
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: '#FCA5A5',
+  },
+  errorText: {
+    fontSize: 14,
+    color: '#DC2626',
+    textAlign: 'center',
+  },
+  observerTarget: {
+    height: 20,
+    width: '100%',
+  },
+  loadingMore: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 12,
+    paddingVertical: 24,
+  },
+  loadingMoreText: {
     fontSize: 14,
     color: COLORS.text.secondary,
   },

@@ -3,15 +3,15 @@ import { Text } from '../../../shared/components/Typography'
 import { COLORS } from '../../../shared/styles/colors'
 import { MdEdit } from 'react-icons/md'
 import {
-  StockItem,
+  InventoryItem,
   InventoryItemType,
   FermentableInventoryItem,
   HopInventoryItem,
   YeastInventoryItem,
-} from '../data/mockStockData'
+} from '../interfaces/inventory'
 
 interface StockCardProps {
-  item: StockItem
+  item: InventoryItem
   onEdit?: () => void
 }
 
@@ -39,6 +39,13 @@ export const StockCard = ({ item, onEdit }: StockCardProps) => {
 
   const config = typeConfig[item.type]
 
+  const itemName =
+    item.type === InventoryItemType.FERMENTABLE
+      ? item.fermentable.name
+      : item.type === InventoryItemType.HOP
+        ? item.hop.name
+        : item.yeast.name
+
   const getExpiryBadge = () => {
     if (item.isExpired) {
       return { label: 'Vencido', color: '#EF4444', bgColor: '#FEE2E2' }
@@ -60,7 +67,7 @@ export const StockCard = ({ item, onEdit }: StockCardProps) => {
 
     if (item.type === InventoryItemType.HOP) {
       const hopItem = item as HopInventoryItem
-      if (!hopItem.isStillFresh) {
+      if (hopItem.isStillFresh === false) {
         alerts.push({
           label: 'Não está mais fresco',
           color: '#EF4444',
@@ -82,7 +89,7 @@ export const StockCard = ({ item, onEdit }: StockCardProps) => {
 
     if (item.type === InventoryItemType.FERMENTABLE) {
       const fermentableItem = item as FermentableInventoryItem
-      if (!fermentableItem.isQualityAcceptable) {
+      if (fermentableItem.isQualityAcceptable === false) {
         alerts.push({
           label: 'Baixa Qualidade',
           color: '#EF4444',
@@ -99,12 +106,9 @@ export const StockCard = ({ item, onEdit }: StockCardProps) => {
   return (
     <View style={styles.card}>
       <View style={styles.header}>
-        <Image
-          source={{ uri: item.imageUrl || defaultImageUrl }}
-          style={styles.image}
-        />
+        <Image source={{ uri: defaultImageUrl }} style={styles.image} />
         <View style={styles.headerContent}>
-          <Text style={styles.title}>{item.name}</Text>
+          <Text style={styles.title}>{itemName}</Text>
           <View style={styles.badges}>
             <View style={[styles.badge, { backgroundColor: config.bgColor }]}>
               <Text style={[styles.badgeText, { color: config.color }]}>
@@ -159,7 +163,9 @@ export const StockCard = ({ item, onEdit }: StockCardProps) => {
             <View style={styles.infoRow}>
               <Text style={styles.label}>Alfa Ácidos Atuais:</Text>
               <Text style={styles.value}>
-                {(item as HopInventoryItem).currentAlphaAcids?.toFixed(2)}%
+                {(item as HopInventoryItem).currentAlphaAcids?.toFixed(2) ||
+                  'N/A'}
+                %
               </Text>
             </View>
             <View style={styles.infoRow}>
@@ -176,7 +182,9 @@ export const StockCard = ({ item, onEdit }: StockCardProps) => {
             <View style={styles.infoRow}>
               <Text style={styles.label}>Viabilidade Atual:</Text>
               <Text style={styles.value}>
-                {(item as YeastInventoryItem).currentViability?.toFixed(1)}%
+                {(item as YeastInventoryItem).currentViability?.toFixed(1) ||
+                  'N/A'}
+                %
               </Text>
             </View>
           </View>
@@ -198,6 +206,13 @@ export const StockCard = ({ item, onEdit }: StockCardProps) => {
                 </Text>
               </View>
             )}
+          </View>
+        )}
+
+        {item.notes && (
+          <View style={styles.notesContainer}>
+            <Text style={styles.label}>Observações:</Text>
+            <Text style={styles.notes}>{item.notes}</Text>
           </View>
         )}
       </View>
@@ -308,5 +323,17 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontWeight: '500',
     color: COLORS.text.secondary,
+  },
+  notesContainer: {
+    marginTop: 8,
+    paddingTop: 8,
+    borderTopWidth: 1,
+    borderTopColor: COLORS.border.light,
+    gap: 4,
+  },
+  notes: {
+    fontSize: 13,
+    color: COLORS.text.secondary,
+    fontStyle: 'italic',
   },
 })

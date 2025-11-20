@@ -1,10 +1,10 @@
 import { View, StyleSheet, TouchableOpacity } from 'react-native'
 import { Text } from '../../../shared/components/Typography'
 import { COLORS } from '../../../shared/styles/colors'
-import { MdEdit } from 'react-icons/md'
+import { MdEdit, MdDelete } from 'react-icons/md'
 import { IoWater } from 'react-icons/io5'
+import { WaterProfile } from '../interfaces/WaterProfile'
 import {
-  WaterProfile,
   calculateSO4ClRatio,
   getProfileType,
   calculateTotalHardness,
@@ -18,18 +18,19 @@ import {
   profileTypeLabels,
   profileTypeColors,
   hardnessLabels,
-  ProfileType,
   WaterHardness,
 } from '../data/mockWaterProfilesData'
 
 interface WaterProfileCardProps {
   profile: WaterProfile
   onEdit?: () => void
+  onDelete?: () => void
 }
 
 export const WaterProfileCard = ({
   profile,
   onEdit,
+  onDelete,
 }: WaterProfileCardProps) => {
   // Cálculos dos índices
   const so4ClRatio = calculateSO4ClRatio(profile)
@@ -37,7 +38,7 @@ export const WaterProfileCard = ({
   const totalHardness = calculateTotalHardness(profile)
   const hardnessLevel = getHardnessLevel(profile)
   const residualAlkalinity = calculateResidualAlkalinity(profile)
-  const phLevel = getPhLevel(profile.ph)
+  const phLevel = getPhLevel(profile.ph ?? null)
 
   // Características especiais
   const highSulfate = hasHighSulfate(profile)
@@ -67,7 +68,12 @@ export const WaterProfileCard = ({
     <View style={styles.card}>
       {/* Header */}
       <View style={styles.header}>
-        <View style={[styles.iconContainer, { backgroundColor: typeConfig.bgColor }]}>
+        <View
+          style={[
+            styles.iconContainer,
+            { backgroundColor: typeConfig.bgColor },
+          ]}
+        >
           <IoWater size={32} color={typeConfig.color} />
         </View>
         <View style={styles.headerContent}>
@@ -111,21 +117,27 @@ export const WaterProfileCard = ({
               </View>
             )}
             {highSulfate && (
-              <View style={[styles.specialBadge, { backgroundColor: '#FFEDD5' }]}>
+              <View
+                style={[styles.specialBadge, { backgroundColor: '#FFEDD5' }]}
+              >
                 <Text style={[styles.specialBadgeText, { color: '#F97316' }]}>
                   🔸 Alto Amargor
                 </Text>
               </View>
             )}
             {highChloride && (
-              <View style={[styles.specialBadge, { backgroundColor: '#FEF3C7' }]}>
+              <View
+                style={[styles.specialBadge, { backgroundColor: '#FEF3C7' }]}
+              >
                 <Text style={[styles.specialBadgeText, { color: '#F59E0B' }]}>
                   🟡 Maltado
                 </Text>
               </View>
             )}
             {highBicarbonate && (
-              <View style={[styles.specialBadge, { backgroundColor: '#FEE2E2' }]}>
+              <View
+                style={[styles.specialBadge, { backgroundColor: '#FEE2E2' }]}
+              >
                 <Text style={[styles.specialBadgeText, { color: '#DC2626' }]}>
                   🟤 P/ Cervejas Escuras
                 </Text>
@@ -188,13 +200,10 @@ export const WaterProfileCard = ({
             <Text style={styles.mineralLabel}>pH:</Text>
             <View style={styles.phValueRow}>
               <Text style={styles.mineralValue}>
-                {profile.ph !== null ? profile.ph.toFixed(1) : 'N/A'}
+                {profile.ph != null ? Number(profile.ph).toFixed(1) : 'N/A'}
               </Text>
               <View
-                style={[
-                  styles.phBadge,
-                  { backgroundColor: phLevel.bgColor },
-                ]}
+                style={[styles.phBadge, { backgroundColor: phLevel.bgColor }]}
               >
                 <Text style={[styles.phBadgeText, { color: phLevel.color }]}>
                   {phLevel.label}
@@ -222,7 +231,10 @@ export const WaterProfileCard = ({
                     ]}
                   >
                     <Text
-                      style={[styles.indexBadgeText, { color: typeConfig.color }]}
+                      style={[
+                        styles.indexBadgeText,
+                        { color: typeConfig.color },
+                      ]}
                     >
                       {profileTypeLabels[profileType]}
                     </Text>
@@ -281,7 +293,9 @@ export const WaterProfileCard = ({
                       },
                     ]}
                   >
-                    {residualAlkalinity < 0 ? 'Cervejas Claras' : 'Cervejas Escuras'}
+                    {residualAlkalinity < 0
+                      ? 'Cervejas Claras'
+                      : 'Cervejas Escuras'}
                   </Text>
                 </View>
               </View>
@@ -315,10 +329,20 @@ export const WaterProfileCard = ({
 
       {/* Footer */}
       <View style={styles.footer}>
-        <TouchableOpacity style={styles.editButton} onPress={onEdit}>
-          <MdEdit size={16} color={COLORS.text.secondary} />
-          <Text style={styles.editButtonText}>Editar</Text>
-        </TouchableOpacity>
+        <View style={styles.actions}>
+          {onEdit && (
+            <TouchableOpacity style={styles.actionButton} onPress={onEdit}>
+              <MdEdit size={16} color={COLORS.text.secondary} />
+              <Text style={styles.actionButtonText}>Editar</Text>
+            </TouchableOpacity>
+          )}
+          {onDelete && (
+            <TouchableOpacity style={styles.deleteButton} onPress={onDelete}>
+              <MdDelete size={16} color="#EF4444" />
+              <Text style={styles.deleteButtonText}>Deletar</Text>
+            </TouchableOpacity>
+          )}
+        </View>
       </View>
     </View>
   )
@@ -521,16 +545,29 @@ const styles = StyleSheet.create({
     borderTopWidth: 1,
     borderTopColor: COLORS.border.light,
   },
-  editButton: {
+  actions: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 6,
-    paddingVertical: 4,
+    gap: 12,
   },
-  editButtonText: {
-    fontSize: 14,
+  actionButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+  },
+  actionButtonText: {
+    fontSize: 13,
     fontWeight: '500',
     color: COLORS.text.secondary,
   },
+  deleteButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+  },
+  deleteButtonText: {
+    fontSize: 13,
+    fontWeight: '500',
+    color: '#EF4444',
+  },
 })
-

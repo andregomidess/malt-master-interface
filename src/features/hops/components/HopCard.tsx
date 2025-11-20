@@ -1,30 +1,30 @@
-import { View, StyleSheet, TouchableOpacity, Image } from 'react-native'
+import { View, StyleSheet, TouchableOpacity } from 'react-native'
 import { Text } from '../../../shared/components/Typography'
 import { COLORS } from '../../../shared/styles/colors'
-import { MdEdit } from 'react-icons/md'
+import { MdEdit, MdDelete } from 'react-icons/md'
 import { GiHops } from 'react-icons/gi'
 import { BiWorld, BiDollarCircle } from 'react-icons/bi'
+import { Hop, HopUse } from '../interfaces/Hop'
 import {
-  Hop,
   hopFormLabels,
   hopUseLabels,
   getAlphaAcidsLevel,
   isNobleHop,
   isModernHop,
   useColors,
-} from '../data/mockHopsData'
+} from '../helpers/hopHelpers'
 
 interface HopCardProps {
   hop: Hop
   onEdit?: () => void
+  onDelete?: () => void
 }
 
-export const HopCard = ({ hop, onEdit }: HopCardProps) => {
-  const defaultImageUrl =
-    'https://images.unsplash.com/photo-1597822738124-151f4ffe64a6?w=100&h=100&fit=crop'
+export const HopCard = ({ hop, onEdit, onDelete }: HopCardProps) => {
+  const isPublic = hop.user === null
 
   // Uso principal (primeiro da lista)
-  const primaryUse = hop.uses[0]
+  const primaryUse = hop.uses?.[0] || HopUse.DUAL_PURPOSE
   const primaryUseConfig = useColors[primaryUse]
 
   // Nível de alfa ácidos
@@ -48,7 +48,7 @@ export const HopCard = ({ hop, onEdit }: HopCardProps) => {
         <View style={styles.headerContent}>
           <View style={styles.titleRow}>
             <Text style={styles.title}>{hop.name}</Text>
-            {hop.isPublic && (
+            {isPublic && (
               <View style={styles.publicBadge}>
                 <BiWorld size={12} color="#6B7280" />
                 <Text style={styles.publicBadgeText}>Público</Text>
@@ -81,9 +81,7 @@ export const HopCard = ({ hop, onEdit }: HopCardProps) => {
               </Text>
             </View>
           </View>
-          {hop.origin && (
-            <Text style={styles.origin}>{hop.origin}</Text>
-          )}
+          {hop.origin && <Text style={styles.origin}>{hop.origin}</Text>}
         </View>
       </View>
 
@@ -102,7 +100,9 @@ export const HopCard = ({ hop, onEdit }: HopCardProps) => {
             <View style={styles.alphaContainer}>
               <Text style={styles.label}>Alfa Ácidos:</Text>
               <View style={styles.alphaValueRow}>
-                <Text style={styles.alphaValue}>{hop.alphaAcids.toFixed(1)}%</Text>
+                <Text style={styles.alphaValue}>
+                  {hop.alphaAcids.toFixed(1)}%
+                </Text>
                 <View
                   style={[
                     styles.alphaBadge,
@@ -165,12 +165,12 @@ export const HopCard = ({ hop, onEdit }: HopCardProps) => {
           </View>
         )}
 
-        {hop.costPerKilogram && (
+        {hop.costPerKilogram != null && (
           <View style={styles.costRow}>
             <BiDollarCircle size={16} color={COLORS.text.secondary} />
             <Text style={styles.label}>Custo:</Text>
             <Text style={styles.costValue}>
-              R$ {hop.costPerKilogram.toFixed(2)}/kg
+              R$ {Number(hop.costPerKilogram).toFixed(2)}/kg
             </Text>
           </View>
         )}
@@ -178,19 +178,19 @@ export const HopCard = ({ hop, onEdit }: HopCardProps) => {
         {(hop.cohumulone || hop.totalOils || hop.harvestYear) && (
           <View style={styles.additionalInfo}>
             <Text style={styles.additionalTitle}>Informações Adicionais:</Text>
-            {hop.cohumulone && (
+            {hop.cohumulone != null && (
               <View style={styles.additionalRow}>
                 <Text style={styles.additionalLabel}>Cohumulona:</Text>
                 <Text style={styles.additionalValue}>
-                  {hop.cohumulone.toFixed(1)}%
+                  {Number(hop.cohumulone).toFixed(1)}%
                 </Text>
               </View>
             )}
-            {hop.totalOils && (
+            {hop.totalOils != null && (
               <View style={styles.additionalRow}>
                 <Text style={styles.additionalLabel}>Óleos Totais:</Text>
                 <Text style={styles.additionalValue}>
-                  {hop.totalOils.toFixed(1)} ml/100g
+                  {Number(hop.totalOils).toFixed(1)} ml/100g
                 </Text>
               </View>
             )}
@@ -205,10 +205,20 @@ export const HopCard = ({ hop, onEdit }: HopCardProps) => {
       </View>
 
       <View style={styles.footer}>
-        <TouchableOpacity style={styles.editButton} onPress={onEdit}>
-          <MdEdit size={16} color={COLORS.text.secondary} />
-          <Text style={styles.editButtonText}>Editar</Text>
-        </TouchableOpacity>
+        <View style={styles.actions}>
+          {onEdit && (
+            <TouchableOpacity style={styles.actionButton} onPress={onEdit}>
+              <MdEdit size={16} color={COLORS.text.secondary} />
+              <Text style={styles.actionButtonText}>Editar</Text>
+            </TouchableOpacity>
+          )}
+          {onDelete && (
+            <TouchableOpacity style={styles.deleteButton} onPress={onDelete}>
+              <MdDelete size={16} color="#EF4444" />
+              <Text style={styles.deleteButtonText}>Deletar</Text>
+            </TouchableOpacity>
+          )}
+        </View>
       </View>
     </View>
   )
@@ -450,16 +460,29 @@ const styles = StyleSheet.create({
     borderTopWidth: 1,
     borderTopColor: COLORS.border.light,
   },
-  editButton: {
+  actions: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 6,
-    paddingVertical: 4,
+    gap: 12,
   },
-  editButtonText: {
-    fontSize: 14,
+  actionButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+  },
+  actionButtonText: {
+    fontSize: 13,
     fontWeight: '500',
     color: COLORS.text.secondary,
   },
+  deleteButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+  },
+  deleteButtonText: {
+    fontSize: 13,
+    fontWeight: '500',
+    color: '#EF4444',
+  },
 })
-

@@ -3,167 +3,251 @@ import {
   StyleSheet,
   ActivityIndicator,
   TouchableOpacity,
-  TextInput,
-  FlatList,
+  ScrollView,
+  NativeSyntheticEvent,
+  NativeScrollEvent,
 } from 'react-native'
+import { useState, useCallback } from 'react'
+import { useNavigate } from 'react-router'
 import { Layout } from '../../../shared/components/Layout'
-import { Text } from '../../../shared/components/Typography'
+import { Heading, Text } from '../../../shared/components/Typography'
+import { InputText } from '../../../shared/components/InputText'
 import { COLORS } from '../../../shared/styles/colors'
-import { useBatches } from '../hooks/useBatches'
+import { BiPlus, BiSearch } from 'react-icons/bi'
+import { MdSort, MdRefresh } from 'react-icons/md'
 import { BatchCard } from '../components/BatchCard'
-import { BatchStatus } from '../interfaces/Brewing'
-import { MdRefresh } from 'react-icons/md'
+import {
+  BatchStatus,
+  BatchSortBy,
+  SortOrder,
+  BatchStatusLabels,
+} from '../interfaces/Brewing'
+import { useBatchesList } from '../hooks/useBatchesList'
+import { useDeleteBatch } from '../hooks/useDeleteBatch'
+import toast from 'react-hot-toast'
 
 export const ListBrewing = () => {
-  const {
-    data,
-    loading,
-    error,
-    statusFilter,
-    setStatusFilter,
-    searchQuery,
-    setSearchQuery,
-    sortBy,
-    setSortBy,
-    refetch,
-  } = useBatches()
+  const navigate = useNavigate()
+  const [searchQuery, setSearchQuery] = useState('')
+  const [activeFilter, setActiveFilter] = useState<BatchStatus | 'all'>('all')
+  const [sortBy, setSortBy] = useState<BatchSortBy>(BatchSortBy.BREW_DATE)
+  const [order, setOrder] = useState<SortOrder>(SortOrder.DESC)
 
-  const statusOptions: Array<{ value: BatchStatus | 'all'; label: string }> = [
-    { value: 'all', label: 'Todas' },
-    { value: 'planned', label: 'Planejadas' },
-    { value: 'fermenting', label: 'Fermentando' },
-    { value: 'maturing', label: 'Maturando' },
-    { value: 'packaged', label: 'Envasadas' },
-    { value: 'completed', label: 'Finalizadas' },
+  const {
+    batches,
+    isLoading,
+    isFetchingNextPage,
+    hasNextPage,
+    error,
+    refetch,
+  } = useBatchesList(
+    searchQuery,
+    activeFilter === 'all' ? undefined : activeFilter,
+    sortBy,
+    order,
+  )
+
+  const { deleteBatch } = useDeleteBatch()
+
+  const handleDelete = async (id: string) => {
+    if (confirm('Tem certeza que deseja deletar esta brassagem?')) {
+      try {
+        await deleteBatch(id)
+        toast.success('Brassagem deletada com sucesso!')
+        await refetch()
+      } catch {
+        toast.error('Erro ao deletar brassagem')
+        await refetch()
+      }
+    }
+  }
+
+  const handleScroll = useCallback(
+    (event: NativeSyntheticEvent<NativeScrollEvent>) => {
+      const { layoutMeasurement, contentOffset, contentSize } =
+        event.nativeEvent
+      const isCloseToBottom =
+        layoutMeasurement.height + contentOffset.y >= contentSize.height - 50
+      if (isCloseToBottom && hasNextPage && !isFetchingNextPage) {
+        // fetchNextPage()
+      }
+    },
+    [hasNextPage, isFetchingNextPage],
+  )
+
+  const handleRefresh = async () => {
+    await refetch()
+  }
+
+  const renderErrorState = () => (
+    <View style={styles.errorState}>
+      <Text style={styles.errorText}>Erro ao carregar brassagens</Text>
+      <TouchableOpacity style={styles.retryButton} onPress={handleRefresh}>
+        <MdRefresh size={16} color={COLORS.neutral.white} />
+        <Text style={styles.retryButtonText}>Tentar Novamente</Text>
+      </TouchableOpacity>
+    </View>
+  )
+
+  const statusOptions: Array<{ id: BatchStatus | 'all'; label: string }> = [
+    { id: 'all', label: 'Todas' },
+    { id: 'planned', label: BatchStatusLabels.planned },
+    { id: 'fermenting', label: BatchStatusLabels.fermenting },
+    { id: 'maturing', label: BatchStatusLabels.maturing },
+    { id: 'packaged', label: BatchStatusLabels.packaged },
+    { id: 'completed', label: BatchStatusLabels.completed },
   ]
 
-  const sortOptions: Array<{
-    value: 'recent' | 'name' | 'status'
-    label: string
-  }> = [
-    { value: 'recent', label: 'Mais Recentes' },
-    { value: 'name', label: 'Nome' },
-    { value: 'status', label: 'Status' },
+  const sortOptions: Array<{ id: BatchSortBy; label: string }> = [
+    { id: BatchSortBy.BREW_DATE, label: 'Data de Brassagem' },
+    { id: BatchSortBy.NAME, label: 'Nome' },
+    { id: BatchSortBy.STATUS, label: 'Status' },
+    { id: BatchSortBy.PACKAGING_DATE, label: 'Data de Envasamento' },
+    { id: BatchSortBy.READY_DATE, label: 'Data de Pronto' },
   ]
 
   return (
     <Layout activeMenuItem="brewings">
       <View style={styles.container}>
         <View style={styles.header}>
-          <Text style={styles.title}>Brassagens</Text>
+          <Heading variant="h3" style={styles.title}>
+            Brassagens
+          </Heading>
           <TouchableOpacity
-            style={styles.addButton}
-            activeOpacity={0.85}
-            onPress={() => console.log('Criar nova brassagem')}
+            style={styles.createButton}
+            onPress={() => navigate('/brewings/new')}
           >
-            <Text style={styles.addButtonText}>+ Nova Brassagem</Text>
+            <BiPlus size={20} color={COLORS.neutral.white} />
+            <Text style={styles.createButtonText}>Nova Brassagem</Text>
           </TouchableOpacity>
         </View>
 
-        <View style={styles.filters}>
-          <TextInput
-            placeholder="Buscar por nome, código ou receita..."
-            value={searchQuery}
-            onChangeText={setSearchQuery}
-            style={styles.searchInput}
-          />
-
-          <View style={styles.filterRow}>
-            <Text style={styles.filterLabel}>Status:</Text>
-            <View style={styles.pills}>
-              {statusOptions.map(option => (
-                <TouchableOpacity
-                  key={option.value}
-                  onPress={() => setStatusFilter(option.value)}
+        <View style={styles.filtersRow}>
+          <View style={styles.tabs}>
+            {statusOptions.map(filter => (
+              <TouchableOpacity
+                key={filter.id}
+                style={[
+                  styles.tab,
+                  activeFilter === filter.id && styles.tabActive,
+                ]}
+                onPress={() => setActiveFilter(filter.id)}
+              >
+                <Text
                   style={[
-                    styles.pill,
-                    statusFilter === option.value && styles.pillActive,
+                    styles.tabText,
+                    activeFilter === filter.id && styles.tabTextActive,
                   ]}
-                  activeOpacity={0.7}
                 >
-                  <Text
-                    style={[
-                      styles.pillText,
-                      statusFilter === option.value && styles.pillTextActive,
-                    ]}
-                  >
-                    {option.label}
-                  </Text>
-                </TouchableOpacity>
-              ))}
-            </View>
+                  {filter.label}
+                </Text>
+              </TouchableOpacity>
+            ))}
+          </View>
+        </View>
+
+        <View style={styles.searchAndSortRow}>
+          <View style={styles.searchContainer}>
+            <BiSearch size={20} color={COLORS.text.secondary} />
+            <InputText
+              placeholder="Buscar por nome, código ou receita..."
+              value={searchQuery}
+              onChangeText={setSearchQuery}
+              style={styles.searchInput}
+            />
           </View>
 
-          <View style={styles.filterRow}>
-            <Text style={styles.filterLabel}>Ordenar:</Text>
-            <View style={styles.pills}>
+          <View style={styles.sortContainer}>
+            <MdSort size={20} color={COLORS.text.secondary} />
+            <Text style={styles.sortLabel}>Ordenar:</Text>
+            <View style={styles.sortButtons}>
               {sortOptions.map(option => (
                 <TouchableOpacity
-                  key={option.value}
-                  onPress={() => setSortBy(option.value)}
+                  key={option.id}
                   style={[
-                    styles.pill,
-                    sortBy === option.value && styles.pillActive,
+                    styles.sortButton,
+                    sortBy === option.id && styles.sortButtonActive,
                   ]}
-                  activeOpacity={0.7}
+                  onPress={() => setSortBy(option.id)}
                 >
                   <Text
                     style={[
-                      styles.pillText,
-                      sortBy === option.value && styles.pillTextActive,
+                      styles.sortButtonText,
+                      sortBy === option.id && styles.sortButtonTextActive,
                     ]}
                   >
                     {option.label}
                   </Text>
                 </TouchableOpacity>
               ))}
+              <TouchableOpacity
+                style={[
+                  styles.sortButton,
+                  order === SortOrder.ASC && styles.sortButtonActive,
+                ]}
+                onPress={() =>
+                  setOrder(
+                    order === SortOrder.ASC ? SortOrder.DESC : SortOrder.ASC,
+                  )
+                }
+              >
+                <Text
+                  style={[
+                    styles.sortButtonText,
+                    order === SortOrder.ASC && styles.sortButtonTextActive,
+                  ]}
+                >
+                  {order === SortOrder.ASC ? 'ASC' : 'DESC'}
+                </Text>
+              </TouchableOpacity>
             </View>
           </View>
         </View>
 
-        {loading && (
-          <View style={styles.centerContainer}>
+        {isLoading ? (
+          <View style={styles.loadingContainer}>
             <ActivityIndicator size="large" color={COLORS.brand.primary} />
+            <Text style={styles.loadingText}>Carregando brassagens...</Text>
           </View>
-        )}
-
-        {error && (
-          <View style={styles.centerContainer}>
-            <Text style={styles.errorText}>{error}</Text>
-            <TouchableOpacity
-              style={styles.retryButton}
-              onPress={refetch}
-              activeOpacity={0.85}
-            >
-              <MdRefresh size={18} color={COLORS.brand.primary} />
-              <Text style={styles.retryText}>Tentar Novamente</Text>
-            </TouchableOpacity>
-          </View>
-        )}
-
-        {!loading && !error && data.length === 0 && (
-          <View style={styles.centerContainer}>
-            <Text style={styles.emptyText}>
-              {searchQuery || statusFilter !== 'all'
-                ? 'Nenhuma brassagem encontrada com os filtros aplicados.'
-                : 'Você ainda não tem brassagens cadastradas.'}
-            </Text>
-          </View>
-        )}
-
-        {!loading && !error && data.length > 0 && (
-          <FlatList
-            data={data}
-            keyExtractor={item => item.id}
-            renderItem={({ item }) => (
-              <BatchCard
-                batch={item}
-                onPress={() => console.log('Abrir sessão:', item.id)}
+        ) : error ? (
+          renderErrorState()
+        ) : (
+          <ScrollView
+            onScroll={handleScroll}
+            scrollEventThrottle={400}
+            contentContainerStyle={styles.scrollViewContent}
+          >
+            <View style={styles.batchesList}>
+              {batches
+                .filter(item => item != null && item.id != null)
+                .map(item => (
+                  <BatchCard
+                    key={item.id}
+                    batch={item}
+                    onPress={() => navigate(`/brewings/${item.id}/edit`)}
+                    onDelete={() => handleDelete(item.id)}
+                    onStartSession={() =>
+                      navigate(`/brewings/${item.id}/session`)
+                    }
+                  />
+                ))}
+            </View>
+            {isFetchingNextPage && (
+              <ActivityIndicator
+                size="small"
+                color={COLORS.brand.primary}
+                style={styles.loadingMoreIndicator}
               />
             )}
-            contentContainerStyle={styles.list}
-            showsVerticalScrollIndicator={false}
-          />
+          </ScrollView>
+        )}
+
+        {batches.length === 0 && !isLoading && !error && (
+          <View style={styles.emptyState}>
+            <Text style={styles.emptyStateText}>
+              Nenhuma brassagem encontrada com os filtros selecionados
+            </Text>
+          </View>
         )}
       </View>
     </Layout>
@@ -172,109 +256,181 @@ export const ListBrewing = () => {
 
 const styles = StyleSheet.create({
   container: {
-    gap: 20,
+    flex: 1,
+    gap: 24,
   },
   header: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
     flexWrap: 'wrap',
-    gap: 12,
+    gap: 16,
   },
   title: {
     fontSize: 28,
     fontWeight: '700',
     color: COLORS.text.primary,
   },
-  addButton: {
+  createButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
     backgroundColor: COLORS.brand.primary,
-    paddingVertical: 10,
     paddingHorizontal: 20,
-    borderRadius: 10,
+    paddingVertical: 12,
+    borderRadius: 8,
+    cursor: 'pointer',
   },
-  addButtonText: {
-    color: '#FFFFFF',
-    fontSize: 14,
-    fontWeight: '700',
-  },
-  filters: {
-    gap: 12,
-  },
-  searchInput: {
-    backgroundColor: COLORS.neutral.white,
-    borderWidth: 1,
-    borderColor: COLORS.border.light,
-    borderRadius: 10,
-    padding: 12,
-    fontSize: 14,
-    color: COLORS.text.primary,
-  },
-  filterRow: {
-    gap: 10,
-  },
-  filterLabel: {
+  createButtonText: {
     fontSize: 14,
     fontWeight: '600',
-    color: COLORS.text.primary,
+    color: COLORS.neutral.white,
   },
-  pills: {
+  filtersRow: {
+    gap: 16,
+  },
+  tabs: {
     flexDirection: 'row',
-    flexWrap: 'wrap',
     gap: 8,
+    flexWrap: 'wrap',
   },
-  pill: {
-    paddingVertical: 6,
-    paddingHorizontal: 14,
+  tab: {
+    paddingHorizontal: 16,
+    paddingVertical: 8,
     borderRadius: 20,
     backgroundColor: COLORS.neutral.white,
     borderWidth: 1,
     borderColor: COLORS.border.light,
+    cursor: 'pointer',
   },
-  pillActive: {
+  tabActive: {
     backgroundColor: COLORS.brand.primary,
     borderColor: COLORS.brand.primary,
   },
-  pillText: {
-    fontSize: 13,
+  tabText: {
+    fontSize: 14,
+    fontWeight: '500',
+    color: COLORS.text.secondary,
+  },
+  tabTextActive: {
+    color: COLORS.neutral.white,
     fontWeight: '600',
+  },
+  searchAndSortRow: {
+    gap: 16,
+  },
+  searchContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    backgroundColor: COLORS.neutral.white,
+    borderWidth: 1,
+    borderColor: COLORS.border.light,
+    borderRadius: 8,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+  },
+  searchInput: {
+    flex: 1,
+    fontSize: 14,
     color: COLORS.text.primary,
+    borderWidth: 0,
+    paddingHorizontal: 0,
+    paddingVertical: 0,
+    backgroundColor: 'transparent',
   },
-  pillTextActive: {
-    color: '#FFFFFF',
+  sortContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+    flexWrap: 'wrap',
   },
-  centerContainer: {
+  sortLabel: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: COLORS.text.secondary,
+  },
+  sortButtons: {
+    flexDirection: 'row',
+    gap: 8,
+    flexWrap: 'wrap',
+  },
+  sortButton: {
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 6,
+    backgroundColor: COLORS.neutral.white,
+    borderWidth: 1,
+    borderColor: COLORS.border.light,
+    cursor: 'pointer',
+  },
+  sortButtonActive: {
+    backgroundColor: COLORS.brand.primary,
+    borderColor: COLORS.brand.primary,
+  },
+  sortButtonText: {
+    fontSize: 13,
+    fontWeight: '500',
+    color: COLORS.text.secondary,
+  },
+  sortButtonTextActive: {
+    color: COLORS.neutral.white,
+    fontWeight: '600',
+  },
+  scrollViewContent: {
+    paddingBottom: 20,
+  },
+  batchesList: {
+    gap: 16,
+  },
+  loadingContainer: {
+    alignItems: 'center',
+    justifyContent: 'center',
     paddingVertical: 60,
+    gap: 12,
+  },
+  loadingText: {
+    fontSize: 14,
+    color: COLORS.text.secondary,
+  },
+  loadingMoreIndicator: {
+    marginTop: 20,
+  },
+  emptyState: {
+    paddingVertical: 60,
+    alignItems: 'center',
+  },
+  emptyStateText: {
+    fontSize: 16,
+    color: COLORS.text.secondary,
+    textAlign: 'center',
+  },
+  errorState: {
+    backgroundColor: COLORS.neutral.white,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: COLORS.border.light,
+    padding: 48,
     alignItems: 'center',
     gap: 16,
   },
   errorText: {
-    fontSize: 14,
+    fontSize: 16,
+    fontWeight: '600',
     color: COLORS.status.error,
-    textAlign: 'center',
   },
   retryButton: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 8,
-    paddingVertical: 10,
     paddingHorizontal: 16,
+    paddingVertical: 10,
+    backgroundColor: COLORS.brand.primary,
     borderRadius: 8,
-    borderWidth: 1,
-    borderColor: COLORS.brand.primary,
   },
-  retryText: {
+  retryButtonText: {
     fontSize: 14,
     fontWeight: '600',
-    color: COLORS.brand.primary,
-  },
-  emptyText: {
-    fontSize: 14,
-    color: COLORS.text.secondary,
-    textAlign: 'center',
-    maxWidth: 400,
-  },
-  list: {
-    gap: 16,
-    paddingBottom: 20,
+    color: COLORS.neutral.white,
   },
 })

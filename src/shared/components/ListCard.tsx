@@ -1,7 +1,7 @@
 import { View, StyleSheet, TouchableOpacity, Image } from 'react-native'
 import { Text } from './Typography'
 import { COLORS } from '../styles/colors'
-import { MdEdit } from 'react-icons/md'
+import { MdEdit, MdDelete } from 'react-icons/md'
 
 interface RecipeCardProps {
   title: string
@@ -9,6 +9,7 @@ interface RecipeCardProps {
   lastModified: string
   imageUrl?: string
   onEdit?: () => void
+  onDelete?: () => void
 }
 
 export const ListCard = ({
@@ -17,6 +18,7 @@ export const ListCard = ({
   lastModified,
   imageUrl,
   onEdit,
+  onDelete,
 }: RecipeCardProps) => {
   const defaultImageUrl =
     'https://images.unsplash.com/photo-1535958636474-b021ee887b13?w=100&h=100&fit=crop'
@@ -44,10 +46,20 @@ export const ListCard = ({
       </View>
 
       <View style={styles.footer}>
-        <TouchableOpacity style={styles.editButton} onPress={onEdit}>
-          <MdEdit size={16} color={COLORS.text.secondary} />
-          <Text style={styles.editButtonText}>Editar</Text>
-        </TouchableOpacity>
+        <View style={styles.actions}>
+          {onEdit && (
+            <TouchableOpacity style={styles.actionButton} onPress={onEdit}>
+              <MdEdit size={16} color={COLORS.text.secondary} />
+              <Text style={styles.actionButtonText}>Editar</Text>
+            </TouchableOpacity>
+          )}
+          {onDelete && (
+            <TouchableOpacity style={styles.deleteButton} onPress={onDelete}>
+              <MdDelete size={16} color="#EF4444" />
+              <Text style={styles.deleteButtonText}>Deletar</Text>
+            </TouchableOpacity>
+          )}
+        </View>
       </View>
     </View>
   )
@@ -108,15 +120,29 @@ const styles = StyleSheet.create({
     borderTopWidth: 1,
     borderTopColor: COLORS.border.light,
   },
-  editButton: {
+  actions: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 6,
-    paddingVertical: 4,
+    gap: 12,
   },
-  editButtonText: {
-    fontSize: 14,
+  actionButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+  },
+  actionButtonText: {
+    fontSize: 13,
     fontWeight: '500',
     color: COLORS.text.secondary,
+  },
+  deleteButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+  },
+  deleteButtonText: {
+    fontSize: 13,
+    fontWeight: '500',
+    color: '#EF4444',
   },
 })

@@ -74,7 +74,6 @@ const styles = StyleSheet.create({
     borderRadius: 8,
     gap: 8,
   },
-  // Variants
   primary: {
     backgroundColor: COLORS.brand.primary,
     shadowColor: '#A84900',

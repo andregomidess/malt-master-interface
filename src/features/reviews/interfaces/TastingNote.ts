@@ -128,3 +128,29 @@ export const truncateText = (text: string, maxLength: number): string => {
   return text.substring(0, maxLength) + '...'
 }
 
+export enum TastingNoteSortBy {
+  TASTING_DATE = 'tastingDate',
+  OVERALL_SCORE = 'overallScore',
+  CREATED_AT = 'createdAt',
+}
+
+export enum SortOrder {
+  ASC = 'ASC',
+  DESC = 'DESC',
+}
+
+export interface TastingNoteQueryParams {
+  search?: string
+  batchId?: string
+  sortBy?: TastingNoteSortBy
+  order?: SortOrder
+  page?: number
+  take?: number
+}
+
+export interface PaginatedTastingNotes {
+  data: TastingNote[]
+  total: number
+  page: number
+  totalPages: number
+}

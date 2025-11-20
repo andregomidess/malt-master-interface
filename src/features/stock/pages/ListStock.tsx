@@ -7,6 +7,7 @@ import {
   NativeScrollEvent,
 } from 'react-native'
 import { useState, useRef, useCallback } from 'react'
+import { useNavigate } from 'react-router'
 import { Layout } from '../../../shared/components/Layout'
 import { Heading, Text } from '../../../shared/components/Typography'
 import { InputText } from '../../../shared/components/InputText'
@@ -17,11 +18,11 @@ import { StockCard } from '../components/StockCard'
 import { useInfiniteInventoryItems } from '../hooks/useInfiniteInventoryItems'
 import { useInventoryStats } from '../hooks/useInventoryStats'
 import { InventoryItemType } from '../interfaces/inventory'
-import toast from 'react-hot-toast'
 
 type FilterType = 'all' | InventoryItemType
 
 export const ListStock = () => {
+  const navigate = useNavigate()
   const [activeFilter, setActiveFilter] = useState<FilterType>('all')
   const [searchQuery, setSearchQuery] = useState('')
   const scrollViewRef = useRef<ScrollView>(null)
@@ -61,17 +62,11 @@ export const ListStock = () => {
   )
 
   const handleEdit = (itemId: string) => {
-    console.log('Editar item:', itemId)
-    toast('Funcionalidade de edição em desenvolvimento', {
-      icon: '🚧',
-    })
+    navigate(`/stock/${itemId}/edit`)
   }
 
   const handleAddItem = () => {
-    console.log('Adicionar novo item ao estoque')
-    toast('Funcionalidade de adicionar item em desenvolvimento', {
-      icon: '🚧',
-    })
+    navigate('/stock/new')
   }
 
   const filters = [

@@ -5,6 +5,27 @@ export type BatchStatus =
   | 'packaged'
   | 'completed'
 
+export enum BatchSortBy {
+  NAME = 'name',
+  BREW_DATE = 'brewDate',
+  STATUS = 'status',
+  CREATED_AT = 'createdAt',
+  PACKAGING_DATE = 'packagingDate',
+  READY_DATE = 'readyDate',
+}
+
+export enum SortOrder {
+  ASC = 'ASC',
+  DESC = 'DESC',
+}
+
+export interface PaginatedResult<T> {
+  data: T[]
+  total: number
+  page: number
+  totalPages: number
+}
+
 export interface Batch {
   id: string
   name: string | null
@@ -14,15 +35,20 @@ export interface Batch {
     id: string
     name: string
     styleName?: string | null
+    beerStyle?: {
+      id: string
+      name: string
+    } | null
     og?: number | null
     fg?: number | null
     ibu?: number | null
     color?: number | null
     abv?: number | null
-  }
+  } | null
   equipment?: { id: string; name: string } | null
   brewDate?: string | null
   packagingDate?: string | null
+  readyDate?: string | null
   plannedVolume?: number | null
   finalVolume?: number | null
   actualOriginalGravity?: number | null
@@ -32,7 +58,20 @@ export interface Batch {
   actualAbv?: number | null
   actualEfficiency?: number | null
   observations?: string | null
+  createdAt?: string
+  updatedAt?: string
 }
+
+export interface BatchQueryParams {
+  page?: number
+  take?: number
+  search?: string
+  sortBy?: BatchSortBy
+  order?: SortOrder
+  status?: BatchStatus
+}
+
+export type PaginatedBatches = PaginatedResult<Batch>
 
 export type MashStepType = 'infusion' | 'temperature' | 'decoction'
 

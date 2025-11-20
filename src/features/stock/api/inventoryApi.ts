@@ -104,6 +104,13 @@ export const updateItemQuantity = async (
   return response.data
 }
 
+export const getInventoryItemById = async (
+  itemId: string,
+): Promise<InventoryItem> => {
+  const response = await maltMasterApi.get(`/inventory-items/${itemId}`)
+  return response.data
+}
+
 export const removeInventoryItem = async (
   itemId: string,
 ): Promise<{ message: string }> => {

@@ -4,6 +4,8 @@ import {
   TastingNoteInput,
   TastingNoteStatistics,
   BatchAverageScores,
+  TastingNoteQueryParams,
+  PaginatedTastingNotes,
 } from '../interfaces/TastingNote'
 
 const TASTING_NOTES_BASE_URL = '/tasting-notes'
@@ -13,6 +15,17 @@ export const tastingNotesApi = {
   findAll: async (): Promise<TastingNote[]> => {
     const response = await maltMasterApi.get<TastingNote[]>(
       TASTING_NOTES_BASE_URL,
+    )
+    return response.data
+  },
+
+  // Lista avaliações do usuário com paginação
+  findAllPaginated: async (
+    params?: TastingNoteQueryParams,
+  ): Promise<PaginatedTastingNotes> => {
+    const response = await maltMasterApi.get<PaginatedTastingNotes>(
+      TASTING_NOTES_BASE_URL,
+      { params },
     )
     return response.data
   },
@@ -84,4 +97,3 @@ export const tastingNotesApi = {
     return response.data
   },
 }
-

@@ -27,6 +27,7 @@ export enum YeastInventoryUnit {
 
 export interface BaseInventoryItem {
   id: string
+  name: string
   type: InventoryItemType
   quantity: number
   purchaseDate: string | null
@@ -133,7 +134,7 @@ export interface Inventory {
 // Inputs para criar/atualizar itens
 export interface CreateFermentableInventoryItemInput {
   type: InventoryItemType.FERMENTABLE
-  fermentableId: string
+  fermentable: string
   quantity: number
   unit: FermentableInventoryUnit
   purchaseDate?: string
@@ -148,7 +149,7 @@ export interface CreateFermentableInventoryItemInput {
 
 export interface CreateHopInventoryItemInput {
   type: InventoryItemType.HOP
-  hopId: string
+  hop: string
   quantity: number
   unit: HopInventoryUnit
   purchaseDate?: string
@@ -162,7 +163,7 @@ export interface CreateHopInventoryItemInput {
 
 export interface CreateYeastInventoryItemInput {
   type: InventoryItemType.YEAST
-  yeastId: string
+  yeast: string
   quantity: number
   unit: YeastInventoryUnit
   purchaseDate?: string

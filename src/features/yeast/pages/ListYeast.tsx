@@ -1,51 +1,111 @@
-import { useState } from 'react'
-import { View, StyleSheet, TouchableOpacity } from 'react-native'
+import {
+  View,
+  StyleSheet,
+  TouchableOpacity,
+  ScrollView,
+  NativeSyntheticEvent,
+  NativeScrollEvent,
+  ActivityIndicator,
+} from 'react-native'
+import { useState, useCallback, useMemo } from 'react'
+import { useNavigate } from 'react-router'
 import { Layout } from '../../../shared/components/Layout'
 import { Heading, Text } from '../../../shared/components/Typography'
 import { InputText } from '../../../shared/components/InputText'
 import { COLORS } from '../../../shared/styles/colors'
 import { BiPlus, BiSearch } from 'react-icons/bi'
 import { MdSort } from 'react-icons/md'
-import {
-  mockYeastsData,
-  YeastType,
-  calculateYeastStats,
-  filterYeastsByType,
-  searchYeasts,
-  sortYeasts,
-  YeastSortBy,
-  yeastTypeLabels,
-} from '../data/mockYeastsData'
 import { YeastStats } from '../components/YeastStats'
 import { YeastCard } from '../components/YeastCard'
+import { useYeastsList } from '../hooks/useYeasts'
+import { useDeleteYeast } from '../hooks/useDeleteYeast'
+import {
+  YeastType,
+  YeastSortBy,
+  SortOrder,
+  yeastTypeLabels,
+} from '../interfaces/Yeast'
+import { calculateYeastStats, filterYeastsByType } from '../data/mockYeastsData'
+
+type FilterType = YeastType | 'all' | 'wild-bacteria'
+type SortByOption = 'name' | 'attenuation' | 'temperature' | 'type'
 
 export const ListYeast = () => {
-  const [activeFilter, setActiveFilter] = useState<
-    YeastType | 'all' | 'wild-bacteria'
-  >('all')
+  const navigate = useNavigate()
+  const [activeFilter, setActiveFilter] = useState<FilterType>('all')
   const [searchQuery, setSearchQuery] = useState('')
-  const [sortBy, setSortBy] = useState<YeastSortBy>('name')
+  const [sortBy, setSortBy] = useState<SortByOption>('name')
+  const order = SortOrder.DESC
 
-  const stats = calculateYeastStats(mockYeastsData)
-
-  let filteredYeasts = mockYeastsData
-
-  if (activeFilter === 'wild-bacteria') {
-    filteredYeasts = mockYeastsData.filter(
-      y => y.type === YeastType.WILD || y.type === YeastType.BACTERIA,
-    )
-  } else {
-    filteredYeasts = filterYeastsByType(mockYeastsData, activeFilter)
+  const mapSortByToBackend = (sort: string): YeastSortBy => {
+    switch (sort) {
+      case 'name':
+        return YeastSortBy.NAME
+      case 'attenuation':
+        return YeastSortBy.ATTENUATION
+      case 'temperature':
+        return YeastSortBy.CREATED_AT // Backend não tem temperatura como sort, usar data
+      case 'type':
+        return YeastSortBy.TYPE
+      default:
+        return YeastSortBy.NAME
+    }
   }
 
-  if (searchQuery) {
-    filteredYeasts = searchYeasts(filteredYeasts, searchQuery)
-  }
+  const {
+    yeasts,
+    isLoading,
+    error,
+    fetchNextPage,
+    hasNextPage,
+    isFetchingNextPage,
+  } = useYeastsList(searchQuery, mapSortByToBackend(sortBy), order)
 
-  filteredYeasts = sortYeasts(filteredYeasts, sortBy)
+  const { deleteYeast } = useDeleteYeast()
+
+  // Filtrar por tipo no front-end
+  const filteredYeasts = useMemo(() => {
+    if (activeFilter === 'wild-bacteria') {
+      return yeasts.filter(
+        y => y.type === YeastType.WILD || y.type === YeastType.BACTERIA,
+      )
+    }
+    return filterYeastsByType(yeasts, activeFilter)
+  }, [yeasts, activeFilter])
+
+  // Calcular estatísticas
+  const stats = useMemo(() => calculateYeastStats(yeasts), [yeasts])
+
+  const handleScroll = useCallback(
+    (event: NativeSyntheticEvent<NativeScrollEvent>) => {
+      const { layoutMeasurement, contentOffset, contentSize } =
+        event.nativeEvent
+      const paddingToBottom = 20
+
+      const isCloseToBottom =
+        layoutMeasurement.height + contentOffset.y >=
+        contentSize.height - paddingToBottom
+
+      if (isCloseToBottom && hasNextPage && !isFetchingNextPage) {
+        fetchNextPage()
+      }
+    },
+    [hasNextPage, isFetchingNextPage, fetchNextPage],
+  )
+
+  const handleDelete = async (id: string) => {
+    if (confirm('Tem certeza que deseja deletar esta levedura?')) {
+      try {
+        await deleteYeast(id)
+        alert('Levedura deletada com sucesso!')
+      } catch {
+        alert('Erro ao deletar levedura')
+      }
+    }
+  }
 
   const filters: Array<{
-    id: YeastType | 'all' | 'wild-bacteria'
+    id: FilterType
     label: string
   }> = [
     { id: 'all', label: 'Todos' },
@@ -54,7 +114,7 @@ export const ListYeast = () => {
     { id: 'wild-bacteria', label: 'Selvagens & Bactérias' },
   ]
 
-  const sortOptions: Array<{ id: YeastSortBy; label: string }> = [
+  const sortOptions: Array<{ id: SortByOption; label: string }> = [
     { id: 'name', label: 'Nome' },
     { id: 'attenuation', label: 'Atenuação' },
     { id: 'temperature', label: 'Temperatura' },
@@ -68,7 +128,10 @@ export const ListYeast = () => {
           <Heading variant="h3" style={styles.title}>
             Catálogo de Leveduras
           </Heading>
-          <TouchableOpacity style={styles.addButton}>
+          <TouchableOpacity
+            style={styles.addButton}
+            onPress={() => navigate('/yeast/new')}
+          >
             <BiPlus size={20} color={COLORS.neutral.white} />
             <Text style={styles.addButtonText}>Adicionar Levedura</Text>
           </TouchableOpacity>
@@ -143,24 +206,55 @@ export const ListYeast = () => {
           </View>
         </View>
 
-        <View style={styles.yeastsGrid}>
-          {filteredYeasts.map(yeast => (
-            <View key={yeast.id} style={styles.yeastCardWrapper}>
-              <YeastCard
-                yeast={yeast}
-                onEdit={() => console.log('Editar', yeast.id)}
-              />
+        <ScrollView
+          style={styles.scrollView}
+          contentContainerStyle={styles.scrollContent}
+          onScroll={handleScroll}
+          scrollEventThrottle={400}
+        >
+          {isLoading ? (
+            <View style={styles.loadingContainer}>
+              <ActivityIndicator size="large" color={COLORS.brand.primary} />
+              <Text style={styles.loadingText}>Carregando leveduras...</Text>
             </View>
-          ))}
-        </View>
+          ) : error ? (
+            <View style={styles.errorContainer}>
+              <Text style={styles.errorText}>
+                Erro ao carregar leveduras: {error.message}
+              </Text>
+            </View>
+          ) : filteredYeasts.length === 0 ? (
+            <View style={styles.emptyState}>
+              <Text style={styles.emptyStateText}>
+                {searchQuery
+                  ? 'Nenhuma levedura encontrada para a busca.'
+                  : 'Nenhuma levedura encontrada com os filtros selecionados'}
+              </Text>
+            </View>
+          ) : (
+            <>
+              <View style={styles.yeastsGrid}>
+                {filteredYeasts.map(yeast => (
+                  <View key={yeast.id} style={styles.yeastCardWrapper}>
+                    <YeastCard
+                      yeast={yeast}
+                      onEdit={() => navigate(`/yeast/${yeast.id}/edit`)}
+                      onDelete={() => handleDelete(yeast.id)}
+                    />
+                  </View>
+                ))}
+              </View>
 
-        {filteredYeasts.length === 0 && (
-          <View style={styles.emptyState}>
-            <Text style={styles.emptyStateText}>
-              Nenhuma levedura encontrada com os filtros selecionados
-            </Text>
-          </View>
-        )}
+              {isFetchingNextPage && (
+                <View style={styles.loadingMoreContainer}>
+                  <Text style={styles.loadingText}>
+                    Carregando mais leveduras...
+                  </Text>
+                </View>
+              )}
+            </>
+          )}
+        </ScrollView>
       </View>
     </Layout>
   )
@@ -306,6 +400,38 @@ const styles = StyleSheet.create({
   emptyStateText: {
     fontSize: 16,
     color: COLORS.text.secondary,
+    textAlign: 'center',
+  },
+  scrollView: {
+    flex: 1,
+  },
+  scrollContent: {
+    paddingBottom: 24,
+  },
+  loadingContainer: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 60,
+    gap: 12,
+  },
+  loadingText: {
+    fontSize: 14,
+    color: COLORS.text.secondary,
+  },
+  loadingMoreContainer: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 24,
+  },
+  errorContainer: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 48,
+    paddingHorizontal: 24,
+  },
+  errorText: {
+    fontSize: 14,
+    color: '#EF4444',
     textAlign: 'center',
   },
 })

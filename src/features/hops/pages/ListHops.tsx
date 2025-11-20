@@ -1,5 +1,14 @@
-import { View, StyleSheet, TouchableOpacity } from 'react-native'
-import { useState } from 'react'
+import {
+  View,
+  StyleSheet,
+  TouchableOpacity,
+  ScrollView,
+  NativeSyntheticEvent,
+  NativeScrollEvent,
+  ActivityIndicator,
+} from 'react-native'
+import { useState, useCallback, useMemo } from 'react'
+import { useNavigate } from 'react-router'
 import { Layout } from '../../../shared/components/Layout'
 import { Heading, Text } from '../../../shared/components/Typography'
 import { InputText } from '../../../shared/components/InputText'
@@ -8,38 +17,90 @@ import { BiPlus, BiSearch } from 'react-icons/bi'
 import { MdSort } from 'react-icons/md'
 import { HopStats } from '../components/HopStats'
 import { HopCard } from '../components/HopCard'
-import {
-  mockHopsData,
-  calculateHopStats,
-  filterHopsByUse,
-  searchHops,
-  sortHops,
-  HopUse,
-  HopSortBy,
-} from '../data/mockHopsData'
+import { useHopsList } from '../hooks/useHops'
+import { useDeleteHop } from '../hooks/useDeleteHop'
+import { HopUse, HopSortBy, SortOrder } from '../interfaces/Hop'
+import { calculateHopStats, filterHopsByUse } from '../helpers/hopHelpers'
 
 type FilterType = 'all' | HopUse
+type SortByOption = 'name' | 'alphaAcids' | 'cost' | 'origin'
 
 export const ListHops = () => {
+  const navigate = useNavigate()
   const [activeFilter, setActiveFilter] = useState<FilterType>('all')
   const [searchQuery, setSearchQuery] = useState('')
-  const [sortBy, setSortBy] = useState<HopSortBy>('name')
+  const [sortBy, setSortBy] = useState<SortByOption>('name')
   const [showSortMenu, setShowSortMenu] = useState(false)
+  const order = SortOrder.DESC
 
-  const filteredByUse = filterHopsByUse(mockHopsData, activeFilter)
-  const filteredBySearch = searchQuery
-    ? searchHops(filteredByUse, searchQuery)
-    : filteredByUse
-  const sortedHops = sortHops(filteredBySearch, sortBy)
+  const mapSortByToBackend = (sort: string): HopSortBy => {
+    switch (sort) {
+      case 'name':
+        return HopSortBy.NAME
+      case 'alphaAcids':
+        return HopSortBy.ALPHA_ACIDS
+      case 'cost':
+        return HopSortBy.COST
+      case 'origin':
+        return HopSortBy.NAME // Backend não tem origem como sort, usar nome
+      default:
+        return HopSortBy.NAME
+    }
+  }
 
-  const stats = calculateHopStats(mockHopsData)
+  const {
+    hops,
+    isLoading,
+    error,
+    fetchNextPage,
+    hasNextPage,
+    isFetchingNextPage,
+  } = useHopsList(searchQuery, mapSortByToBackend(sortBy), order)
+
+  const { deleteHop } = useDeleteHop()
+
+  // Filtrar por uso no front-end
+  const filteredHops = useMemo(() => {
+    return filterHopsByUse(hops, activeFilter)
+  }, [hops, activeFilter])
+
+  // Calcular estatísticas
+  const stats = useMemo(() => calculateHopStats(hops), [hops])
+
+  const handleScroll = useCallback(
+    (event: NativeSyntheticEvent<NativeScrollEvent>) => {
+      const { layoutMeasurement, contentOffset, contentSize } =
+        event.nativeEvent
+      const paddingToBottom = 20
+
+      const isCloseToBottom =
+        layoutMeasurement.height + contentOffset.y >=
+        contentSize.height - paddingToBottom
+
+      if (isCloseToBottom && hasNextPage && !isFetchingNextPage) {
+        fetchNextPage()
+      }
+    },
+    [hasNextPage, isFetchingNextPage, fetchNextPage],
+  )
 
   const handleEdit = (hopId: string) => {
-    console.log('Editar lúpulo:', hopId)
+    navigate(`/hops/${hopId}/edit`)
   }
 
   const handleAddHop = () => {
-    console.log('Adicionar novo lúpulo')
+    navigate('/hops/new')
+  }
+
+  const handleDelete = async (id: string) => {
+    if (confirm('Tem certeza que deseja deletar este lúpulo?')) {
+      try {
+        await deleteHop(id)
+        alert('Lúpulo deletado com sucesso!')
+      } catch {
+        alert('Erro ao deletar lúpulo')
+      }
+    }
   }
 
   const filters = [
@@ -50,14 +111,14 @@ export const ListHops = () => {
     { id: HopUse.DUAL_PURPOSE as FilterType, label: 'Duplo Propósito' },
   ]
 
-  const sortOptions: { id: HopSortBy; label: string }[] = [
+  const sortOptions: { id: SortByOption; label: string }[] = [
     { id: 'name', label: 'Nome' },
     { id: 'alphaAcids', label: 'Alfa Ácidos' },
     { id: 'cost', label: 'Custo' },
     { id: 'origin', label: 'Origem' },
   ]
 
-  const sortLabels: Record<HopSortBy, string> = {
+  const sortLabels: Record<SortByOption, string> = {
     name: 'Nome',
     alphaAcids: 'Alfa Ácidos',
     cost: 'Custo',
@@ -162,23 +223,55 @@ export const ListHops = () => {
           </View>
         </View>
 
-        <View style={styles.hopsGrid}>
-          {sortedHops.map(hop => (
-            <View key={hop.id} style={styles.cardWrapper}>
-              <HopCard hop={hop} onEdit={() => handleEdit(hop.id)} />
+        <ScrollView
+          style={styles.scrollView}
+          contentContainerStyle={styles.scrollContent}
+          onScroll={handleScroll}
+          scrollEventThrottle={400}
+        >
+          {isLoading ? (
+            <View style={styles.loadingContainer}>
+              <ActivityIndicator size="large" color={COLORS.brand.primary} />
+              <Text style={styles.loadingText}>Carregando lúpulos...</Text>
             </View>
-          ))}
-        </View>
+          ) : error ? (
+            <View style={styles.errorContainer}>
+              <Text style={styles.errorText}>
+                Erro ao carregar lúpulos: {error.message}
+              </Text>
+            </View>
+          ) : filteredHops.length === 0 ? (
+            <View style={styles.emptyState}>
+              <Text style={styles.emptyStateText}>
+                {searchQuery
+                  ? 'Nenhum lúpulo encontrado para a busca.'
+                  : 'Nenhum lúpulo nesta categoria.'}
+              </Text>
+            </View>
+          ) : (
+            <>
+              <View style={styles.hopsGrid}>
+                {filteredHops.map(hop => (
+                  <View key={hop.id} style={styles.cardWrapper}>
+                    <HopCard
+                      hop={hop}
+                      onEdit={() => handleEdit(hop.id)}
+                      onDelete={() => handleDelete(hop.id)}
+                    />
+                  </View>
+                ))}
+              </View>
 
-        {sortedHops.length === 0 && (
-          <View style={styles.emptyState}>
-            <Text style={styles.emptyStateText}>
-              {searchQuery
-                ? 'Nenhum lúpulo encontrado para a busca.'
-                : 'Nenhum lúpulo nesta categoria.'}
-            </Text>
-          </View>
-        )}
+              {isFetchingNextPage && (
+                <View style={styles.loadingMoreContainer}>
+                  <Text style={styles.loadingText}>
+                    Carregando mais lúpulos...
+                  </Text>
+                </View>
+              )}
+            </>
+          )}
+        </ScrollView>
       </View>
     </Layout>
   )
@@ -340,5 +433,37 @@ const styles = StyleSheet.create({
   emptyStateText: {
     fontSize: 14,
     color: COLORS.text.secondary,
+  },
+  scrollView: {
+    flex: 1,
+  },
+  scrollContent: {
+    paddingBottom: 24,
+  },
+  loadingContainer: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 60,
+    gap: 12,
+  },
+  loadingText: {
+    fontSize: 14,
+    color: COLORS.text.secondary,
+  },
+  loadingMoreContainer: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 24,
+  },
+  errorContainer: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 48,
+    paddingHorizontal: 24,
+  },
+  errorText: {
+    fontSize: 14,
+    color: '#EF4444',
+    textAlign: 'center',
   },
 })

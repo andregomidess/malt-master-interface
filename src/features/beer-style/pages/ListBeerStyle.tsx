@@ -3,8 +3,12 @@ import {
   StyleSheet,
   ActivityIndicator,
   TouchableOpacity,
+  ScrollView,
+  NativeSyntheticEvent,
+  NativeScrollEvent,
 } from 'react-native'
-import { useState } from 'react'
+import { useState, useCallback, useMemo } from 'react'
+import { useNavigate } from 'react-router'
 import { Layout } from '../../../shared/components/Layout'
 import { Heading, Text } from '../../../shared/components/Typography'
 import { InputText } from '../../../shared/components/InputText'
@@ -13,34 +17,78 @@ import { BiPlus, BiSearch } from 'react-icons/bi'
 import { MdSort } from 'react-icons/md'
 import { BeerStyleCard } from '../components/BeerStyleCard'
 import { BeerStyleStats } from '../components/BeerStyleStats'
-import { useBeerStyles } from '../hooks/useBeerStyles'
+import { useBeerStylesList } from '../hooks/useBeerStyles'
 import { useDeleteBeerStyle } from '../hooks/useDeleteBeerStyle'
 import {
-  filterByCategory,
-  searchStyles,
-  sortStyles,
   calculateBeerStyleStats,
   BeerStyleCategory,
-  BeerStyleSortBy,
 } from '../data/mockBeerStylesData'
+import { BeerStyleSortBy, SortOrder } from '../interfaces/BeerStyle'
+
+type SortByOption = 'name' | 'category' | 'date'
 
 export const ListBeerStyle = () => {
-  const { beerStyles, isLoading, refetch } = useBeerStyles()
-  const { deleteStyle } = useDeleteBeerStyle()
-
+  const navigate = useNavigate()
   const [activeFilter, setActiveFilter] = useState<BeerStyleCategory>('all')
   const [searchQuery, setSearchQuery] = useState('')
-  const [sortBy, setSortBy] = useState<BeerStyleSortBy>('name')
+  const [sortBy, setSortBy] = useState<SortByOption>('name')
+  const order = SortOrder.DESC
+
+  const mapSortByToBackend = (sort: string): BeerStyleSortBy => {
+    switch (sort) {
+      case 'name':
+        return BeerStyleSortBy.NAME
+      case 'category':
+        return BeerStyleSortBy.CATEGORY
+      case 'date':
+        return BeerStyleSortBy.CREATED_AT
+      default:
+        return BeerStyleSortBy.NAME
+    }
+  }
+
+  const {
+    beerStyles,
+    isLoading,
+    error,
+    fetchNextPage,
+    hasNextPage,
+    isFetchingNextPage,
+  } = useBeerStylesList(searchQuery, mapSortByToBackend(sortBy), order)
+
+  const { deleteStyle } = useDeleteBeerStyle()
+
+  // Filtrar por categoria no front-end (já que o backend não suporta filtro por categoria ainda)
+  const filteredStyles = useMemo(() => {
+    if (activeFilter === 'all') return beerStyles
+    return beerStyles.filter(style => {
+      if (activeFilter === 'Ale') return style.category === 'Ale'
+      if (activeFilter === 'Lager') return style.category === 'Lager'
+      if (activeFilter === 'Selvagem')
+        return style.subCategory?.includes('Sour')
+      return true
+    })
+  }, [beerStyles, activeFilter])
 
   // Calcular estatísticas
-  const stats = calculateBeerStyleStats(beerStyles)
+  const stats = useMemo(() => calculateBeerStyleStats(beerStyles), [beerStyles])
 
-  // Aplicar filtros, busca e ordenação
-  let filteredStyles = filterByCategory(beerStyles, activeFilter)
-  if (searchQuery) {
-    filteredStyles = searchStyles(filteredStyles, searchQuery)
-  }
-  filteredStyles = sortStyles(filteredStyles, sortBy)
+  const handleScroll = useCallback(
+    (event: NativeSyntheticEvent<NativeScrollEvent>) => {
+      const { layoutMeasurement, contentOffset, contentSize } =
+        event.nativeEvent
+      const paddingToBottom = 20
+
+      const isCloseToBottom =
+        layoutMeasurement.height + contentOffset.y >=
+        contentSize.height - paddingToBottom
+
+      if (isCloseToBottom && hasNextPage && !isFetchingNextPage) {
+        fetchNextPage()
+      }
+    },
+    [hasNextPage, isFetchingNextPage, fetchNextPage],
+  )
 
   // Filtros
   const filters: Array<{
@@ -54,18 +102,16 @@ export const ListBeerStyle = () => {
   ]
 
   // Opções de ordenação
-  const sortOptions: Array<{ id: BeerStyleSortBy; label: string }> = [
+  const sortOptions: Array<{ id: SortByOption; label: string }> = [
     { id: 'name', label: 'Nome' },
-    { id: 'abv', label: 'ABV' },
-    { id: 'ibu', label: 'IBU' },
-    { id: 'color', label: 'Cor' },
+    { id: 'category', label: 'Categoria' },
+    { id: 'date', label: 'Data' },
   ]
 
   const handleDelete = async (id: string) => {
     if (confirm('Tem certeza que deseja deletar este estilo?')) {
       try {
         await deleteStyle(id)
-        await refetch()
         alert('Estilo deletado com sucesso!')
       } catch {
         alert('Erro ao deletar estilo')
@@ -81,7 +127,10 @@ export const ListBeerStyle = () => {
           <Heading variant="h3" style={styles.title}>
             Catálogo de Estilos de Cerveja
           </Heading>
-          <TouchableOpacity style={styles.addButton}>
+          <TouchableOpacity
+            style={styles.addButton}
+            onPress={() => navigate('/beer-styles/new')}
+          >
             <BiPlus size={20} color={COLORS.neutral.white} />
             <Text style={styles.addButtonText}>Adicionar Estilo</Text>
           </TouchableOpacity>
@@ -162,34 +211,56 @@ export const ListBeerStyle = () => {
         </View>
 
         {/* Content */}
-        {isLoading ? (
-          <View style={styles.loadingContainer}>
-            <ActivityIndicator size="large" color={COLORS.brand.primary} />
-            <Text style={styles.loadingText}>Carregando estilos...</Text>
-          </View>
-        ) : (
-          <View style={styles.stylesGrid}>
-            {filteredStyles.map(style => (
-              <View key={style.id} style={styles.styleCardWrapper}>
-                <BeerStyleCard
-                  beerStyle={style}
-                  onView={() => console.log('Ver detalhes:', style.id)}
-                  onEdit={() => console.log('Editar:', style.id)}
-                  onDelete={() => handleDelete(style.id)}
-                />
+        <ScrollView
+          style={styles.scrollView}
+          contentContainerStyle={styles.scrollContent}
+          onScroll={handleScroll}
+          scrollEventThrottle={400}
+        >
+          {isLoading ? (
+            <View style={styles.loadingContainer}>
+              <ActivityIndicator size="large" color={COLORS.brand.primary} />
+              <Text style={styles.loadingText}>Carregando estilos...</Text>
+            </View>
+          ) : error ? (
+            <View style={styles.errorContainer}>
+              <Text style={styles.errorText}>
+                Erro ao carregar estilos: {error.message}
+              </Text>
+            </View>
+          ) : filteredStyles.length === 0 ? (
+            <View style={styles.emptyState}>
+              <Text style={styles.emptyStateText}>
+                {searchQuery
+                  ? 'Nenhum estilo encontrado para a busca.'
+                  : 'Nenhum estilo encontrado com os filtros selecionados'}
+              </Text>
+            </View>
+          ) : (
+            <>
+              <View style={styles.stylesGrid}>
+                {filteredStyles.map(style => (
+                  <View key={style.id} style={styles.styleCardWrapper}>
+                    <BeerStyleCard
+                      beerStyle={style}
+                      onView={() => console.log('Ver detalhes:', style.id)}
+                      onEdit={() => navigate(`/beer-styles/${style.id}/edit`)}
+                      onDelete={() => handleDelete(style.id)}
+                    />
+                  </View>
+                ))}
               </View>
-            ))}
-          </View>
-        )}
 
-        {/* Empty State */}
-        {filteredStyles.length === 0 && !isLoading && (
-          <View style={styles.emptyState}>
-            <Text style={styles.emptyStateText}>
-              Nenhum estilo encontrado com os filtros selecionados
-            </Text>
-          </View>
-        )}
+              {isFetchingNextPage && (
+                <View style={styles.loadingMoreContainer}>
+                  <Text style={styles.loadingText}>
+                    Carregando mais estilos...
+                  </Text>
+                </View>
+              )}
+            </>
+          )}
+        </ScrollView>
       </View>
     </Layout>
   )
@@ -342,6 +413,28 @@ const styles = StyleSheet.create({
   emptyStateText: {
     fontSize: 16,
     color: COLORS.text.secondary,
+    textAlign: 'center',
+  },
+  scrollView: {
+    flex: 1,
+  },
+  scrollContent: {
+    paddingBottom: 24,
+  },
+  loadingMoreContainer: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 24,
+  },
+  errorContainer: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 48,
+    paddingHorizontal: 24,
+  },
+  errorText: {
+    fontSize: 14,
+    color: '#EF4444',
     textAlign: 'center',
   },
 })

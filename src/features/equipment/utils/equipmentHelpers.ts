@@ -3,6 +3,7 @@ import type {
   EquipmentStats,
 } from '../interfaces/equipment'
 
+// TODO: should be in bck-end
 export const calculateEquipmentStats = (
   equipments: EquipmentWithPublicFlag[],
 ): EquipmentStats => {

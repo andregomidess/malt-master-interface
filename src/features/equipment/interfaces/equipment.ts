@@ -1,4 +1,3 @@
-// Tipos de equipamentos baseados no backend
 export enum EquipmentType {
   KETTLE = 'kettle',
   FERMENTER = 'fermenter',
@@ -36,7 +35,6 @@ export enum ChillerType {
   ICE_BATH = 'ice_bath',
 }
 
-// Traduções
 export const equipmentTypeLabels: Record<EquipmentType, string> = {
   [EquipmentType.KETTLE]: 'Panela',
   [EquipmentType.FERMENTER]: 'Fermentador',
@@ -74,14 +72,12 @@ export const chillerTypeLabels: Record<ChillerType, string> = {
   [ChillerType.ICE_BATH]: 'Banho de Gelo',
 }
 
-// Interfaces que correspondem ao backend
 interface User {
   id: string
   name: string
   email: string
 }
 
-// Interface base para equipamentos
 interface BaseEquipment {
   id: string
   user: User | null // null = público, não-null = do usuário
@@ -96,7 +92,6 @@ interface BaseEquipment {
   deletedAt: string | Date | null
 }
 
-// Interface para Panela/Caldeira
 export interface KettleEquipment extends BaseEquipment {
   type: EquipmentType.KETTLE
   kettleLoss: number
@@ -106,7 +101,6 @@ export interface KettleEquipment extends BaseEquipment {
   heatingSource: HeatingSource
 }
 
-// Interface para Fermentador
 export interface FermenterEquipment extends BaseEquipment {
   type: EquipmentType.FERMENTER
   fermenterLoss: number
@@ -118,7 +112,6 @@ export interface FermenterEquipment extends BaseEquipment {
   maxTemperature: number
 }
 
-// Interface para Resfriador
 export interface ChillerEquipment extends BaseEquipment {
   type: EquipmentType.CHILLER
   coolingCapacity: number
@@ -130,16 +123,13 @@ export interface ChillerEquipment extends BaseEquipment {
   tubeDiameter: number
 }
 
-// Union type para todos os tipos de equipamentos
 export type Equipment = KettleEquipment | FermenterEquipment | ChillerEquipment
 
-// Interface estendida para uso no front-end com campo computado isPublic
 export interface EquipmentWithPublicFlag extends Omit<Equipment, 'user'> {
   user: User | null
   isPublic: boolean
 }
 
-// Helper para converter Equipment do backend para EquipmentWithPublicFlag do front-end
 export const addPublicFlag = (
   equipment: Equipment,
 ): EquipmentWithPublicFlag => {
@@ -149,7 +139,6 @@ export const addPublicFlag = (
   }
 }
 
-// Inputs para criação/edição de equipamentos
 export interface BaseEquipmentInput {
   id?: string
   name: string
@@ -216,7 +205,6 @@ export interface EquipmentQueryParams {
   take?: number
 }
 
-// Resposta paginada do backend
 export interface PaginatedEquipments {
   data: Equipment[]
   total: number
@@ -224,11 +212,9 @@ export interface PaginatedEquipments {
   totalPages: number
 }
 
-// Tipos auxiliares (mantidos para compatibilidade com componentes locais)
 export type FilterType = 'all' | EquipmentType
 export type SortBy = 'name' | 'capacity' | 'date'
 
-// Estatísticas de equipamentos
 export interface EquipmentStats {
   totalEquipments: number
   kettles: number

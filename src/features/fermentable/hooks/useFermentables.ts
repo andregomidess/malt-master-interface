@@ -1,0 +1,66 @@
+import { useInfiniteQuery } from '@tanstack/react-query'
+import { fermentablesApi } from '../api/fermentablesApi'
+import type { FermentableQueryParams } from '../interfaces/Fermentable'
+import { FermentableSortBy, SortOrder } from '../interfaces/Fermentable'
+import { useMemo } from 'react'
+import {
+  addPublicFlag,
+  FermentableWithPublicFlag,
+} from '../interfaces/Fermentable'
+
+interface PaginatedResult {
+  data: FermentableWithPublicFlag[]
+  total: number
+  page: number
+  totalPages: number
+}
+
+export const useFermentables = (
+  params?: Omit<FermentableQueryParams, 'page'>,
+) => {
+  return useInfiniteQuery({
+    queryKey: ['fermentables', params] as const,
+    queryFn: async ({ pageParam }: { pageParam: number }) => {
+      const result = await fermentablesApi.findAllPaginated({
+        ...params,
+        page: pageParam,
+      })
+      return {
+        ...result,
+        data: result.data.map(addPublicFlag) as FermentableWithPublicFlag[],
+      }
+    },
+    initialPageParam: 1,
+    getNextPageParam: (lastPage: PaginatedResult) => {
+      return lastPage.page < lastPage.totalPages ? lastPage.page + 1 : undefined
+    },
+  })
+}
+
+export const useFermentablesList = (
+  searchQuery?: string,
+  sortBy?: FermentableSortBy,
+  order?: SortOrder,
+) => {
+  const queryParams = useMemo(
+    () => ({
+      search: searchQuery || undefined,
+      sortBy: sortBy || FermentableSortBy.NAME,
+      order: order || SortOrder.DESC,
+      take: 20,
+    }),
+    [searchQuery, sortBy, order],
+  )
+
+  const query = useFermentables(queryParams)
+
+  const fermentables = useMemo(() => {
+    if (!query.data?.pages) return []
+    return query.data.pages.flatMap(page => page.data)
+  }, [query.data])
+
+  return {
+    ...query,
+    fermentables,
+  }
+}

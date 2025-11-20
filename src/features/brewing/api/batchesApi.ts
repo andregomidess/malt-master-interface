@@ -1,38 +1,71 @@
-import { Batch, BatchDetail, BrewLog } from '../interfaces/Brewing'
-import { mockBatches, mockDetails, mockLogs } from '../data/mockBatchesData'
+import { maltMasterApi } from '../../../shared/maltMasterApi'
+import {
+  Batch,
+  BatchDetail,
+  BrewLog,
+  BatchQueryParams,
+  PaginatedBatches,
+} from '../interfaces/Brewing'
 
-export async function findAllBatches(): Promise<Batch[]> {
-  await new Promise(resolve => setTimeout(resolve, 300))
-  return mockBatches
+const BATCHES_BASE_URL = '/batches'
+
+export const batchesApi = {
+  findAllPaginated: async (
+    params?: BatchQueryParams,
+  ): Promise<PaginatedBatches> => {
+    const response = await maltMasterApi.get<PaginatedBatches>(
+      BATCHES_BASE_URL,
+      { params },
+    )
+    const data = (response.data.data || []).filter(
+      (item): item is Batch => item != null && item.id != null,
+    )
+    return {
+      ...response.data,
+      data,
+    }
+  },
+
+  findById: async (id: string): Promise<BatchDetail> => {
+    const response = await maltMasterApi.get<BatchDetail>(
+      `${BATCHES_BASE_URL}/${id}`,
+    )
+    return response.data
+  },
+
+  save: async (input: Partial<Batch>): Promise<Batch> => {
+    const response = await maltMasterApi.put<Batch>(BATCHES_BASE_URL, input)
+    return response.data
+  },
+
+  delete: async (id: string): Promise<void> => {
+    await maltMasterApi.delete(`${BATCHES_BASE_URL}/${id}`)
+  },
 }
 
 export async function findBatchById(id: string): Promise<BatchDetail | null> {
-  await new Promise(resolve => setTimeout(resolve, 300))
-  return mockDetails[id] || null
-}
-
-export async function findBatchLogs(id: string): Promise<BrewLog[]> {
-  await new Promise(resolve => setTimeout(resolve, 200))
-  return mockLogs.filter(log => log.batchId === id)
-}
-
-export async function addBatchLog(
-  log: Omit<BrewLog, 'id'>
-): Promise<BrewLog> {
-  await new Promise(resolve => setTimeout(resolve, 150))
-  const created: BrewLog = {
-    ...log,
-    id: `l${Date.now()}`
+  try {
+    const response = await maltMasterApi.get<BatchDetail>(
+      `${BATCHES_BASE_URL}/${id}`,
+    )
+    return response.data
+  } catch {
+    return null
   }
-  mockLogs.push(created)
-  return created
+}
+
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
+export async function findBatchLogs(_id: string): Promise<BrewLog[]> {
+  // TODO: Implement when backend supports batch logs
+  return []
+}
+
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
+export async function addBatchLog(_log: Omit<BrewLog, 'id'>): Promise<BrewLog> {
+  // TODO: Implement when backend supports batch logs
+  throw new Error('Not implemented')
 }
 
 export async function deleteBatch(id: string): Promise<void> {
-  await new Promise(resolve => setTimeout(resolve, 150))
-  const index = mockBatches.findIndex(b => b.id === id)
-  if (index !== -1) {
-    mockBatches.splice(index, 1)
-  }
+  await batchesApi.delete(id)
 }
-

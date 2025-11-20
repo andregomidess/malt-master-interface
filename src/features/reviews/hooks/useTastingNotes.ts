@@ -1,35 +1,54 @@
-import { useState, useEffect } from 'react'
-import { TastingNote } from '../interfaces/TastingNote'
-import { mockTastingNotes } from '../data/mockTastingNotesData'
+import { useInfiniteQuery } from '@tanstack/react-query'
+import { tastingNotesApi } from '../api/tastingNotesApi'
+import type { TastingNoteQueryParams } from '../interfaces/TastingNote'
+import { TastingNoteSortBy, SortOrder } from '../interfaces/TastingNote'
+import { useMemo } from 'react'
 
-interface UseTastingNotesResult {
-  tastingNotes: TastingNote[]
-  isLoading: boolean
-  error: Error | null
-  refetch: () => Promise<void>
+export const useTastingNotes = (
+  params?: Omit<TastingNoteQueryParams, 'page'>,
+) => {
+  return useInfiniteQuery({
+    queryKey: ['tasting-notes', params] as const,
+    queryFn: async ({ pageParam }: { pageParam: number }) => {
+      const result = await tastingNotesApi.findAllPaginated({
+        ...params,
+        page: pageParam,
+      })
+      return result
+    },
+    initialPageParam: 1,
+    getNextPageParam: lastPage => {
+      return lastPage.page < lastPage.totalPages ? lastPage.page + 1 : undefined
+    },
+  })
 }
 
-export const useTastingNotes = (): UseTastingNotesResult => {
-  const [tastingNotes, setTastingNotes] = useState<TastingNote[]>([])
-  const [isLoading, setIsLoading] = useState(true)
-  const [error] = useState<Error | null>(null)
+export const useTastingNotesList = (
+  searchQuery?: string,
+  batchId?: string,
+  sortBy?: TastingNoteSortBy,
+  order?: SortOrder,
+) => {
+  const queryParams = useMemo(
+    () => ({
+      search: searchQuery || undefined,
+      batchId: batchId || undefined,
+      sortBy: sortBy || TastingNoteSortBy.TASTING_DATE,
+      order: order || SortOrder.DESC,
+      take: 20,
+    }),
+    [searchQuery, batchId, sortBy, order],
+  )
 
-  const fetchTastingNotes = async () => {
-    setIsLoading(true)
-    // Simula um delay de carregamento
-    await new Promise(resolve => setTimeout(resolve, 500))
-    setTastingNotes(mockTastingNotes)
-    setIsLoading(false)
-  }
+  const query = useTastingNotes(queryParams)
 
-  useEffect(() => {
-    fetchTastingNotes()
-  }, [])
+  const tastingNotes = useMemo(() => {
+    if (!query.data?.pages) return []
+    return query.data.pages.flatMap(page => page.data)
+  }, [query.data])
 
   return {
+    ...query,
     tastingNotes,
-    isLoading,
-    error,
-    refetch: fetchTastingNotes,
   }
 }

@@ -1,41 +1,107 @@
-import { useState } from 'react'
-import { View, StyleSheet, TouchableOpacity } from 'react-native'
+import {
+  View,
+  StyleSheet,
+  TouchableOpacity,
+  ScrollView,
+  NativeSyntheticEvent,
+  NativeScrollEvent,
+  ActivityIndicator,
+} from 'react-native'
+import { useState, useCallback, useMemo } from 'react'
+import { useNavigate } from 'react-router'
 import { Layout } from '../../../shared/components/Layout'
 import { Heading, Text } from '../../../shared/components/Typography'
 import { InputText } from '../../../shared/components/InputText'
 import { COLORS } from '../../../shared/styles/colors'
 import { BiPlus, BiSearch } from 'react-icons/bi'
 import { MdSort } from 'react-icons/md'
-import {
-  mockWaterProfilesData,
-  ProfileType,
-  calculateWaterStats,
-  filterProfilesByType,
-  searchProfiles,
-  sortProfiles,
-  WaterSortBy,
-  profileTypeLabels,
-} from '../data/mockWaterProfilesData'
 import { WaterProfileStats } from '../components/WaterProfileStats'
 import { WaterProfileCard } from '../components/WaterProfileCard'
+import { useWaterProfilesList } from '../hooks/useWaterProfiles'
+import { useDeleteWaterProfile } from '../hooks/useDeleteWaterProfile'
+import {
+  ProfileType,
+  WaterProfileSortBy,
+  SortOrder,
+  profileTypeLabels,
+} from '../interfaces/WaterProfile'
+import {
+  calculateWaterStats,
+  filterProfilesByType,
+} from '../data/mockWaterProfilesData'
+
+type SortByOption = 'name' | 'hardness' | 'sulfate' | 'ratio'
 
 export const ListWater = () => {
+  const navigate = useNavigate()
   const [activeFilter, setActiveFilter] = useState<ProfileType | 'all'>('all')
   const [searchQuery, setSearchQuery] = useState('')
-  const [sortBy, setSortBy] = useState<WaterSortBy>('name')
+  const [sortBy, setSortBy] = useState<SortByOption>('name')
+  const order = SortOrder.DESC
 
-  const stats = calculateWaterStats(mockWaterProfilesData)
-
-  let filteredProfiles = filterProfilesByType(
-    mockWaterProfilesData,
-    activeFilter,
-  )
-
-  if (searchQuery) {
-    filteredProfiles = searchProfiles(filteredProfiles, searchQuery)
+  const mapSortByToBackend = (sort: string): WaterProfileSortBy => {
+    switch (sort) {
+      case 'name':
+        return WaterProfileSortBy.NAME
+      case 'sulfate':
+        return WaterProfileSortBy.SO4
+      case 'hardness':
+      case 'ratio':
+        return WaterProfileSortBy.CREATED_AT // Backend não tem esses sorts, usar data
+      default:
+        return WaterProfileSortBy.NAME
+    }
   }
 
-  filteredProfiles = sortProfiles(filteredProfiles, sortBy)
+  const {
+    waterProfiles,
+    isLoading,
+    error,
+    fetchNextPage,
+    hasNextPage,
+    isFetchingNextPage,
+  } = useWaterProfilesList(searchQuery, mapSortByToBackend(sortBy), order)
+
+  const { deleteWaterProfile } = useDeleteWaterProfile()
+
+  // Filtrar por tipo no front-end
+  const filteredProfiles = useMemo(() => {
+    return filterProfilesByType(waterProfiles, activeFilter)
+  }, [waterProfiles, activeFilter])
+
+  // Calcular estatísticas
+  const stats = useMemo(
+    () => calculateWaterStats(waterProfiles),
+    [waterProfiles],
+  )
+
+  const handleScroll = useCallback(
+    (event: NativeSyntheticEvent<NativeScrollEvent>) => {
+      const { layoutMeasurement, contentOffset, contentSize } =
+        event.nativeEvent
+      const paddingToBottom = 20
+
+      const isCloseToBottom =
+        layoutMeasurement.height + contentOffset.y >=
+        contentSize.height - paddingToBottom
+
+      if (isCloseToBottom && hasNextPage && !isFetchingNextPage) {
+        fetchNextPage()
+      }
+    },
+    [hasNextPage, isFetchingNextPage, fetchNextPage],
+  )
+
+  const handleDelete = async (id: string) => {
+    if (confirm('Tem certeza que deseja deletar este perfil de água?')) {
+      try {
+        await deleteWaterProfile(id)
+        alert('Perfil de água deletado com sucesso!')
+      } catch {
+        alert('Erro ao deletar perfil de água')
+      }
+    }
+  }
 
   const filters: Array<{
     id: ProfileType | 'all'
@@ -50,7 +116,7 @@ export const ListWater = () => {
     { id: ProfileType.MALTY, label: profileTypeLabels[ProfileType.MALTY] },
   ]
 
-  const sortOptions: Array<{ id: WaterSortBy; label: string }> = [
+  const sortOptions: Array<{ id: SortByOption; label: string }> = [
     { id: 'name', label: 'Nome' },
     { id: 'hardness', label: 'Dureza' },
     { id: 'sulfate', label: 'Sulfato' },
@@ -64,7 +130,10 @@ export const ListWater = () => {
           <Heading variant="h3" style={styles.title}>
             Perfis de Água
           </Heading>
-          <TouchableOpacity style={styles.addButton}>
+          <TouchableOpacity
+            style={styles.addButton}
+            onPress={() => navigate('/water/new')}
+          >
             <BiPlus size={20} color={COLORS.neutral.white} />
             <Text style={styles.addButtonText}>Adicionar Perfil</Text>
           </TouchableOpacity>
@@ -139,24 +208,57 @@ export const ListWater = () => {
           </View>
         </View>
 
-        <View style={styles.profilesGrid}>
-          {filteredProfiles.map(profile => (
-            <View key={profile.id} style={styles.profileCardWrapper}>
-              <WaterProfileCard
-                profile={profile}
-                onEdit={() => console.log('Editar', profile.id)}
-              />
+        <ScrollView
+          style={styles.scrollView}
+          contentContainerStyle={styles.scrollContent}
+          onScroll={handleScroll}
+          scrollEventThrottle={400}
+        >
+          {isLoading ? (
+            <View style={styles.loadingContainer}>
+              <ActivityIndicator size="large" color={COLORS.brand.primary} />
+              <Text style={styles.loadingText}>
+                Carregando perfis de água...
+              </Text>
             </View>
-          ))}
-        </View>
+          ) : error ? (
+            <View style={styles.errorContainer}>
+              <Text style={styles.errorText}>
+                Erro ao carregar perfis de água: {error.message}
+              </Text>
+            </View>
+          ) : filteredProfiles.length === 0 ? (
+            <View style={styles.emptyState}>
+              <Text style={styles.emptyStateText}>
+                {searchQuery
+                  ? 'Nenhum perfil de água encontrado para a busca.'
+                  : 'Nenhum perfil de água encontrado com os filtros selecionados'}
+              </Text>
+            </View>
+          ) : (
+            <>
+              <View style={styles.profilesGrid}>
+                {filteredProfiles.map(profile => (
+                  <View key={profile.id} style={styles.profileCardWrapper}>
+                    <WaterProfileCard
+                      profile={profile}
+                      onEdit={() => navigate(`/water/${profile.id}/edit`)}
+                      onDelete={() => handleDelete(profile.id)}
+                    />
+                  </View>
+                ))}
+              </View>
 
-        {filteredProfiles.length === 0 && (
-          <View style={styles.emptyState}>
-            <Text style={styles.emptyStateText}>
-              Nenhum perfil de água encontrado com os filtros selecionados
-            </Text>
-          </View>
-        )}
+              {isFetchingNextPage && (
+                <View style={styles.loadingMoreContainer}>
+                  <Text style={styles.loadingText}>
+                    Carregando mais perfis...
+                  </Text>
+                </View>
+              )}
+            </>
+          )}
+        </ScrollView>
       </View>
     </Layout>
   )
@@ -302,6 +404,38 @@ const styles = StyleSheet.create({
   emptyStateText: {
     fontSize: 16,
     color: COLORS.text.secondary,
+    textAlign: 'center',
+  },
+  scrollView: {
+    flex: 1,
+  },
+  scrollContent: {
+    paddingBottom: 24,
+  },
+  loadingContainer: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 60,
+    gap: 12,
+  },
+  loadingText: {
+    fontSize: 14,
+    color: COLORS.text.secondary,
+  },
+  loadingMoreContainer: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 24,
+  },
+  errorContainer: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 48,
+    paddingHorizontal: 24,
+  },
+  errorText: {
+    fontSize: 14,
+    color: '#EF4444',
     textAlign: 'center',
   },
 })

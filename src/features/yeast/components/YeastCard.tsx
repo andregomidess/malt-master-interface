@@ -1,14 +1,13 @@
 import { View, StyleSheet, TouchableOpacity } from 'react-native'
 import { Text } from '../../../shared/components/Typography'
 import { COLORS } from '../../../shared/styles/colors'
-import { MdEdit } from 'react-icons/md'
+import { MdEdit, MdDelete } from 'react-icons/md'
 import { BiWorld, BiDroplet } from 'react-icons/bi'
 import { GiChemicalDrop } from 'react-icons/gi'
 import { BsSnow, BsStars, BsLightningChargeFill } from 'react-icons/bs'
 import { FaBacteria } from 'react-icons/fa'
+import { Yeast, YeastType } from '../interfaces/Yeast'
 import {
-  Yeast,
-  YeastType,
   yeastTypeLabels,
   yeastFormatLabels,
   yeastFlocculationLabels,
@@ -25,9 +24,11 @@ import {
 interface YeastCardProps {
   yeast: Yeast
   onEdit?: () => void
+  onDelete?: () => void
 }
 
-export const YeastCard = ({ yeast, onEdit }: YeastCardProps) => {
+export const YeastCard = ({ yeast, onEdit, onDelete }: YeastCardProps) => {
+  const isPublic = yeast.user === null
   const typeConfig = typeColors[yeast.type]
 
   // Ícone baseado no tipo
@@ -46,8 +47,13 @@ export const YeastCard = ({ yeast, onEdit }: YeastCardProps) => {
   const TypeIcon = getTypeIcon()
 
   // Classificações
-  const attenuationLevel = getAttenuationLevel(yeast.attenuationMax || yeast.attenuation)
-  const tempLevel = getTempLevel(yeast.minTemp, yeast.maxTemp)
+  const attenuationLevel = getAttenuationLevel(
+    yeast.attenuation != null ? yeast.attenuation : null,
+  )
+  const tempLevel = getTempLevel(
+    yeast.minTemp != null ? yeast.minTemp : null,
+    yeast.maxTemp != null ? yeast.maxTemp : null,
+  )
   const flocculationConfig = getFlocculationConfig(yeast.flocculation)
 
   // Características especiais
@@ -60,14 +66,17 @@ export const YeastCard = ({ yeast, onEdit }: YeastCardProps) => {
     <View style={styles.card}>
       <View style={styles.header}>
         <View
-          style={[styles.iconContainer, { backgroundColor: typeConfig.bgColor }]}
+          style={[
+            styles.iconContainer,
+            { backgroundColor: typeConfig.bgColor },
+          ]}
         >
           <TypeIcon size={32} color={typeConfig.color} />
         </View>
         <View style={styles.headerContent}>
           <View style={styles.titleRow}>
             <Text style={styles.title}>{yeast.name}</Text>
-            {yeast.isPublic && (
+            {isPublic && (
               <View style={styles.publicBadge}>
                 <BiWorld size={12} color="#6B7280" />
                 <Text style={styles.publicBadgeText}>Público</Text>
@@ -106,7 +115,10 @@ export const YeastCard = ({ yeast, onEdit }: YeastCardProps) => {
       </View>
 
       <View style={styles.content}>
-        {(isClean || isCharacteristic || hasHighAttenuation || hasHighGravity) && (
+        {(isClean ||
+          isCharacteristic ||
+          hasHighAttenuation ||
+          hasHighGravity) && (
           <View style={styles.specialBadges}>
             {isClean && (
               <View style={styles.cleanBadge}>
@@ -162,7 +174,9 @@ export const YeastCard = ({ yeast, onEdit }: YeastCardProps) => {
                     { backgroundColor: tempLevel.bgColor },
                   ]}
                 >
-                  <Text style={[styles.levelBadgeText, { color: tempLevel.color }]}>
+                  <Text
+                    style={[styles.levelBadgeText, { color: tempLevel.color }]}
+                  >
                     {tempLevel.label}
                   </Text>
                 </View>
@@ -175,8 +189,9 @@ export const YeastCard = ({ yeast, onEdit }: YeastCardProps) => {
               <Text style={styles.label}>Atenuação:</Text>
               <View style={styles.valueRow}>
                 <Text style={styles.value}>
-                  {yeast.attenuation}
-                  {yeast.attenuationMax && `-${yeast.attenuationMax}`}%
+                  {yeast.attenuation != null
+                    ? `${Number(yeast.attenuation).toFixed(1)}%`
+                    : 'N/A'}
                 </Text>
                 <View
                   style={[
@@ -257,10 +272,20 @@ export const YeastCard = ({ yeast, onEdit }: YeastCardProps) => {
       </View>
 
       <View style={styles.footer}>
-        <TouchableOpacity style={styles.editButton} onPress={onEdit}>
-          <MdEdit size={16} color={COLORS.text.secondary} />
-          <Text style={styles.editButtonText}>Editar</Text>
-        </TouchableOpacity>
+        <View style={styles.actions}>
+          {onEdit && (
+            <TouchableOpacity style={styles.actionButton} onPress={onEdit}>
+              <MdEdit size={16} color={COLORS.text.secondary} />
+              <Text style={styles.actionButtonText}>Editar</Text>
+            </TouchableOpacity>
+          )}
+          {onDelete && (
+            <TouchableOpacity style={styles.deleteButton} onPress={onDelete}>
+              <MdDelete size={16} color="#EF4444" />
+              <Text style={styles.deleteButtonText}>Deletar</Text>
+            </TouchableOpacity>
+          )}
+        </View>
       </View>
     </View>
   )
@@ -497,16 +522,29 @@ const styles = StyleSheet.create({
     borderTopWidth: 1,
     borderTopColor: COLORS.border.light,
   },
-  editButton: {
+  actions: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 6,
-    paddingVertical: 4,
+    gap: 12,
   },
-  editButtonText: {
-    fontSize: 14,
+  actionButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+  },
+  actionButtonText: {
+    fontSize: 13,
     fontWeight: '500',
     color: COLORS.text.secondary,
   },
+  deleteButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+  },
+  deleteButtonText: {
+    fontSize: 13,
+    fontWeight: '500',
+    color: '#EF4444',
+  },
 })
-

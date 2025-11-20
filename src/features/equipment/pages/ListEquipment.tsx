@@ -5,6 +5,7 @@ import {
   ActivityIndicator,
 } from 'react-native'
 import { useState, useMemo, useRef, useCallback, useEffect } from 'react'
+import { useNavigate } from 'react-router'
 import { Layout } from '../../../shared/components/Layout'
 import { Heading, Text } from '../../../shared/components/Typography'
 import { InputText } from '../../../shared/components/InputText'
@@ -25,6 +26,7 @@ import {
 } from '../interfaces/equipment'
 
 export const ListEquipment = () => {
+  const navigate = useNavigate()
   const [activeFilter, setActiveFilter] = useState<FilterType>('all')
   const [searchQuery, setSearchQuery] = useState('')
   const [sortBy, setSortBy] = useState<SortBy>('name')
@@ -100,11 +102,11 @@ export const ListEquipment = () => {
   }, [handleObserver])
 
   const handleEdit = (equipmentId: string) => {
-    console.log('Editar equipamento:', equipmentId)
+    navigate(`/equipment/${equipmentId}/edit`)
   }
 
   const handleAddEquipment = () => {
-    console.log('Adicionar novo equipamento')
+    navigate('/equipment/new')
   }
 
   const filters = [

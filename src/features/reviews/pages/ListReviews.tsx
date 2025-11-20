@@ -3,21 +3,44 @@ import {
   StyleSheet,
   ActivityIndicator,
   TouchableOpacity,
+  ScrollView,
+  NativeSyntheticEvent,
+  NativeScrollEvent,
 } from 'react-native'
-import { useState } from 'react'
+import { useState, useCallback, useMemo } from 'react'
+import { useNavigate } from 'react-router'
 import { Layout } from '../../../shared/components/Layout'
 import { Heading, Text } from '../../../shared/components/Typography'
 import { COLORS } from '../../../shared/styles/colors'
 import { TastingNoteCard } from '../components/TastingNoteCard'
 import { TastingNoteStats } from '../components/TastingNoteStats'
-import { useTastingNotes } from '../hooks/useTastingNotes'
+import { useTastingNotesList } from '../hooks/useTastingNotes'
 import { useTastingNoteStats } from '../hooks/useTastingNoteStats'
 import { useDeleteTastingNote } from '../hooks/useDeleteTastingNote'
-import { BiPlus } from 'react-icons/bi'
+import { TastingNoteSortBy, SortOrder } from '../interfaces/TastingNote'
+import { BiPlus, BiSearch } from 'react-icons/bi'
 import { MdRefresh } from 'react-icons/md'
+import { InputText } from '../../../shared/components/InputText'
 
 export const ListReviews = () => {
-  const { tastingNotes, isLoading, error, refetch } = useTastingNotes()
+  const navigate = useNavigate()
+  const [searchQuery, setSearchQuery] = useState('')
+  const [filterScore, setFilterScore] = useState<
+    'all' | 'high' | 'medium' | 'low'
+  >('all')
+  const sortBy = TastingNoteSortBy.TASTING_DATE
+  const order = SortOrder.DESC
+
+  const {
+    tastingNotes,
+    isLoading,
+    error,
+    fetchNextPage,
+    hasNextPage,
+    isFetchingNextPage,
+    refetch,
+  } = useTastingNotesList(searchQuery, undefined, sortBy, order)
+
   const {
     statistics,
     isLoading: isLoadingStats,
@@ -25,35 +48,39 @@ export const ListReviews = () => {
   } = useTastingNoteStats()
   const { deleteNote } = useDeleteTastingNote()
 
-  const [searchQuery] = useState('')
-  const [filterScore, setFilterScore] = useState<
-    'all' | 'high' | 'medium' | 'low'
-  >('all')
+  // Filtrar notas por score no front-end
+  const filteredNotes = useMemo(() => {
+    return tastingNotes.filter(note => {
+      const matchesFilter =
+        filterScore === 'all' ||
+        (filterScore === 'high' && note.overallScore >= 8) ||
+        (filterScore === 'medium' &&
+          note.overallScore >= 5 &&
+          note.overallScore < 8) ||
+        (filterScore === 'low' && note.overallScore < 5)
 
-  // Filtrar notas
-  const filteredNotes = tastingNotes.filter(note => {
-    const batchName =
-      note.batch.name ||
-      note.batch.batchCode ||
-      `Lote #${note.batch.id.slice(0, 8)}`
+      return matchesFilter
+    })
+  }, [tastingNotes, filterScore])
 
-    const matchesSearch = batchName
-      .toLowerCase()
-      .includes(searchQuery.toLowerCase())
+  const handleScroll = useCallback(
+    (event: NativeSyntheticEvent<NativeScrollEvent>) => {
+      const { layoutMeasurement, contentOffset, contentSize } =
+        event.nativeEvent
+      const paddingToBottom = 20
 
-    const matchesFilter =
-      filterScore === 'all' ||
-      (filterScore === 'high' && note.overallScore >= 8) ||
-      (filterScore === 'medium' &&
-        note.overallScore >= 5 &&
-        note.overallScore < 8) ||
-      (filterScore === 'low' && note.overallScore < 5)
+      const isCloseToBottom =
+        layoutMeasurement.height + contentOffset.y >=
+        contentSize.height - paddingToBottom
 
-    return matchesSearch && matchesFilter
-  })
+      if (isCloseToBottom && hasNextPage && !isFetchingNextPage) {
+        fetchNextPage()
+      }
+    },
+    [hasNextPage, isFetchingNextPage, fetchNextPage],
+  )
 
   const handleDelete = async (id: string) => {
-    // Aqui você pode adicionar um modal de confirmação
     if (confirm('Tem certeza que deseja deletar esta avaliação?')) {
       try {
         await deleteNote(id)
@@ -88,7 +115,10 @@ export const ListReviews = () => {
           <Heading variant="h3" style={styles.title}>
             Avaliações de Degustação
           </Heading>
-          <TouchableOpacity style={styles.addButton}>
+          <TouchableOpacity
+            style={styles.addButton}
+            onPress={() => navigate('/reviews/new')}
+          >
             <BiPlus size={20} color={COLORS.neutral.white} />
             <Text style={styles.addButtonText}>Nova Avaliação</Text>
           </TouchableOpacity>
@@ -96,6 +126,17 @@ export const ListReviews = () => {
 
         {/* Statistics */}
         {!isLoadingStats && <TastingNoteStats statistics={statistics} />}
+
+        {/* Search */}
+        <View style={styles.searchContainer}>
+          <BiSearch size={20} color={COLORS.text.secondary} />
+          <InputText
+            placeholder="Buscar por pontos positivos, negativos ou notas..."
+            value={searchQuery}
+            onChangeText={setSearchQuery}
+            style={styles.searchInput}
+          />
+        </View>
 
         {/* Filters */}
         <View style={styles.filtersRow}>
@@ -156,37 +197,52 @@ export const ListReviews = () => {
         </View>
 
         {/* Content */}
-        {isLoading ? (
-          <View style={styles.loadingContainer}>
-            <ActivityIndicator size="large" color={COLORS.brand.primary} />
-            <Text style={styles.loadingText}>Carregando avaliações...</Text>
-          </View>
-        ) : error ? (
-          renderErrorState()
-        ) : (
-          <View style={styles.notesGrid}>
-            {filteredNotes.map(note => (
-              <View key={note.id} style={styles.noteCardWrapper}>
-                <TastingNoteCard
-                  tastingNote={note}
-                  onView={() => console.log('Ver detalhes:', note.id)}
-                  onEdit={() => console.log('Editar:', note.id)}
-                  onDelete={() => handleDelete(note.id)}
-                />
+        <ScrollView
+          style={styles.scrollView}
+          contentContainerStyle={styles.scrollContent}
+          onScroll={handleScroll}
+          scrollEventThrottle={400}
+        >
+          {isLoading ? (
+            <View style={styles.loadingContainer}>
+              <ActivityIndicator size="large" color={COLORS.brand.primary} />
+              <Text style={styles.loadingText}>Carregando avaliações...</Text>
+            </View>
+          ) : error ? (
+            renderErrorState()
+          ) : filteredNotes.length === 0 ? (
+            <View style={styles.emptyState}>
+              <Text style={styles.emptyStateText}>
+                {searchQuery || filterScore !== 'all'
+                  ? 'Nenhuma avaliação encontrada com os filtros selecionados'
+                  : 'Nenhuma avaliação cadastrada ainda'}
+              </Text>
+            </View>
+          ) : (
+            <>
+              <View style={styles.notesGrid}>
+                {filteredNotes.map(note => (
+                  <View key={note.id} style={styles.noteCardWrapper}>
+                    <TastingNoteCard
+                      tastingNote={note}
+                      onView={() => console.log('Ver detalhes:', note.id)}
+                      onEdit={() => navigate(`/reviews/${note.id}/edit`)}
+                      onDelete={() => handleDelete(note.id)}
+                    />
+                  </View>
+                ))}
               </View>
-            ))}
-          </View>
-        )}
 
-        {filteredNotes.length === 0 && !isLoading && !error && (
-          <View style={styles.emptyState}>
-            <Text style={styles.emptyStateText}>
-              {searchQuery || filterScore !== 'all'
-                ? 'Nenhuma avaliação encontrada com os filtros selecionados'
-                : 'Nenhuma avaliação cadastrada ainda'}
-            </Text>
-          </View>
-        )}
+              {isFetchingNextPage && (
+                <View style={styles.loadingMoreContainer}>
+                  <Text style={styles.loadingText}>
+                    Carregando mais avaliações...
+                  </Text>
+                </View>
+              )}
+            </>
+          )}
+        </ScrollView>
       </View>
     </Layout>
   )
@@ -222,6 +278,26 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontWeight: '600',
     color: COLORS.neutral.white,
+  },
+  searchContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    backgroundColor: COLORS.neutral.white,
+    borderWidth: 1,
+    borderColor: COLORS.border.light,
+    borderRadius: 8,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+  },
+  searchInput: {
+    flex: 1,
+    fontSize: 14,
+    color: COLORS.text.primary,
+    borderWidth: 0,
+    paddingHorizontal: 0,
+    paddingVertical: 0,
+    backgroundColor: 'transparent',
   },
   filtersRow: {
     gap: 16,
@@ -308,5 +384,16 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontWeight: '600',
     color: COLORS.neutral.white,
+  },
+  scrollView: {
+    flex: 1,
+  },
+  scrollContent: {
+    paddingBottom: 24,
+  },
+  loadingMoreContainer: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 24,
   },
 })

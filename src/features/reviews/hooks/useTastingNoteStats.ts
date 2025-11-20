@@ -1,6 +1,6 @@
-import { useState, useEffect } from 'react'
+import { useQuery } from '@tanstack/react-query'
+import { tastingNotesApi } from '../api/tastingNotesApi'
 import { TastingNoteStatistics } from '../interfaces/TastingNote'
-import { mockStatistics } from '../data/mockTastingNotesData'
 
 interface UseTastingNoteStatsResult {
   statistics: TastingNoteStatistics | null
@@ -10,28 +10,24 @@ interface UseTastingNoteStatsResult {
 }
 
 export const useTastingNoteStats = (): UseTastingNoteStatsResult => {
-  const [statistics, setStatistics] = useState<TastingNoteStatistics | null>(
-    null,
-  )
-  const [isLoading, setIsLoading] = useState(true)
-  const [error] = useState<Error | null>(null)
-
-  const fetchStatistics = async () => {
-    setIsLoading(true)
-    // Simula um delay de carregamento
-    await new Promise(resolve => setTimeout(resolve, 500))
-    setStatistics(mockStatistics)
-    setIsLoading(false)
-  }
-
-  useEffect(() => {
-    fetchStatistics()
-  }, [])
-
-  return {
-    statistics,
+  const {
+    data: statistics,
     isLoading,
     error,
-    refetch: fetchStatistics,
+    refetch,
+  } = useQuery({
+    queryKey: ['tasting-notes-statistics'] as const,
+    queryFn: async () => {
+      return await tastingNotesApi.getStatistics()
+    },
+  })
+
+  return {
+    statistics: statistics ?? null,
+    isLoading,
+    error: error as Error | null,
+    refetch: async () => {
+      await refetch()
+    },
   }
 }

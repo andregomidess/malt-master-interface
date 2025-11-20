@@ -174,7 +174,6 @@ export const BeerTagColors: Record<
   [BeerTag.SMOKY]: { color: '#374151', bgColor: '#E5E7EB' },
 }
 
-// Labels para tipos de copo
 export const GlasswareLabels: Record<GlasswareType, string> = {
   [GlasswareType.PINT]: 'Pint',
   [GlasswareType.PILSNER]: 'Pilsner',
@@ -187,7 +186,6 @@ export const GlasswareLabels: Record<GlasswareType, string> = {
   [GlasswareType.MUG]: 'Canecão',
 }
 
-// Emojis para tipos de copo
 export const GlasswareEmojis: Record<GlasswareType, string> = {
   [GlasswareType.PINT]: '🍺',
   [GlasswareType.PILSNER]: '🍺',
@@ -264,4 +262,30 @@ export const countryFlags: Record<string, string> = {
   França: '🇫🇷',
   Áustria: '🇦🇹',
   Brasil: '🇧🇷',
+}
+
+export enum BeerStyleSortBy {
+  NAME = 'name',
+  CREATED_AT = 'createdAt',
+  CATEGORY = 'category',
+}
+
+export enum SortOrder {
+  ASC = 'ASC',
+  DESC = 'DESC',
+}
+
+export interface BeerStyleQueryParams {
+  search?: string
+  sortBy?: BeerStyleSortBy
+  order?: SortOrder
+  page?: number
+  take?: number
+}
+
+export interface PaginatedBeerStyles {
+  data: BeerStyle[]
+  total: number
+  page: number
+  totalPages: number
 }

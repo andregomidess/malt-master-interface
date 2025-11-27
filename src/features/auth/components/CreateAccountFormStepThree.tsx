@@ -1,10 +1,10 @@
 import { View, StyleSheet, TouchableOpacity } from 'react-native'
 import { Controller, useFormContext } from 'react-hook-form'
-import { InputText } from '../../../shared/components/InputText'
 import { COLORS } from '../../../shared/styles/colors'
-import { BiWorld } from 'react-icons/bi'
 import { CreateAccountFormData } from './CreateAccountForm'
 import { Text } from '../../../shared/components/Typography'
+import { Select } from '../../recipes/components/Select'
+import { countries } from '../../../shared/utils/countries'
 
 export const CreateAccountFormStepThree = () => {
   const {
@@ -80,13 +80,12 @@ export const CreateAccountFormStepThree = () => {
           control={control}
           name="country"
           render={({ field: { value, onChange } }) => (
-            <InputText
+            <Select
               label="País"
-              leftIcon={<BiWorld size={20} color={COLORS.icons} />}
-              placeholder="País"
+              placeholder="Selecione um país"
               value={value}
-              onChangeText={onChange}
-              autoCapitalize="words"
+              options={countries}
+              onSelect={onChange}
               error={!!errors.country}
               errorMessage={errors.country?.message}
             />

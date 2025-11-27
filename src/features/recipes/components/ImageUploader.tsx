@@ -1,4 +1,4 @@
-import React, { useState, useRef } from 'react'
+import React, { useRef } from 'react'
 import {
   View,
   Text,
@@ -8,7 +8,11 @@ import {
   ViewStyle,
 } from 'react-native'
 import { COLORS } from '../../../shared/styles/colors'
-import { FONT_FAMILY, FONT_SIZE, FONT_WEIGHT } from '../../../shared/styles/typography'
+import {
+  FONT_FAMILY,
+  FONT_SIZE,
+  FONT_WEIGHT,
+} from '../../../shared/styles/typography'
 import { BiImage, BiUpload } from 'react-icons/bi'
 
 interface ImageUploaderProps {
@@ -71,8 +75,8 @@ export const ImageUploader: React.FC<ImageUploaderProps> = ({
           </TouchableOpacity>
         </View>
       ) : (
-        <View
-          style={styles.uploadArea}
+        <div
+          style={styles.uploadArea as React.CSSProperties}
           onDrop={handleDrop}
           onDragOver={handleDragOver}
         >
@@ -89,7 +93,7 @@ export const ImageUploader: React.FC<ImageUploaderProps> = ({
             <Text style={styles.uploadButtonText}>Procure por uma imagem</Text>
           </TouchableOpacity>
           <Text style={styles.uploadHint}>Formato 16:9 recomendado</Text>
-        </View>
+        </div>
       )}
 
       <input
@@ -183,4 +187,3 @@ const styles = StyleSheet.create({
     color: COLORS.text.tertiary,
   },
 })
-

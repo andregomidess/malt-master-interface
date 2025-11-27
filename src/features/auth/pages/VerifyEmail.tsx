@@ -3,14 +3,120 @@ import { AuthCard } from '../components/AuthCard'
 import bgImage from '../../../assets/bg-malt-master.jpg'
 import { Heading, Text } from '../../../shared/components/Typography'
 import { COLORS } from '../../../shared/styles/colors'
-import { BiEnvelope } from 'react-icons/bi'
+import { BiEnvelope, BiCheckCircle, BiErrorCircle } from 'react-icons/bi'
 import { Button } from '../../../shared/components/Button'
 import { useNavigate, useSearchParams } from 'react-router'
+import { useVerifyEmail } from '../hooks/useVerifyEmail'
+import { useEffect } from 'react'
 
 export const VerifyEmail = () => {
   const [searchParams] = useSearchParams()
-  const email = searchParams.get('email') || 'seu.email@exemplo.com'
+  const email = searchParams.get('email')
+  const token = searchParams.get('token')
   const navigate = useNavigate()
+  const verifyEmail = useVerifyEmail()
+
+  useEffect(() => {
+    if (
+      token &&
+      !verifyEmail.isPending &&
+      !verifyEmail.isSuccess &&
+      !verifyEmail.isError
+    ) {
+      verifyEmail.mutate(token)
+    }
+  }, [token, verifyEmail])
+
+  if (token && verifyEmail.isPending) {
+    return (
+      <ImageBackground
+        source={{ uri: bgImage }}
+        style={styles.container}
+        resizeMode="cover"
+      >
+        <AuthCard>
+          <View style={styles.content}>
+            <View style={styles.iconContainer}>
+              <BiEnvelope size={64} color={COLORS.brand.primary} />
+            </View>
+            <Heading variant="h3" style={styles.title}>
+              Verificando e-mail...
+            </Heading>
+            <Text variant="body" style={styles.description}>
+              Aguarde enquanto verificamos seu e-mail.
+            </Text>
+          </View>
+        </AuthCard>
+      </ImageBackground>
+    )
+  }
+
+  if (token && verifyEmail.isSuccess) {
+    return (
+      <ImageBackground
+        source={{ uri: bgImage }}
+        style={styles.container}
+        resizeMode="cover"
+      >
+        <AuthCard>
+          <View style={styles.content}>
+            <View style={styles.iconContainer}>
+              <BiCheckCircle size={64} color={COLORS.status.success} />
+            </View>
+            <Heading variant="h3" style={styles.title}>
+              E-mail verificado!
+            </Heading>
+            <Text variant="body" style={styles.description}>
+              Seu e-mail foi verificado com sucesso. Você já pode fazer login.
+            </Text>
+            <View style={styles.buttonsContainer}>
+              <Button
+                variant="primary"
+                onPress={() => navigate('/sign-in')}
+                style={styles.button}
+              >
+                Ir para login
+              </Button>
+            </View>
+          </View>
+        </AuthCard>
+      </ImageBackground>
+    )
+  }
+
+  if (token && verifyEmail.isError) {
+    return (
+      <ImageBackground
+        source={{ uri: bgImage }}
+        style={styles.container}
+        resizeMode="cover"
+      >
+        <AuthCard>
+          <View style={styles.content}>
+            <View style={styles.iconContainer}>
+              <BiErrorCircle size={64} color={COLORS.status.error} />
+            </View>
+            <Heading variant="h3" style={styles.title}>
+              Erro na verificação
+            </Heading>
+            <Text variant="body" style={styles.description}>
+              O link de verificação é inválido ou expirou. Solicite um novo link
+              de verificação.
+            </Text>
+            <View style={styles.buttonsContainer}>
+              <Button
+                variant="primary"
+                onPress={() => navigate('/sign-in')}
+                style={styles.button}
+              >
+                Ir para login
+              </Button>
+            </View>
+          </View>
+        </AuthCard>
+      </ImageBackground>
+    )
+  }
 
   return (
     <ImageBackground

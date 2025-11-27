@@ -125,18 +125,44 @@ export interface ChillerEquipment extends BaseEquipment {
 
 export type Equipment = KettleEquipment | FermenterEquipment | ChillerEquipment
 
-export interface EquipmentWithPublicFlag extends Omit<Equipment, 'user'> {
+export interface KettleEquipmentWithPublicFlag
+  extends Omit<KettleEquipment, 'user'> {
   user: User | null
   isPublic: boolean
 }
 
+export interface FermenterEquipmentWithPublicFlag
+  extends Omit<FermenterEquipment, 'user'> {
+  user: User | null
+  isPublic: boolean
+}
+
+export interface ChillerEquipmentWithPublicFlag
+  extends Omit<ChillerEquipment, 'user'> {
+  user: User | null
+  isPublic: boolean
+}
+
+export type EquipmentWithPublicFlag =
+  | KettleEquipmentWithPublicFlag
+  | FermenterEquipmentWithPublicFlag
+  | ChillerEquipmentWithPublicFlag
+
 export const addPublicFlag = (
   equipment: Equipment,
 ): EquipmentWithPublicFlag => {
-  return {
+  const base = {
     ...equipment,
     isPublic: equipment.user === null,
   }
+
+  if (equipment.type === EquipmentType.KETTLE) {
+    return base as KettleEquipmentWithPublicFlag
+  }
+  if (equipment.type === EquipmentType.FERMENTER) {
+    return base as FermenterEquipmentWithPublicFlag
+  }
+  return base as ChillerEquipmentWithPublicFlag
 }
 
 export interface BaseEquipmentInput {

@@ -10,12 +10,7 @@ import {
 } from 'react-icons/gi'
 import { BsLightningChargeFill } from 'react-icons/bs'
 import { BiWorld } from 'react-icons/bi'
-import type {
-  EquipmentWithPublicFlag as Equipment,
-  KettleEquipment,
-  FermenterEquipment,
-  ChillerEquipment,
-} from '../interfaces/equipment'
+import type { EquipmentWithPublicFlag as Equipment } from '../interfaces/equipment'
 import {
   EquipmentType,
   equipmentTypeLabels,
@@ -57,8 +52,7 @@ export const EquipmentCard = ({ equipment, onEdit }: EquipmentCardProps) => {
 
   const isHighCapacity = equipment.totalCapacity > 50
   const isHighPower =
-    equipment.type === EquipmentType.KETTLE &&
-    (equipment as KettleEquipment).heatingPower > 5000
+    equipment.type === EquipmentType.KETTLE && equipment.heatingPower > 5000
 
   return (
     <View style={styles.card}>
@@ -133,25 +127,19 @@ export const EquipmentCard = ({ equipment, onEdit }: EquipmentCardProps) => {
               />
               <Text style={styles.label}>Potência:</Text>
               <Text style={styles.value}>
-                {(equipment as KettleEquipment).heatingPower}W
+                {equipment.heatingPower}W
                 {isHighPower && <Text style={styles.highlight}> (Alta)</Text>}
               </Text>
             </View>
             <View style={styles.infoRow}>
               <Text style={styles.label}>Fonte de Calor:</Text>
               <Text style={styles.value}>
-                {
-                  heatingSourceLabels[
-                    (equipment as KettleEquipment).heatingSource
-                  ]
-                }
+                {heatingSourceLabels[equipment.heatingSource]}
               </Text>
             </View>
             <View style={styles.infoRow}>
               <Text style={styles.label}>Taxa de Evaporação:</Text>
-              <Text style={styles.value}>
-                {(equipment as KettleEquipment).evaporationRate}%
-              </Text>
+              <Text style={styles.value}>{equipment.evaporationRate}%</Text>
             </View>
           </View>
         )}
@@ -159,7 +147,7 @@ export const EquipmentCard = ({ equipment, onEdit }: EquipmentCardProps) => {
         {equipment.type === EquipmentType.FERMENTER && (
           <View style={styles.specificInfo}>
             <Text style={styles.sectionTitle}>Características:</Text>
-            {(equipment as FermenterEquipment).hasTemperatureControl && (
+            {equipment.hasTemperatureControl && (
               <View style={styles.temperatureControlBadge}>
                 <GiThermometerCold size={16} color="#10B981" />
                 <Text style={styles.temperatureControlText}>
@@ -170,25 +158,18 @@ export const EquipmentCard = ({ equipment, onEdit }: EquipmentCardProps) => {
             <View style={styles.infoRow}>
               <Text style={styles.label}>Faixa de Temperatura:</Text>
               <Text style={styles.value}>
-                {(equipment as FermenterEquipment).minTemperature}°C a{' '}
-                {(equipment as FermenterEquipment).maxTemperature}°C
+                {equipment.minTemperature}°C a {equipment.maxTemperature}°C
               </Text>
             </View>
             <View style={styles.infoRow}>
               <Text style={styles.label}>Resfriamento:</Text>
               <Text style={styles.value}>
-                {
-                  coolingTypeLabels[
-                    (equipment as FermenterEquipment).coolingType
-                  ]
-                }
+                {coolingTypeLabels[equipment.coolingType]}
               </Text>
             </View>
             <View style={styles.infoRow}>
               <Text style={styles.label}>Pressão Máxima:</Text>
-              <Text style={styles.value}>
-                {(equipment as FermenterEquipment).maxPressure} PSI
-              </Text>
+              <Text style={styles.value}>{equipment.maxPressure} PSI</Text>
             </View>
           </View>
         )}
@@ -199,20 +180,17 @@ export const EquipmentCard = ({ equipment, onEdit }: EquipmentCardProps) => {
             <View style={styles.infoRow}>
               <Text style={styles.label}>Tipo:</Text>
               <Text style={styles.value}>
-                {chillerTypeLabels[(equipment as ChillerEquipment).chillerType]}
+                {chillerTypeLabels[equipment.chillerType]}
               </Text>
             </View>
             <View style={styles.infoRow}>
               <Text style={styles.label}>Taxa de Fluxo:</Text>
-              <Text style={styles.value}>
-                {(equipment as ChillerEquipment).flowRate} L/min
-              </Text>
+              <Text style={styles.value}>{equipment.flowRate} L/min</Text>
             </View>
             <View style={styles.infoRow}>
               <Text style={styles.label}>Delta T:</Text>
               <Text style={styles.value}>
-                {(equipment as ChillerEquipment).inletTemperature}°C →{' '}
-                {(equipment as ChillerEquipment).outletTemperature}°C
+                {equipment.inletTemperature}°C → {equipment.outletTemperature}°C
               </Text>
             </View>
           </View>

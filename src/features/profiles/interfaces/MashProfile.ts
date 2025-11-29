@@ -5,10 +5,24 @@ export enum MashProfileType {
   BIAB = 'biab',
 }
 
+export enum MashStepType {
+  INFUSION = 'infusion',
+  TEMPERATURE = 'temperature',
+  DECOCTION = 'decoction',
+}
+
 export interface MashStep {
   id: string
+  stepOrder: number
+  name: string
+  stepType: MashStepType
   temperature: number
-  time: number
+  duration: number
+  infusionAmount?: number | null
+  infusionTemp?: number | null
+  decoctionAmount?: number | null
+  rampTime?: number | null
+  description?: string | null
   mashProfileId: string
 }
 

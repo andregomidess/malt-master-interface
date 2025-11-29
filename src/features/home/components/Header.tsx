@@ -48,7 +48,7 @@ export const Header = ({
               onPress={handleProfilePress}
               activeOpacity={0.7}
             >
-              {userAvatar ? (
+              {userAvatar && userAvatar.trim() !== '' ? (
                 <Image source={{ uri: userAvatar }} style={styles.avatar} />
               ) : (
                 <View style={styles.avatarPlaceholder}>

@@ -18,18 +18,26 @@ export const DecimalInput: React.FC<DecimalInputProps> = ({
   error,
   errorMessage,
 }) => {
-  const [textValue, setTextValue] = useState(value?.toString() || '')
+  const [textValue, setTextValue] = useState(() => {
+    if (value === undefined || value === null) return ''
+    return value.toString()
+  })
   const isTypingRef = useRef(false)
 
   useEffect(() => {
     if (!isTypingRef.current) {
-      const currentText = value?.toString() || ''
       if (value === undefined || value === null) {
         setTextValue('')
       } else {
-        setTextValue(currentText)
+        // Garante que o valor seja exibido corretamente, incluindo 0 e decimais
+        const stringValue = value.toString()
+        // Só atualiza se o valor realmente mudou e não está sendo digitado
+        if (stringValue !== textValue) {
+          setTextValue(stringValue)
+        }
       }
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [value])
 
   const handleChange = (text: string) => {
@@ -50,18 +58,23 @@ export const DecimalInput: React.FC<DecimalInputProps> = ({
     // Normaliza vírgula para ponto
     const normalized = trimmed.replace(',', '.')
 
-    // Valida formato numérico
+    // Valida formato numérico (permite números decimais)
     const decimalRegex = /^-?\d*\.?\d*$/
     if (!decimalRegex.test(normalized)) {
       return
     }
 
-    // Se termina com ponto, mantém o número antes
+    // Se termina com ponto, não chama onChange ainda
+    // Isso permite que o usuário continue digitando após o ponto
     if (normalized.endsWith('.')) {
       const beforeDot = normalized.slice(0, -1)
       if (beforeDot === '' || beforeDot === '-') {
+        // Permite digitar apenas o ponto ou ponto após sinal negativo
+        // Não atualiza o valor ainda
         return
       }
+      // Se já tem números antes do ponto, atualiza com o valor antes do ponto
+      // Isso permite que "0." mostre 0 enquanto o usuário digita
       const num = parseFloat(beforeDot)
       if (!isNaN(num)) {
         onChange(num)
@@ -69,11 +82,12 @@ export const DecimalInput: React.FC<DecimalInputProps> = ({
       return
     }
 
-    // Converte para número
+    // Converte para número - parseFloat preserva decimais corretamente
     const num = parseFloat(normalized)
     if (!isNaN(num)) {
       onChange(num)
     } else {
+      // Se não conseguir converter, mantém undefined
       onChange(undefined)
     }
   }

@@ -9,8 +9,16 @@ export enum FermentationProfileType {
 
 export interface FermentationStep {
   id: string
+  stepOrder: number
+  name: string
   temperature: number
-  time: number
+  duration: number
+  targetGravity?: number | null
+  pressureControl?: number | null
+  isRamping: boolean
+  rampTime?: number | null
+  rampToTemperature?: number | null
+  description?: string | null
   fermentationProfileId: string
 }
 

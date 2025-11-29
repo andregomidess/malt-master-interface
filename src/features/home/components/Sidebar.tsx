@@ -12,7 +12,12 @@ import {
 import logoImage from '../../../assets/logo2.png'
 import { Image } from 'react-native-web'
 import { PiToolbox } from 'react-icons/pi'
-import { GiBubbles } from 'react-icons/gi'
+import {
+  GiBubbles,
+  GiBarrel,
+  GiCookingPot,
+  GiBottleVapors,
+} from 'react-icons/gi'
 import { IoWaterOutline } from 'react-icons/io5'
 import { HopsIcon } from '../icons/HopsIcon'
 import { MaltIcon } from '../icons/MaltIcon'
@@ -82,6 +87,24 @@ const menuItems: MenuItem[] = [
     icon: BiStar,
     path: '/reviews',
   },
+  {
+    id: 'carbonation-profiles',
+    label: 'Perfis de Carbonatação',
+    icon: GiBottleVapors,
+    path: '/carbonation-profiles',
+  },
+  {
+    id: 'fermentation-profiles',
+    label: 'Perfis de Fermentação',
+    icon: GiBarrel,
+    path: '/fermentation-profiles',
+  },
+  {
+    id: 'mash-profiles',
+    label: 'Perfis de Mostura',
+    icon: GiCookingPot,
+    path: '/mash-profiles',
+  },
   // {
   //   id: 'community',
   //   label: 'Comunidade',
@@ -111,7 +134,11 @@ export const Sidebar = ({ activeItem, onItemPress }: SidebarProps) => {
     if (activeItem) return activeItem
 
     const currentPath = location.pathname
-    const menuItem = menuItems.find(item => item.path === currentPath)
+    // Verifica se o caminho atual corresponde exatamente ou começa com o caminho do item
+    const menuItem = menuItems.find(
+      item =>
+        currentPath === item.path || currentPath.startsWith(item.path + '/'),
+    )
     return menuItem?.id || 'dashboard'
   }
 

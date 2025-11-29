@@ -17,14 +17,31 @@ export const Layout = ({
   userAvatar,
 }: DashboardLayoutProps) => {
   const navigate = useNavigate()
+  
+  // Obtém o usuário do localStorage para pegar o pictureUrl
+  const getUserFromStorage = () => {
+    try {
+      const userData = localStorage.getItem('user')
+      if (userData) {
+        return JSON.parse(userData)
+      }
+    } catch (error) {
+      console.error('Erro ao ler usuário do localStorage:', error)
+    }
+    return null
+  }
+
+  const user = getUserFromStorage()
+  const avatarUrl = userAvatar || user?.pictureUrl || undefined
+
   return (
     <View style={styles.container}>
       <Sidebar activeItem={activeMenuItem} />
 
       <View style={styles.mainContent}>
         <Header
-          userName={JSON.parse(localStorage.getItem('user') || '{}').username}
-          userAvatar={userAvatar}
+          userName={user?.username || ''}
+          userAvatar={avatarUrl}
           onProfilePress={() => navigate('/profile')}
           onLogoutPress={() => navigate('/sign-in')}
         />

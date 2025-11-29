@@ -121,7 +121,6 @@ export const SaveHops = () => {
 
   useEffect(() => {
     if (existingHop) {
-      // Função helper para converter string para number
       const toNumber = (
         val: number | string | null | undefined,
       ): number | undefined => {

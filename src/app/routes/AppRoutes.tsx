@@ -18,6 +18,7 @@ import { ListReviews } from '../../features/reviews/pages/ListReviews'
 import { SaveReviews } from '../../features/reviews/pages/SaveReviews'
 import { Community } from '../../features/community/pages/Community'
 import { Profile } from '../../features/profile/pages/Profile'
+import { EditProfile } from '../../features/profile/pages/EditProfile'
 import { ListEquipment } from '../../features/equipment/pages/ListEquipment'
 import { SaveEquipment } from '../../features/equipment/pages/SaveEquipment'
 import { ListHops } from '../../features/hops/pages/ListHops'
@@ -30,6 +31,12 @@ import { SaveBeerStyle } from '../../features/beer-style/pages/SaveBeerStyle'
 import { GuardRoute } from '../../shared/components/GuardRoute'
 import { ListFermentable } from '../../features/fermentable/pages/ListFermentable'
 import { SaveFermentable } from '../../features/fermentable/pages/SaveFermentable'
+import { ListCarbonationProfile } from '../../features/profiles/pages/ListCarbonationProfile'
+import { SaveCarbonationProfile } from '../../features/profiles/pages/SaveCarbonationProfile'
+import { ListFermentationProfile } from '../../features/profiles/pages/ListFermentationProfile'
+import { SaveFermentationProfile } from '../../features/profiles/pages/SaveFermentationProfile'
+import { ListMashProfile } from '../../features/profiles/pages/ListMashProfile'
+import { SaveMashProfile } from '../../features/profiles/pages/SaveMashProfile'
 import { useParams } from 'react-router'
 
 const BrewSessionWrapper = () => {
@@ -305,6 +312,14 @@ export const AppRoutes = () => {
           }
         />
         <Route
+          path="/profile/edit"
+          element={
+            <GuardRoute>
+              <EditProfile />
+            </GuardRoute>
+          }
+        />
+        <Route
           path="/beer-styles"
           element={
             <GuardRoute>
@@ -325,6 +340,78 @@ export const AppRoutes = () => {
           element={
             <GuardRoute>
               <SaveBeerStyle />
+            </GuardRoute>
+          }
+        />
+        <Route
+          path="/carbonation-profiles"
+          element={
+            <GuardRoute>
+              <ListCarbonationProfile />
+            </GuardRoute>
+          }
+        />
+        <Route
+          path="/carbonation-profiles/new"
+          element={
+            <GuardRoute>
+              <SaveCarbonationProfile />
+            </GuardRoute>
+          }
+        />
+        <Route
+          path="/carbonation-profiles/:id/edit"
+          element={
+            <GuardRoute>
+              <SaveCarbonationProfile />
+            </GuardRoute>
+          }
+        />
+        <Route
+          path="/fermentation-profiles"
+          element={
+            <GuardRoute>
+              <ListFermentationProfile />
+            </GuardRoute>
+          }
+        />
+        <Route
+          path="/fermentation-profiles/new"
+          element={
+            <GuardRoute>
+              <SaveFermentationProfile />
+            </GuardRoute>
+          }
+        />
+        <Route
+          path="/fermentation-profiles/:id/edit"
+          element={
+            <GuardRoute>
+              <SaveFermentationProfile />
+            </GuardRoute>
+          }
+        />
+        <Route
+          path="/mash-profiles"
+          element={
+            <GuardRoute>
+              <ListMashProfile />
+            </GuardRoute>
+          }
+        />
+        <Route
+          path="/mash-profiles/new"
+          element={
+            <GuardRoute>
+              <SaveMashProfile />
+            </GuardRoute>
+          }
+        />
+        <Route
+          path="/mash-profiles/:id/edit"
+          element={
+            <GuardRoute>
+              <SaveMashProfile />
             </GuardRoute>
           }
         />

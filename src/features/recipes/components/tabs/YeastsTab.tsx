@@ -45,11 +45,23 @@ export const YeastsTab: React.FC = () => {
                 <Text variant="body" style={styles.itemName}>
                   {yeast.yeast?.name || 'Levedura'}
                 </Text>
-                {yeast.amount && (
-                  <Text variant="bodySmall" style={styles.itemAmount}>
-                    {yeast.amount} g
-                  </Text>
-                )}
+                <View style={styles.itemDetails}>
+                  {yeast.amount && (
+                    <Text variant="bodySmall" style={styles.itemAmount}>
+                      {yeast.amount} g
+                    </Text>
+                  )}
+                  {yeast.stage && (
+                    <Text variant="bodySmall" style={styles.itemStage}>
+                      •{' '}
+                      {yeast.stage === 'primary'
+                        ? 'Primária'
+                        : yeast.stage === 'secondary'
+                          ? 'Secundária'
+                          : 'Starter'}
+                    </Text>
+                  )}
+                </View>
               </View>
               <Button
                 variant="ghost"
@@ -117,7 +129,15 @@ const styles = StyleSheet.create({
     color: COLORS.text.primary,
     marginBottom: 4,
   },
+  itemDetails: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
   itemAmount: {
+    color: COLORS.text.secondary,
+  },
+  itemStage: {
     color: COLORS.text.secondary,
   },
 })

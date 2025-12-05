@@ -45,10 +45,91 @@ export const batchesApi = {
 
 export async function findBatchById(id: string): Promise<BatchDetail | null> {
   try {
-    const response = await maltMasterApi.get<BatchDetail>(
+    const response = await maltMasterApi.get<Batch | BatchDetail>(
       `${BATCHES_BASE_URL}/${id}`,
     )
-    return response.data
+    const data = response.data
+
+    if ('batch' in data && 'mashSteps' in data) {
+      return data as BatchDetail
+    }
+
+    const batch = data as Batch
+    const recipeWithMash = batch.recipe as typeof batch.recipe & {
+      mash?: {
+        mashProfile?: {
+          steps?: Array<{
+            id: string
+            stepOrder: number
+            name: string
+            stepType: string
+            temperature: number
+            duration: number
+            infusionAmount?: number | null
+            infusionTemp?: number | null
+            rampTime?: number | null
+            description?: string | null
+          }>
+        }
+      }
+      fermentation?: {
+        fermentationProfile?: {
+          steps?: Array<{
+            id: string
+            stepOrder: number
+            name: string
+            temperature: number
+            duration: number
+          }>
+        }
+      }
+      hops?: Array<{
+        time: number
+        name: string
+        amount: number
+        unit: 'g' | 'oz'
+        alphaAcid?: number
+      }>
+    }
+
+    const mashSteps =
+      recipeWithMash?.mash?.mashProfile?.steps?.map(step => ({
+        id: step.id,
+        stepOrder: step.stepOrder,
+        name: step.name,
+        stepType: step.stepType as 'infusion' | 'temperature' | 'decoction',
+        temperature: step.temperature,
+        duration: step.duration,
+        infusionAmount: step.infusionAmount || null,
+        infusionTemp: step.infusionTemp || null,
+        rampTime: step.rampTime || null,
+        description: step.description || null,
+      })) || []
+
+    const fermentationSteps =
+      recipeWithMash?.fermentation?.fermentationProfile?.steps?.map(step => ({
+        id: step.id,
+        stepOrder: step.stepOrder,
+        name: step.name,
+        temperature: step.temperature,
+        duration: step.duration,
+      })) || []
+
+    const hopSchedule =
+      recipeWithMash?.hops?.map(hop => ({
+        time: hop.time,
+        name: hop.name,
+        amount: hop.amount,
+        unit: hop.unit,
+        alphaAcid: hop.alphaAcid,
+      })) || []
+
+    return {
+      batch,
+      mashSteps,
+      fermentationSteps,
+      hopSchedule,
+    }
   } catch {
     return null
   }

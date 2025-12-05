@@ -34,6 +34,7 @@ export interface RecipeYeast {
   id?: string
   yeastId: string
   amount?: number
+  stage?: 'primary' | 'secondary' | 'starter'
   yeast?: {
     name: string
     attenuation?: number
@@ -237,7 +238,7 @@ export const RecipeProvider: React.FC<{ children: React.ReactNode }> = ({
   const getRecipeInput = useCallback((): RecipeInput => {
     return {
       name: recipe.name,
-      beerStyleId: recipe.beerStyle?.id || '',
+      beerStyle: recipe.beerStyle?.id || '',
       equipmentId: recipe.equipment?.id || null,
       imageUrl: recipe.imageUrl || null,
       about: recipe.about || null,
@@ -260,34 +261,33 @@ export const RecipeProvider: React.FC<{ children: React.ReactNode }> = ({
     return {
       recipe: getRecipeInput(),
       fermentables: recipe.fermentables.map(f => ({
-        fermentable: { id: f.fermentableId },
+        fermentable: f.fermentableId,
         amount: f.amount,
       })),
       hops: recipe.hops.map(h => ({
-        hop: { id: h.hopId },
+        hop: h.hopId,
         amount: h.amount,
         boilTime: h.boilTime ?? null,
         stage: h.stage,
       })),
       yeasts: recipe.yeasts.map(y => ({
-        yeast: { id: y.yeastId },
-        amount: y.amount ?? null,
+        yeast: y.yeastId,
+        amount: y.amount ? String(y.amount) : null,
+        stage: y.stage || 'primary',
       })),
       waters: recipe.waters.map(w => ({
-        waterProfile: { id: w.waterId },
-        amount: w.amount,
+        waterProfile: w.waterId,
+        volume: w.amount,
       })),
       mash: recipe.mash?.mashProfileId
         ? {
-            mashProfile: { id: recipe.mash.mashProfileId },
+            mashProfile: recipe.mash.mashProfileId,
             actualEfficiency: recipe.mash.actualEfficiency ?? null,
           }
         : undefined,
       fermentation: recipe.fermentation?.fermentationProfileId
         ? {
-            fermentationProfile: {
-              id: recipe.fermentation.fermentationProfileId,
-            },
+            fermentationProfile: recipe.fermentation.fermentationProfileId,
             actualAttenuation: recipe.fermentation.actualAttenuation ?? null,
             finalAbv: recipe.fermentation.finalAbv ?? null,
             observations: recipe.fermentation.observations ?? null,
@@ -295,9 +295,7 @@ export const RecipeProvider: React.FC<{ children: React.ReactNode }> = ({
         : undefined,
       carbonation: recipe.carbonation?.carbonationProfileId
         ? {
-            carbonationProfile: {
-              id: recipe.carbonation.carbonationProfileId,
-            },
+            carbonationProfile: recipe.carbonation.carbonationProfileId,
             amountUsed: recipe.carbonation.amountUsed ?? null,
             temperature: recipe.carbonation.temperature ?? null,
             co2Volumes: recipe.carbonation.co2Volumes ?? null,

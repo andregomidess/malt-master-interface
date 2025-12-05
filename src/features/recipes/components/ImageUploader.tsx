@@ -14,11 +14,84 @@ import {
   FONT_WEIGHT,
 } from '../../../shared/styles/typography'
 import { BiImage, BiUpload } from 'react-icons/bi'
+import toast from 'react-hot-toast'
 
 interface ImageUploaderProps {
   imageUrl?: string | null
   onImageSelect: (imageUrl: string) => void
   containerStyle?: ViewStyle
+}
+
+// Limite máximo de tamanho do base64 (80KB para deixar margem de segurança)
+const MAX_BASE64_SIZE = 80 * 1024
+// Largura máxima da imagem (mantém proporção)
+const MAX_IMAGE_WIDTH = 1200
+// Qualidade de compressão (0.0 a 1.0)
+const COMPRESSION_QUALITY = 0.7
+
+// Função para comprimir imagem
+const compressImage = (
+  file: File,
+  maxWidth: number,
+  quality: number,
+): Promise<string> => {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader()
+    reader.onload = e => {
+      const img = new window.Image()
+      img.onload = () => {
+        const canvas = document.createElement('canvas')
+        let width = img.width
+        let height = img.height
+
+        // Redimensiona se necessário
+        if (width > maxWidth) {
+          height = (height * maxWidth) / width
+          width = maxWidth
+        }
+
+        canvas.width = width
+        canvas.height = height
+
+        const ctx = canvas.getContext('2d')
+        if (!ctx) {
+          reject(new Error('Não foi possível criar contexto do canvas'))
+          return
+        }
+
+        ctx.drawImage(img, 0, 0, width, height)
+
+        let currentQuality = quality
+        let dataUrl = canvas.toDataURL('image/jpeg', currentQuality)
+        let currentWidth = width
+        let currentHeight = height
+
+        while (dataUrl.length > MAX_BASE64_SIZE && currentQuality > 0.1) {
+          currentQuality -= 0.1
+          dataUrl = canvas.toDataURL('image/jpeg', currentQuality)
+        }
+
+        while (dataUrl.length > MAX_BASE64_SIZE && currentWidth > 200) {
+          currentWidth = Math.floor(currentWidth * 0.8)
+          currentHeight = Math.floor(currentHeight * 0.8)
+          canvas.width = currentWidth
+          canvas.height = currentHeight
+          ctx.drawImage(img, 0, 0, currentWidth, currentHeight)
+          dataUrl = canvas.toDataURL('image/jpeg', 0.6)
+        }
+
+        resolve(dataUrl)
+      }
+      img.onerror = () => {
+        reject(new Error('Erro ao carregar imagem'))
+      }
+      img.src = e.target?.result as string
+    }
+    reader.onerror = () => {
+      reject(new Error('Erro ao ler arquivo'))
+    }
+    reader.readAsDataURL(file)
+  })
 }
 
 export const ImageUploader: React.FC<ImageUploaderProps> = ({
@@ -28,15 +101,37 @@ export const ImageUploader: React.FC<ImageUploaderProps> = ({
 }) => {
   const fileInputRef = useRef<HTMLInputElement>(null)
 
-  const handleFileSelect = (event: React.ChangeEvent<HTMLInputElement>) => {
+  const handleFileSelect = async (
+    event: React.ChangeEvent<HTMLInputElement>,
+  ) => {
     const file = event.target.files?.[0]
-    if (file) {
-      const reader = new FileReader()
-      reader.onload = e => {
-        const result = e.target?.result as string
-        onImageSelect(result)
+    if (!file) return
+
+    // Validação de tipo de arquivo
+    if (!file.type.startsWith('image/')) {
+      toast.error('Por favor, selecione um arquivo de imagem')
+      return
+    }
+
+    try {
+      // Comprime a imagem antes de converter para base64
+      const compressedBase64 = await compressImage(
+        file,
+        MAX_IMAGE_WIDTH,
+        COMPRESSION_QUALITY,
+      )
+
+      if (compressedBase64.length > MAX_BASE64_SIZE) {
+        toast.error(
+          'A imagem é muito grande mesmo após compressão. Por favor, escolha uma imagem menor',
+        )
+        return
       }
-      reader.readAsDataURL(file)
+
+      onImageSelect(compressedBase64)
+    } catch (error) {
+      console.error('Erro ao processar imagem:', error)
+      toast.error('Erro ao processar a imagem')
     }
   }
 
@@ -44,16 +139,31 @@ export const ImageUploader: React.FC<ImageUploaderProps> = ({
     fileInputRef.current?.click()
   }
 
-  const handleDrop = (e: React.DragEvent) => {
+  const handleDrop = async (e: React.DragEvent) => {
     e.preventDefault()
     const file = e.dataTransfer.files[0]
-    if (file && file.type.startsWith('image/')) {
-      const reader = new FileReader()
-      reader.onload = e => {
-        const result = e.target?.result as string
-        onImageSelect(result)
+    if (!file || !file.type.startsWith('image/')) {
+      return
+    }
+
+    try {
+      const compressedBase64 = await compressImage(
+        file,
+        MAX_IMAGE_WIDTH,
+        COMPRESSION_QUALITY,
+      )
+
+      if (compressedBase64.length > MAX_BASE64_SIZE) {
+        toast.error(
+          'A imagem é muito grande mesmo após compressão. Por favor, escolha uma imagem menor',
+        )
+        return
       }
-      reader.readAsDataURL(file)
+
+      onImageSelect(compressedBase64)
+    } catch (error) {
+      console.error('Erro ao processar imagem:', error)
+      toast.error('Erro ao processar a imagem')
     }
   }
 

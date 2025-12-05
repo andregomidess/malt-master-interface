@@ -90,7 +90,7 @@ export const BasicTab: React.FC<BasicTabProps> = ({ control, errors }) => {
       <View style={styles.section}>
         <Controller
           control={control}
-          name="beerStyleId"
+          name="beerStyle"
           render={({ field: { value, onChange } }) => (
             <Select
               label="Estilo de Cerveja *"
@@ -106,8 +106,8 @@ export const BasicTab: React.FC<BasicTabProps> = ({ control, errors }) => {
                   updateRecipe({ beerStyle: selectedStyle })
                 }
               }}
-              error={!!errors.beerStyleId}
-              errorMessage={errors.beerStyleId?.message}
+              error={!!errors.beerStyle}
+              errorMessage={errors.beerStyle?.message}
             />
           )}
         />

@@ -63,12 +63,13 @@ export function BrewSession({ batchId }: BrewSessionProps) {
     localStorage.setItem(`brew_session_${batchId}`, JSON.stringify(data))
   }, [completedSteps, measuredValues, activeStepIndex, batchId])
 
-  // Construir lista de passos para a fase atual
   const currentSteps = useMemo(() => {
     if (!detail) return []
-    const { mashSteps } = detail
+
     if (activePhase === 'mash') {
-      return mashSteps.map(step => ({
+      const mashStepsToUse = detail.mashSteps || []
+
+      return mashStepsToUse.map(step => ({
         id: step.id,
         order: step.stepOrder,
         title: step.name,

@@ -16,7 +16,12 @@ import { InputText } from '../../../shared/components/InputText'
 import { Button } from '../../../shared/components/Button'
 import { Select } from '../../recipes/components/Select'
 import { COLORS } from '../../../shared/styles/colors'
-import { BatchStatus, BatchStatusLabels } from '../interfaces/Brewing'
+import {
+  BatchStatus,
+  BatchStatusLabels,
+  BatchDetail,
+  MashStep,
+} from '../interfaces/Brewing'
 import { useSaveBatch, type BatchInput } from '../hooks/useSaveBatch'
 import { useRecipesList } from '../../recipes/hooks/useRecipes'
 import { useEquipments } from '../../equipment/hooks/useEquipments'
@@ -31,6 +36,7 @@ import {
 } from 'react-icons/bi'
 import { recipesApi } from '../../recipes/api/recipesApi'
 import { useEffect } from 'react'
+import { batchesApi } from '../api/batchesApi'
 
 const BATCH_STATUS_VALUES: BatchStatus[] = [
   'planned',
@@ -112,6 +118,7 @@ export const SaveBrewing = () => {
   const [fullRecipe, setFullRecipe] = useState<{
     fermentables?: Array<{ amount?: number; fermentable?: { yield?: number } }>
   } | null>(null)
+  const [isLoadingBatch, setIsLoadingBatch] = useState(false)
 
   const {
     control,
@@ -155,6 +162,109 @@ export const SaveBrewing = () => {
         })
     }
   }, [recipeId, fullRecipe])
+
+  // Buscar dados do batch quando estiver em modo de edição
+  useEffect(() => {
+    if (isEditMode && id) {
+      setIsLoadingBatch(true)
+      batchesApi
+        .findById(id)
+        .then(response => {
+          // O backend retorna Batch, mas a API pode retornar BatchDetail ou Batch
+          const batch =
+            'batch' in response ? (response as BatchDetail).batch : response
+
+          // Preencher campos básicos
+          if (batch.recipe?.id) {
+            setValue('recipeId', batch.recipe.id)
+          }
+          if (batch.equipment?.id) {
+            setValue('equipmentId', batch.equipment.id)
+          }
+          if (batch.name) {
+            setValue('name', batch.name)
+          }
+          if (batch.batchCode) {
+            setValue('batchCode', batch.batchCode)
+          }
+          if (batch.brewDate) {
+            // Formatar data para YYYY-MM-DD
+            const date = new Date(batch.brewDate)
+            const formattedDate = date.toISOString().split('T')[0]
+            setValue('brewDate', formattedDate)
+          }
+          if (batch.status) {
+            setValue('status', batch.status)
+          }
+          if (batch.plannedVolume) {
+            setValue('plannedVolume', Number(batch.plannedVolume))
+          }
+          if (batch.actualOriginalGravity) {
+            setValue(
+              'actualOriginalGravity',
+              Number(batch.actualOriginalGravity),
+            )
+          }
+          if (batch.actualEfficiency) {
+            setValue('actualEfficiency', Number(batch.actualEfficiency))
+          }
+          if (batch.observations) {
+            setValue('observations', batch.observations)
+          }
+
+          // Buscar mashSteps: primeiro tenta do BatchDetail, depois da receita
+          let mashStepsToLoad: MashStep[] = []
+
+          if (
+            'mashSteps' in response &&
+            response.mashSteps &&
+            Array.isArray(response.mashSteps)
+          ) {
+            // MashSteps específicos do batch (se existirem)
+            mashStepsToLoad = response.mashSteps
+          } else {
+            // MashSteps da receita (fallback)
+            // O backend retorna batch.recipe.mash.mashProfile.steps
+            // Usamos type assertion porque a interface Batch não tem mash tipado
+            const recipeWithMash = batch.recipe as unknown as {
+              mash?: {
+                mashProfile?: {
+                  steps?: MashStep[]
+                }
+              }
+            }
+            if (
+              recipeWithMash?.mash?.mashProfile?.steps &&
+              Array.isArray(recipeWithMash.mash.mashProfile.steps)
+            ) {
+              mashStepsToLoad = recipeWithMash.mash.mashProfile.steps
+            }
+          }
+
+          if (mashStepsToLoad.length > 0) {
+            const steps: MashStepForm[] = mashStepsToLoad.map(step => ({
+              id: step.id,
+              stepOrder: step.stepOrder,
+              name: step.name,
+              stepType: step.stepType,
+              temperature: step.temperature,
+              duration: step.duration,
+              infusionAmount: step.infusionAmount || undefined,
+              infusionTemp: step.infusionTemp || undefined,
+              rampTime: step.rampTime || undefined,
+              description: step.description || undefined,
+            }))
+            setMashSteps(steps)
+          }
+        })
+        .catch(error => {
+          console.error('Erro ao carregar batch:', error)
+        })
+        .finally(() => {
+          setIsLoadingBatch(false)
+        })
+    }
+  }, [isEditMode, id, setValue])
 
   // Preencher valores do equipamento quando selecionado
   useEffect(() => {
@@ -215,9 +325,7 @@ export const SaveBrewing = () => {
     label: BatchStatusLabels[status],
   }))
 
-  // Cálculos avançados
   const calculations = useMemo(() => {
-    // Calcular peso total dos grãos da receita
     let grainWeight = 0
     if (fullRecipe?.fermentables) {
       grainWeight = fullRecipe.fermentables.reduce(
@@ -226,7 +334,7 @@ export const SaveBrewing = () => {
       )
     }
     if (grainWeight === 0) {
-      grainWeight = 5.0 // Valor padrão se não houver fermentables
+      grainWeight = 5.0
     }
 
     const mashThickness = watchedValues.mashThickness || 3.0
@@ -272,7 +380,7 @@ export const SaveBrewing = () => {
     }
 
     return {
-      grainWeight: grainWeight.toFixed(2),
+      grainWeight: grainWeight,
       strikeWaterVolume: strikeWaterVolume.toFixed(2),
       grainAbsorption: grainAbsorption.toFixed(2),
       preBoilVolume: preBoilVolume.toFixed(2),
@@ -355,6 +463,22 @@ export const SaveBrewing = () => {
       actualOriginalGravity: data.actualOriginalGravity || null,
       actualEfficiency: data.actualEfficiency || null,
       observations: data.observations || null,
+      mashSteps:
+        mashSteps.length > 0
+          ? mashSteps.map(step => ({
+              ...(step.id && { id: step.id }),
+              stepOrder: step.stepOrder,
+              name: step.name,
+              stepType: step.stepType,
+              temperature: step.temperature,
+              duration: step.duration,
+              infusionAmount: step.infusionAmount || null,
+              infusionTemp: step.infusionTemp || null,
+              decoctionAmount: step.decoctionAmount || null,
+              rampTime: step.rampTime || null,
+              description: step.description || null,
+            }))
+          : undefined,
     }
 
     saveBatch(batchData)
@@ -365,7 +489,7 @@ export const SaveBrewing = () => {
     navigate('/brewings')
   }
 
-  if (isLoadingRecipes || isLoadingEquipments) {
+  if (isLoadingRecipes || isLoadingEquipments || isLoadingBatch) {
     return (
       <Layout activeMenuItem="brewings">
         <View style={styles.centerContainer}>

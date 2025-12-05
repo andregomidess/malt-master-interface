@@ -23,6 +23,7 @@ export const AddYeastModal: React.FC<AddYeastModalProps> = ({
   const { yeasts } = useYeastsList()
   const [selectedYeastId, setSelectedYeastId] = useState<string>('')
   const [amount, setAmount] = useState<string>('')
+  const [stage, setStage] = useState<string>('primary')
 
   const yeastOptions = useMemo(() => {
     return yeasts.map(y => ({
@@ -30,6 +31,12 @@ export const AddYeastModal: React.FC<AddYeastModalProps> = ({
       label: y.name,
     }))
   }, [yeasts])
+
+  const stageOptions = [
+    { value: 'primary', label: 'Primária' },
+    { value: 'secondary', label: 'Secundária' },
+    { value: 'starter', label: 'Starter' },
+  ]
 
   const selectedYeast = useMemo(() => {
     return yeasts.find(y => y.id === selectedYeastId)
@@ -60,6 +67,7 @@ export const AddYeastModal: React.FC<AddYeastModalProps> = ({
     onAdd({
       yeastId: selectedYeastId,
       amount: amount ? parseFloat(amount) : undefined,
+      stage: stage as 'primary' | 'secondary' | 'starter',
       yeast: selectedYeast
         ? {
             name: selectedYeast.name,
@@ -71,6 +79,7 @@ export const AddYeastModal: React.FC<AddYeastModalProps> = ({
     // Reset form
     setSelectedYeastId('')
     setAmount('')
+    setStage('primary')
     onClose()
   }
 
@@ -109,6 +118,16 @@ export const AddYeastModal: React.FC<AddYeastModalProps> = ({
             value={amount}
             onChangeText={setAmount}
             keyboardType="numeric"
+          />
+        </View>
+
+        <View style={styles.field}>
+          <Select
+            label="Estágio *"
+            placeholder="Selecione o estágio"
+            value={stage}
+            options={stageOptions}
+            onSelect={setStage}
           />
         </View>
 

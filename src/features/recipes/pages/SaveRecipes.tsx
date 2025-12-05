@@ -43,7 +43,7 @@ const toNumber = (
 
 const recipeBasicSchema = z.object({
   name: z.string().min(1, 'Nome é obrigatório'),
-  beerStyleId: z.string().min(1, 'Estilo de cerveja é obrigatório'),
+  beerStyle: z.string().min(1, 'Estilo de cerveja é obrigatório'),
   type: z.nativeEnum(RecipeType, {
     required_error: 'Tipo de receita é obrigatório',
   }),
@@ -64,7 +64,18 @@ const recipeBasicSchema = z.object({
   brewDate: z.string().optional().nullable(),
   imageUrl: z
     .string()
-    .url('URL inválida')
+    .refine(
+      val => {
+        if (!val || val === '') return true
+        // Aceita URLs ou base64
+        return (
+          val.startsWith('http://') ||
+          val.startsWith('https://') ||
+          val.startsWith('data:image/')
+        )
+      },
+      { message: 'URL ou imagem inválida' },
+    )
     .optional()
     .nullable()
     .or(z.literal('')),
@@ -109,11 +120,12 @@ interface LoadedRecipe {
     id: string
     yeast?: { id: string; name: string; attenuation?: number }
     amount: number | null
+    stage?: string
   }>
   waters?: Array<{
     id: string
     waterProfile?: { id: string; name: string }
-    amount: number | null
+    volume: number | null
   }>
   mash?: {
     mashProfile?: {
@@ -186,7 +198,7 @@ const SaveRecipesContent: React.FC = () => {
     mode: 'onChange',
     defaultValues: {
       name: '',
-      beerStyleId: '',
+      beerStyle: '',
       type: RecipeType.ALL_GRAIN,
       equipmentId: null,
       finalVolume: undefined,
@@ -213,7 +225,7 @@ const SaveRecipesContent: React.FC = () => {
         // Atualiza o formulário react-hook-form
         resetForm({
           name: loadedRecipe.name || '',
-          beerStyleId: loadedRecipe.beerStyle?.id || '',
+          beerStyle: loadedRecipe.beerStyle?.id || '',
           type: (loadedRecipe.type as RecipeType) || RecipeType.ALL_GRAIN,
           equipmentId: loadedRecipe.equipment?.id || null,
           finalVolume: toNumber(loadedRecipe.finalVolume),
@@ -277,6 +289,8 @@ const SaveRecipesContent: React.FC = () => {
               id: y.id,
               yeastId: y.yeast?.id || '',
               amount: y.amount || undefined,
+              stage:
+                (y.stage as 'primary' | 'secondary' | 'starter') || 'primary',
               yeast: y.yeast
                 ? {
                     name: y.yeast.name || '',
@@ -288,7 +302,7 @@ const SaveRecipesContent: React.FC = () => {
             loadedRecipe.waters?.map(w => ({
               id: w.id,
               waterId: w.waterProfile?.id || '',
-              amount: w.amount || 0,
+              amount: w.volume || 0,
               water: w.waterProfile
                 ? {
                     name: w.waterProfile.name || '',

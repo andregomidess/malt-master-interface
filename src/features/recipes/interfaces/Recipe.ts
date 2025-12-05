@@ -51,7 +51,7 @@ export interface Recipe {
 export interface RecipeInput {
   id?: string
   name: string
-  beerStyleId: string
+  beerStyle: string
   equipmentId?: string | null
   imageUrl?: string | null
   about?: string | null
@@ -74,13 +74,13 @@ export interface RecipeInput {
 // Inputs para os relacionamentos da receita
 export interface RecipeMashInput {
   id?: string
-  mashProfile: { id: string }
+  mashProfile: string
   actualEfficiency?: number | null
 }
 
 export interface RecipeFermentationInput {
   id?: string
-  fermentationProfile: { id: string }
+  fermentationProfile: string
   actualAttenuation?: number | null
   finalAbv?: number | null
   observations?: string | null
@@ -88,7 +88,7 @@ export interface RecipeFermentationInput {
 
 export interface RecipeCarbonationInput {
   id?: string
-  carbonationProfile: { id: string }
+  carbonationProfile: string
   amountUsed?: string | null
   temperature?: number | null
   co2Volumes?: number | null
@@ -97,22 +97,23 @@ export interface RecipeCarbonationInput {
 export interface RecipeUpsertInput {
   recipe: RecipeInput
   fermentables: Array<{
-    fermentable: { id: string }
+    fermentable: string
     amount: number
   }>
   hops: Array<{
-    hop: { id: string }
+    hop: string
     amount: number
     boilTime?: number | null
     stage?: string
   }>
   yeasts: Array<{
-    yeast: { id: string }
-    amount?: number | null
+    yeast: string
+    amount?: string | null
+    stage: string
   }>
   waters: Array<{
-    waterProfile: { id: string }
-    amount: number
+    waterProfile: string
+    volume: number
   }>
   mash?: RecipeMashInput
   fermentation?: RecipeFermentationInput

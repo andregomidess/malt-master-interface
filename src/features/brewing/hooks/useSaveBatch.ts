@@ -3,6 +3,20 @@ import { batchesApi } from '../api/batchesApi'
 import toast from 'react-hot-toast'
 import { Batch } from '../interfaces/Brewing'
 
+export interface MashStepInput {
+  id?: string
+  stepOrder: number
+  name: string
+  stepType: 'infusion' | 'temperature' | 'decoction'
+  temperature: number
+  duration: number
+  infusionAmount?: number | null
+  infusionTemp?: number | null
+  decoctionAmount?: number | null
+  rampTime?: number | null
+  description?: string | null
+}
+
 export interface BatchInput {
   id?: string
   user: string
@@ -26,6 +40,7 @@ export interface BatchInput {
   fermentationTime?: number | null
   actualCarbonation?: number | null
   observations?: string | null
+  mashSteps?: MashStepInput[]
 }
 
 export const useSaveBatch = () => {

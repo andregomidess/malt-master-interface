@@ -88,22 +88,22 @@ export type RecipeBasicFormData = z.infer<typeof recipeBasicSchema>
 interface LoadedRecipe {
   id: string
   name: string
-  beerStyle: { id: string; name: string } | null
-  equipment: { id: string; name: string } | null
+  beerStyle: { id: string; name: string } | string | null
+  equipment: { id: string; name: string } | string | null
   type: string
-  finalVolume: number | null
-  mashVolume: number | null
-  boilTime: number | null
+  finalVolume: number | string | null
+  mashVolume: number | string | null
+  boilTime: number | string | null
   brewDate: string | null
   imageUrl: string | null
   about: string | null
   notes: string | null
-  originalGravity: number | null
-  finalGravity: number | null
-  estimatedIbu: number | null
-  estimatedColor: number | null
-  estimatedAbv: number | null
-  plannedEfficiency: number | null
+  originalGravity: number | string | null
+  finalGravity: number | string | null
+  estimatedIbu: number | string | null
+  estimatedColor: number | string | null
+  estimatedAbv: number | string | null
+  plannedEfficiency: number | string | null
   fermentables?: Array<{
     id: string
     fermentable?: { id: string; name: string; color?: number; yield?: number }
@@ -222,12 +222,31 @@ const SaveRecipesContent: React.FC = () => {
         setIsLoadingRecipe(true)
         const loadedRecipe = (await recipesApi.findById(id)) as LoadedRecipe
 
+        // Extrair IDs de beerStyle e equipment (podem vir como objeto ou string)
+        const beerStyleId =
+          typeof loadedRecipe.beerStyle === 'string'
+            ? loadedRecipe.beerStyle
+            : loadedRecipe.beerStyle?.id || ''
+        const beerStyleObj =
+          typeof loadedRecipe.beerStyle === 'object' && loadedRecipe.beerStyle
+            ? loadedRecipe.beerStyle
+            : null
+
+        const equipmentId =
+          typeof loadedRecipe.equipment === 'string'
+            ? loadedRecipe.equipment
+            : loadedRecipe.equipment?.id || ''
+        const equipmentObj =
+          typeof loadedRecipe.equipment === 'object' && loadedRecipe.equipment
+            ? loadedRecipe.equipment
+            : null
+
         // Atualiza o formulário react-hook-form
         resetForm({
           name: loadedRecipe.name || '',
-          beerStyle: loadedRecipe.beerStyle?.id || '',
+          beerStyle: beerStyleId,
           type: (loadedRecipe.type as RecipeType) || RecipeType.ALL_GRAIN,
-          equipmentId: loadedRecipe.equipment?.id || null,
+          equipmentId: equipmentId || null,
           finalVolume: toNumber(loadedRecipe.finalVolume),
           mashVolume: toNumber(loadedRecipe.mashVolume),
           boilTime: toNumber(loadedRecipe.boilTime),
@@ -241,22 +260,22 @@ const SaveRecipesContent: React.FC = () => {
         // Atualiza o contexto
         updateRecipe({
           name: loadedRecipe.name || '',
-          beerStyle: loadedRecipe.beerStyle || null,
+          beerStyle: beerStyleObj,
           type: (loadedRecipe.type as RecipeType) || '',
-          equipment: loadedRecipe.equipment || null,
-          finalVolume: loadedRecipe.finalVolume || null,
-          mashVolume: loadedRecipe.mashVolume || null,
-          boilTime: loadedRecipe.boilTime || null,
+          equipment: equipmentObj,
+          finalVolume: toNumber(loadedRecipe.finalVolume) || null,
+          mashVolume: toNumber(loadedRecipe.mashVolume) || null,
+          boilTime: toNumber(loadedRecipe.boilTime) || null,
           brewDate: loadedRecipe.brewDate || null,
           imageUrl: loadedRecipe.imageUrl || null,
           about: loadedRecipe.about || null,
           notes: loadedRecipe.notes || null,
-          originalGravity: loadedRecipe.originalGravity || null,
-          finalGravity: loadedRecipe.finalGravity || null,
-          estimatedIbu: loadedRecipe.estimatedIbu || null,
-          estimatedColor: loadedRecipe.estimatedColor || null,
-          estimatedAbv: loadedRecipe.estimatedAbv || null,
-          plannedEfficiency: loadedRecipe.plannedEfficiency || null,
+          originalGravity: toNumber(loadedRecipe.originalGravity) || null,
+          finalGravity: toNumber(loadedRecipe.finalGravity) || null,
+          estimatedIbu: toNumber(loadedRecipe.estimatedIbu) || null,
+          estimatedColor: toNumber(loadedRecipe.estimatedColor) || null,
+          estimatedAbv: toNumber(loadedRecipe.estimatedAbv) || null,
+          plannedEfficiency: toNumber(loadedRecipe.plannedEfficiency) || null,
           fermentables:
             loadedRecipe.fermentables?.map(f => ({
               id: f.id,
@@ -401,22 +420,6 @@ const SaveRecipesContent: React.FC = () => {
 
   const allValid = Object.values(validations).every(v => v)
 
-  const handleSaveDraft = async () => {
-    try {
-      setIsSaving(true)
-      const recipeInput = getRecipeUpsertInput()
-      await recipesApi.create(recipeInput)
-      toast.success('Rascunho salvo com sucesso!')
-      resetRecipe()
-      navigate('/recipes')
-    } catch (error) {
-      toast.error('Erro ao salvar rascunho')
-      console.error(error)
-    } finally {
-      setIsSaving(false)
-    }
-  }
-
   const handleSave = async () => {
     if (!allValid) {
       toast.error('Preencha todos os campos obrigatórios')
@@ -497,14 +500,6 @@ const SaveRecipesContent: React.FC = () => {
           <View style={styles.headerActions}>
             <Button
               variant="outline"
-              size="small"
-              onPress={handleSaveDraft}
-              disabled={isSaving}
-            >
-              Salvar como Rascunho
-            </Button>
-            <Button
-              variant="ghost"
               size="medium"
               onPress={handleCancel}
               disabled={isSaving}

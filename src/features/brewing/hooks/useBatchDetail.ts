@@ -1,9 +1,5 @@
-import { useEffect, useState } from 'react'
-import {
-  findBatchById,
-  findBatchLogs,
-  addBatchLog
-} from '../api/batchesApi'
+import { useEffect, useState, useCallback } from 'react'
+import { findBatchById, findBatchLogs, addBatchLog } from '../api/batchesApi'
 import { BatchDetail, BrewLog } from '../interfaces/Brewing'
 
 export function useBatchDetail(batchId: string) {
@@ -12,16 +8,30 @@ export function useBatchDetail(batchId: string) {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
 
-  useEffect(() => {
+  const loadData = useCallback(async () => {
     setLoading(true)
-    Promise.all([findBatchById(batchId), findBatchLogs(batchId)])
-      .then(([batchDetail, batchLogs]) => {
-        setDetail(batchDetail)
-        setLogs(batchLogs)
-      })
-      .catch(() => setError('Falha ao carregar detalhes do lote'))
-      .finally(() => setLoading(false))
+    setError(null)
+    try {
+      const [batchDetail, batchLogs] = await Promise.all([
+        findBatchById(batchId),
+        findBatchLogs(batchId),
+      ])
+      setDetail(batchDetail)
+      setLogs(batchLogs)
+    } catch {
+      setError('Falha ao carregar detalhes do lote')
+    } finally {
+      setLoading(false)
+    }
   }, [batchId])
+
+  useEffect(() => {
+    loadData()
+  }, [loadData])
+
+  const refetch = () => {
+    loadData()
+  }
 
   const addLog = async (payload: Omit<BrewLog, 'id'>) => {
     try {
@@ -33,6 +43,5 @@ export function useBatchDetail(batchId: string) {
     }
   }
 
-  return { detail, logs, loading, error, addLog }
+  return { detail, logs, loading, error, addLog, refetch }
 }
-

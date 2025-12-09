@@ -7,6 +7,7 @@ import { z } from 'zod/v3'
 import { Layout } from '../../../shared/components/Layout'
 import { Heading, Text } from '../../../shared/components/Typography'
 import { InputText } from '../../../shared/components/InputText'
+import { DateInput } from '../../../shared/components/DateInput'
 import { Button } from '../../../shared/components/Button'
 import { Select } from '../../recipes/components/Select'
 import { COLORS } from '../../../shared/styles/colors'
@@ -163,11 +164,11 @@ export const SaveReviews = () => {
               control={control}
               name="tastingDate"
               render={({ field: { value, onChange } }) => (
-                <InputText
+                <DateInput
                   label="Data da Degustação"
-                  placeholder="YYYY-MM-DD"
-                  value={value || ''}
-                  onChangeText={onChange}
+                  placeholder="Selecione uma data"
+                  value={value || undefined}
+                  onChange={date => onChange(date || '')}
                 />
               )}
             />

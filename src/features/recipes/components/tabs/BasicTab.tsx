@@ -3,6 +3,7 @@ import { View, StyleSheet, ScrollView } from 'react-native'
 import { Controller, Control, FieldErrors } from 'react-hook-form'
 import { useRecipe } from '../../context/RecipeContext'
 import { InputText } from '../../../../shared/components/InputText'
+import { DateInput } from '../../../../shared/components/DateInput'
 import { Select } from '../Select'
 import { Textarea } from '../Textarea'
 import { ImageUploader } from '../ImageUploader'
@@ -275,14 +276,16 @@ export const BasicTab: React.FC<BasicTabProps> = ({ control, errors }) => {
           control={control}
           name="brewDate"
           render={({ field: { value, onChange } }) => (
-            <InputText
+            <DateInput
               label="Data de Criação"
-              placeholder="2024-06-15"
-              value={value || ''}
-              onChangeText={text => {
-                onChange(text)
-                updateRecipe({ brewDate: text || null })
+              placeholder="Selecione uma data"
+              value={value || undefined}
+              onChange={date => {
+                onChange(date || '')
+                updateRecipe({ brewDate: date || null })
               }}
+              error={!!errors.brewDate}
+              errorMessage={errors.brewDate?.message}
             />
           )}
         />

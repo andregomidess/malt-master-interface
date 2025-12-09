@@ -15,7 +15,11 @@ import { BrewTimer } from '../components/BrewTimer'
 import { GuidedStepCard } from '../components/GuidedStepCard'
 import { MeasuredValuesPanel } from '../components/MeasuredValuesPanel'
 import { HopSchedule } from '../components/HopSchedule'
+import { formatGravity, formatPercentage } from '../interfaces/Brewing'
+import { useSaveBatch, type BatchInput } from '../hooks/useSaveBatch'
+import { Button } from '../../../shared/components/Button'
 import { BiChevronLeft, BiChevronRight } from 'react-icons/bi'
+import { useNavigate } from 'react-router'
 import toast from 'react-hot-toast'
 
 type PhaseType = 'planning' | 'mash' | 'fermenting' | 'completed'
@@ -25,7 +29,9 @@ interface BrewSessionProps {
 }
 
 export function BrewSession({ batchId }: BrewSessionProps) {
-  const { detail, loading, error } = useBatchDetail(batchId)
+  const navigate = useNavigate()
+  const { detail, loading, error, refetch } = useBatchDetail(batchId)
+  const { mutate: saveBatch, isPending: isSaving } = useSaveBatch()
   const [activePhase, setActivePhase] = useState<PhaseType>('mash')
   const [activeStepIndex, setActiveStepIndex] = useState<number>(0)
   const [completedSteps, setCompletedSteps] = useState<Set<string>>(new Set())
@@ -156,6 +162,64 @@ export function BrewSession({ batchId }: BrewSessionProps) {
     }
   }
 
+  const handleSaveBatchValues = () => {
+    if (!detail?.batch) {
+      toast.error('Erro ao carregar dados do lote')
+      return
+    }
+
+    const user = JSON.parse(localStorage.getItem('user') || '{}')
+    if (!user?.id) {
+      toast.error('Usuário não encontrado')
+      return
+    }
+
+    // Função auxiliar para converter valores para número ou null
+    const toNumberOrNull = (
+      value: number | string | null | undefined,
+    ): number | null => {
+      if (value === null || value === undefined) return null
+      const num = typeof value === 'string' ? parseFloat(value) : value
+      return isNaN(num) ? null : num
+    }
+
+    // Mapear valores medidos para campos do batch
+    // postBoilGravity → actualOriginalGravity (OG real)
+    const batchData: BatchInput = {
+      id: detail.batch.id,
+      user: user.id,
+      recipe: detail.batch.recipe?.id || '',
+      ...(detail.batch.equipment?.id && {
+        equipment: detail.batch.equipment.id,
+      }),
+      name: detail.batch.name || null,
+      batchCode: detail.batch.batchCode || null,
+      brewDate: detail.batch.brewDate || null,
+      status: detail.batch.status,
+      // Converter valores numéricos garantindo que sejam números válidos
+      plannedVolume: toNumberOrNull(detail.batch.plannedVolume),
+      // Salvar valores medidos
+      ...(measuredValues.postBoilGravity && {
+        actualOriginalGravity: measuredValues.postBoilGravity,
+      }),
+      // Manter valores existentes se não foram medidos
+      actualFinalGravity: toNumberOrNull(detail.batch.actualFinalGravity),
+      actualAbv: toNumberOrNull(detail.batch.actualAbv),
+      actualEfficiency: toNumberOrNull(detail.batch.actualEfficiency),
+      observations: detail.batch.observations || null,
+    }
+
+    saveBatch(batchData, {
+      onSuccess: () => {
+        toast.success('Valores salvos no lote com sucesso!')
+        // Atualizar dados do batch
+        setTimeout(() => {
+          refetch()
+        }, 500)
+      },
+    })
+  }
+
   const phases: Array<{ key: PhaseType; label: string }> = [
     { key: 'planning', label: 'Planejamento' },
     { key: 'mash', label: 'Brassagem' },
@@ -163,7 +227,6 @@ export function BrewSession({ batchId }: BrewSessionProps) {
     { key: 'completed', label: 'Concluído' },
   ]
 
-  // Preparar ingredientes para exibição (vazio por enquanto)
   const mashIngredients: string[] = []
 
   return (
@@ -426,27 +489,120 @@ export function BrewSession({ batchId }: BrewSessionProps) {
               <View style={styles.resultCard}>
                 <Text style={styles.resultLabel}>OG Real</Text>
                 <Text style={styles.resultValue}>
-                  {batch.actualOriginalGravity?.toFixed(3) || '—'}
+                  {formatGravity(batch.actualOriginalGravity)}
                 </Text>
               </View>
               <View style={styles.resultCard}>
                 <Text style={styles.resultLabel}>FG Real</Text>
                 <Text style={styles.resultValue}>
-                  {batch.actualFinalGravity?.toFixed(3) || '—'}
+                  {formatGravity(batch.actualFinalGravity)}
                 </Text>
               </View>
               <View style={styles.resultCard}>
                 <Text style={styles.resultLabel}>ABV</Text>
                 <Text style={styles.resultValue}>
-                  {batch.actualAbv ? `${batch.actualAbv}%` : '—'}
+                  {formatPercentage(batch.actualAbv)}
                 </Text>
               </View>
               <View style={styles.resultCard}>
                 <Text style={styles.resultLabel}>Eficiência</Text>
                 <Text style={styles.resultValue}>
-                  {batch.actualEfficiency ? `${batch.actualEfficiency}%` : '—'}
+                  {formatPercentage(batch.actualEfficiency)}
                 </Text>
               </View>
+            </View>
+
+            {/* Valores Medidos Durante a Sessão */}
+            {(measuredValues.preBoilGravity !== null ||
+              measuredValues.preBoilVolume !== null ||
+              measuredValues.postBoilGravity !== null ||
+              measuredValues.mashPh !== null) && (
+              <View style={styles.measuredValuesSummary}>
+                <Text style={styles.sectionTitle}>
+                  Valores Medidos na Sessão
+                </Text>
+                <View style={styles.measuredValuesList}>
+                  {measuredValues.preBoilGravity !== null && (
+                    <View style={styles.measuredValueRow}>
+                      <Text style={styles.measuredValueLabel}>
+                        Densidade Pré-Fervura:
+                      </Text>
+                      <Text style={styles.measuredValueText}>
+                        {formatGravity(measuredValues.preBoilGravity)}
+                      </Text>
+                    </View>
+                  )}
+                  {measuredValues.preBoilVolume !== null && (
+                    <View style={styles.measuredValueRow}>
+                      <Text style={styles.measuredValueLabel}>
+                        Volume Pré-Fervura:
+                      </Text>
+                      <Text style={styles.measuredValueText}>
+                        {measuredValues.preBoilVolume} L
+                      </Text>
+                    </View>
+                  )}
+                  {measuredValues.postBoilGravity !== null && (
+                    <View style={styles.measuredValueRow}>
+                      <Text style={styles.measuredValueLabel}>
+                        Densidade Pós-Fervura (OG):
+                      </Text>
+                      <Text style={styles.measuredValueText}>
+                        {formatGravity(measuredValues.postBoilGravity)}
+                      </Text>
+                    </View>
+                  )}
+                  {measuredValues.mashPh !== null && (
+                    <View style={styles.measuredValueRow}>
+                      <Text style={styles.measuredValueLabel}>
+                        pH da Mostura:
+                      </Text>
+                      <Text style={styles.measuredValueText}>
+                        {measuredValues.mashPh.toFixed(2)}
+                      </Text>
+                    </View>
+                  )}
+                </View>
+                <View style={styles.saveButtonContainer}>
+                  <Button
+                    variant="primary"
+                    size="medium"
+                    onPress={handleSaveBatchValues}
+                    disabled={isSaving}
+                    loading={isSaving}
+                  >
+                    {isSaving
+                      ? 'Salvando...'
+                      : 'Salvar Valores Medidos no Lote'}
+                  </Button>
+                  <Text style={styles.saveButtonHint}>
+                    Salva os valores medidos durante a sessão no lote. O valor
+                    de densidade pós-fervura será salvo como OG Real.
+                  </Text>
+                </View>
+              </View>
+            )}
+
+            {/* Botão para criar nova brassagem */}
+            <View style={styles.newBatchSection}>
+              <Text style={styles.sectionTitle}>Nova Brassagem</Text>
+              <Text style={styles.newBatchDescription}>
+                Crie uma nova brassagem usando a mesma receita. Útil para
+                repetir uma receita ou fazer ajustes.
+              </Text>
+              <Button
+                variant="primary"
+                size="medium"
+                onPress={() => {
+                  if (batch.recipe?.id) {
+                    navigate(`/brewings/new?recipeId=${batch.recipe.id}`)
+                  } else {
+                    navigate('/brewings/new')
+                  }
+                }}
+              >
+                Nova Brassagem com Esta Receita
+              </Button>
             </View>
           </View>
         )}
@@ -663,5 +819,56 @@ const styles = StyleSheet.create({
     color: COLORS.text.secondary,
     textAlign: 'center',
     paddingVertical: 20,
+  },
+  measuredValuesSummary: {
+    marginTop: 24,
+    gap: 16,
+  },
+  measuredValuesList: {
+    backgroundColor: COLORS.neutral.white,
+    borderRadius: 12,
+    padding: 16,
+    borderWidth: 1,
+    borderColor: COLORS.border.light,
+    gap: 12,
+  },
+  measuredValueRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingVertical: 8,
+  },
+  measuredValueLabel: {
+    fontSize: 14,
+    color: COLORS.text.secondary,
+    fontWeight: '500',
+  },
+  measuredValueText: {
+    fontSize: 16,
+    fontWeight: '700',
+    color: COLORS.brand.primary,
+  },
+  saveButtonContainer: {
+    gap: 8,
+  },
+  saveButtonHint: {
+    fontSize: 12,
+    color: COLORS.text.secondary,
+    fontStyle: 'italic',
+    textAlign: 'center',
+  },
+  newBatchSection: {
+    marginTop: 32,
+    padding: 20,
+    backgroundColor: COLORS.neutral.white,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: COLORS.border.light,
+    gap: 16,
+  },
+  newBatchDescription: {
+    fontSize: 14,
+    color: COLORS.text.secondary,
+    lineHeight: 20,
   },
 })

@@ -143,12 +143,20 @@ export function formatDate(date: string | null | undefined): string {
   return new Date(date).toLocaleDateString('pt-BR')
 }
 
-export function formatGravity(gravity: number | null | undefined): string {
+export function formatGravity(
+  gravity: number | string | null | undefined,
+): string {
   if (!gravity) return '—'
-  return gravity.toFixed(3)
+  const numGravity = typeof gravity === 'string' ? parseFloat(gravity) : gravity
+  if (isNaN(numGravity)) return '—'
+  return numGravity.toFixed(3)
 }
 
-export function formatPercentage(value: number | null | undefined): string {
+export function formatPercentage(
+  value: number | string | null | undefined,
+): string {
   if (!value) return '—'
-  return `${value.toFixed(1)}%`
+  const numValue = typeof value === 'string' ? parseFloat(value) : value
+  if (isNaN(numValue)) return '—'
+  return `${numValue.toFixed(1)}%`
 }

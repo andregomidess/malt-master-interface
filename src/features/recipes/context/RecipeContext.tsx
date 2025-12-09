@@ -239,7 +239,7 @@ export const RecipeProvider: React.FC<{ children: React.ReactNode }> = ({
     return {
       name: recipe.name,
       beerStyle: recipe.beerStyle?.id || '',
-      equipmentId: recipe.equipment?.id || null,
+      equipment: recipe.equipment?.id || null,
       imageUrl: recipe.imageUrl || null,
       about: recipe.about || null,
       notes: recipe.notes || null,

@@ -52,7 +52,7 @@ export interface RecipeInput {
   id?: string
   name: string
   beerStyle: string
-  equipmentId?: string | null
+  equipment?: string | null
   imageUrl?: string | null
   about?: string | null
   notes?: string | null

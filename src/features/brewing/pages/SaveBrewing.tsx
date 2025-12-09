@@ -6,13 +6,14 @@ import {
   TouchableOpacity,
   ActivityIndicator,
 } from 'react-native'
-import { useNavigate, useParams } from 'react-router'
+import { useNavigate, useParams, useSearchParams } from 'react-router'
 import { Controller, useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod/v3'
 import { Layout } from '../../../shared/components/Layout'
 import { Heading, Text } from '../../../shared/components/Typography'
 import { InputText } from '../../../shared/components/InputText'
+import { DateInput } from '../../../shared/components/DateInput'
 import { Button } from '../../../shared/components/Button'
 import { Select } from '../../recipes/components/Select'
 import { COLORS } from '../../../shared/styles/colors'
@@ -48,7 +49,7 @@ const BATCH_STATUS_VALUES: BatchStatus[] = [
 
 const brewingSchema = z.object({
   recipeId: z.string().min(1, 'Receita é obrigatória'),
-  equipmentId: z.string().optional(),
+  equipment: z.string().optional(),
   name: z.string().optional(),
   batchCode: z.string().optional(),
   brewDate: z.string().optional(),
@@ -102,7 +103,9 @@ const DEFAULT_YIELD = 37
 export const SaveBrewing = () => {
   const navigate = useNavigate()
   const { id } = useParams<{ id?: string }>()
+  const [searchParams] = useSearchParams()
   const isEditMode = !!id
+  const recipeIdFromQuery = searchParams.get('recipeId')
 
   const [activeSection, setActiveSection] = useState<
     'basic' | 'mash' | 'sparge' | 'brewday'
@@ -143,13 +146,18 @@ export const SaveBrewing = () => {
 
   const watchedValues = watch()
   const recipeId = watch('recipeId')
-  const equipmentId = watch('equipmentId')
+  const equipment = watch('equipment')
   const selectedRecipe = useMemo(
     () => recipes.find(r => r.id === recipeId),
     [recipes, recipeId],
   )
 
-  // Buscar receita completa quando selecionada
+  useEffect(() => {
+    if (recipeIdFromQuery && !isEditMode && !recipeId) {
+      setValue('recipeId', recipeIdFromQuery)
+    }
+  }, [recipeIdFromQuery, isEditMode, recipeId, setValue])
+
   useEffect(() => {
     if (recipeId && !fullRecipe) {
       recipesApi
@@ -163,23 +171,20 @@ export const SaveBrewing = () => {
     }
   }, [recipeId, fullRecipe])
 
-  // Buscar dados do batch quando estiver em modo de edição
   useEffect(() => {
     if (isEditMode && id) {
       setIsLoadingBatch(true)
       batchesApi
         .findById(id)
         .then(response => {
-          // O backend retorna Batch, mas a API pode retornar BatchDetail ou Batch
           const batch =
             'batch' in response ? (response as BatchDetail).batch : response
 
-          // Preencher campos básicos
           if (batch.recipe?.id) {
             setValue('recipeId', batch.recipe.id)
           }
           if (batch.equipment?.id) {
-            setValue('equipmentId', batch.equipment.id)
+            setValue('equipment', batch.equipment.id)
           }
           if (batch.name) {
             setValue('name', batch.name)
@@ -188,7 +193,6 @@ export const SaveBrewing = () => {
             setValue('batchCode', batch.batchCode)
           }
           if (batch.brewDate) {
-            // Formatar data para YYYY-MM-DD
             const date = new Date(batch.brewDate)
             const formattedDate = date.toISOString().split('T')[0]
             setValue('brewDate', formattedDate)
@@ -212,7 +216,6 @@ export const SaveBrewing = () => {
             setValue('observations', batch.observations)
           }
 
-          // Buscar mashSteps: primeiro tenta do BatchDetail, depois da receita
           let mashStepsToLoad: MashStep[] = []
 
           if (
@@ -220,12 +223,8 @@ export const SaveBrewing = () => {
             response.mashSteps &&
             Array.isArray(response.mashSteps)
           ) {
-            // MashSteps específicos do batch (se existirem)
             mashStepsToLoad = response.mashSteps
           } else {
-            // MashSteps da receita (fallback)
-            // O backend retorna batch.recipe.mash.mashProfile.steps
-            // Usamos type assertion porque a interface Batch não tem mash tipado
             const recipeWithMash = batch.recipe as unknown as {
               mash?: {
                 mashProfile?: {
@@ -266,13 +265,11 @@ export const SaveBrewing = () => {
     }
   }, [isEditMode, id, setValue])
 
-  // Preencher valores do equipamento quando selecionado
   useEffect(() => {
-    if (equipmentId && equipmentsData?.pages) {
+    if (equipment && equipmentsData?.pages) {
       const allEquipments = equipmentsData.pages.flatMap(page => page.data)
-      const equipment = allEquipments.find(eq => eq.id === equipmentId)
-      if (equipment) {
-        // Valores padrão baseados no material do equipamento
+      const selectedEquipment = allEquipments.find(eq => eq.id === equipment)
+      if (selectedEquipment) {
         const materialSpecificHeat: Record<string, number> = {
           stainless_steel: 0.5,
           aluminum: 0.9,
@@ -280,14 +277,14 @@ export const SaveBrewing = () => {
           plastic: 0.5,
           glass: 0.84,
         }
-        const specificHeat = materialSpecificHeat[equipment.material] || 0.3
+        const specificHeat =
+          materialSpecificHeat[selectedEquipment.material] || 0.3
         setValue('tunSpecificHeat', specificHeat)
-        // Estimativa de peso baseada na capacidade (kg)
-        const estimatedWeight = equipment.totalCapacity * 0.1 // ~0.1 kg por litro
+        const estimatedWeight = selectedEquipment.totalCapacity * 0.1
         setValue('tunWeight', estimatedWeight)
       }
     }
-  }, [equipmentId, equipmentsData, setValue])
+  }, [equipment, equipmentsData, setValue])
 
   const equipmentOptions = useMemo(() => {
     if (!equipmentsData?.pages) return []
@@ -454,7 +451,7 @@ export const SaveBrewing = () => {
       ...(isEditMode && id && { id }),
       user: user.id,
       recipe: data.recipeId,
-      ...(data.equipmentId && { equipment: data.equipmentId }),
+      ...(data.equipment && { equipment: data.equipment }),
       name: data.name || null,
       batchCode: data.batchCode || null,
       brewDate: data.brewDate || null,
@@ -564,7 +561,7 @@ export const SaveBrewing = () => {
               <View style={styles.field}>
                 <Controller
                   control={control}
-                  name="equipmentId"
+                  name="equipment"
                   render={({ field: { value, onChange } }) => (
                     <Select
                       label="Equipamento"
@@ -612,11 +609,11 @@ export const SaveBrewing = () => {
                     control={control}
                     name="brewDate"
                     render={({ field: { value, onChange } }) => (
-                      <InputText
+                      <DateInput
                         label="Data da Brassagem"
-                        placeholder="YYYY-MM-DD"
-                        value={value || ''}
-                        onChangeText={onChange}
+                        placeholder="Selecione uma data"
+                        value={value || undefined}
+                        onChange={date => onChange(date || '')}
                       />
                     )}
                   />

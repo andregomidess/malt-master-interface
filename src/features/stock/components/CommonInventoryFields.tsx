@@ -2,6 +2,7 @@ import React from 'react'
 import { View, StyleSheet } from 'react-native'
 import { Controller, Control, FieldErrors } from 'react-hook-form'
 import { InputText } from '../../../shared/components/InputText'
+import { DateInput } from '../../../shared/components/DateInput'
 import { FormData } from '../pages/SaveStock'
 
 interface CommonInventoryFieldsProps {
@@ -40,11 +41,11 @@ export const CommonInventoryFields: React.FC<CommonInventoryFieldsProps> = ({
           control={control}
           name="purchaseDate"
           render={({ field: { value, onChange } }) => (
-            <InputText
+            <DateInput
               label="Data de Compra"
-              placeholder="YYYY-MM-DD"
-              value={value || ''}
-              onChangeText={value => onChange(value || undefined)}
+              placeholder="Selecione uma data"
+              value={value || undefined}
+              onChange={date => onChange(date || undefined)}
             />
           )}
         />
@@ -55,11 +56,11 @@ export const CommonInventoryFields: React.FC<CommonInventoryFieldsProps> = ({
           control={control}
           name="bestBeforeDate"
           render={({ field: { value, onChange } }) => (
-            <InputText
+            <DateInput
               label="Data de Validade"
-              placeholder="YYYY-MM-DD"
-              value={value || ''}
-              onChangeText={value => onChange(value || undefined)}
+              placeholder="Selecione uma data"
+              value={value || undefined}
+              onChange={date => onChange(date || undefined)}
             />
           )}
         />

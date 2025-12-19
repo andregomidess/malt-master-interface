@@ -1,7 +1,6 @@
 import { maltMasterApi } from '../../../shared/maltMasterApi'
 import {
   Recipe,
-  RecipeInput,
   RecipeQueryParams,
   PaginatedRecipes,
   RecipeUpsertInput,

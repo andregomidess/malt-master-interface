@@ -8,7 +8,7 @@ export function useRecentBatches(limit = 5) {
     queryKey: ['recentBatches', limit],
     queryFn: async () => {
       const { data } = await maltMasterApi.get<
-        PaginatedResponse<BatchApi, 'batches'>
+        PaginatedResponse<BatchApi, 'data'>
       >('/batches', { params: { page: 1, take: limit } })
       return data
     },

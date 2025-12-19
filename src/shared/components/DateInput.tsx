@@ -47,7 +47,6 @@ export const DateInput: React.FC<DateInputProps> = ({
 
   const handleContainerPress = () => {
     if (!disabled && inputRef.current) {
-      // Tenta usar showPicker() se disponível (Chrome/Edge modernos)
       if (typeof inputRef.current.showPicker === 'function') {
         inputRef.current.showPicker()
       } else {

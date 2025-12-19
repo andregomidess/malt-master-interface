@@ -74,7 +74,7 @@ export const Home = () => {
   }
 
   const activityData = useMemo<ActivityRow[]>(() => {
-    const batches = recentBatches?.batches ?? []
+    const batches = recentBatches?.data ?? []
     return batches.map(batch => {
       const recipeName =
         (typeof batch.recipe === 'object' ? batch.recipe?.name : batch.name) ??

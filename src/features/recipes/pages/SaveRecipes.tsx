@@ -67,7 +67,6 @@ const recipeBasicSchema = z.object({
     .refine(
       val => {
         if (!val || val === '') return true
-        // Aceita URLs ou base64
         return (
           val.startsWith('http://') ||
           val.startsWith('https://') ||
@@ -212,8 +211,6 @@ const SaveRecipesContent: React.FC = () => {
     },
   })
 
-  // Não precisa sincronizar automaticamente - a sincronização é feita nos onChange dos campos
-
   useEffect(() => {
     const loadRecipe = async () => {
       if (!isEditMode || !id) return
@@ -222,7 +219,6 @@ const SaveRecipesContent: React.FC = () => {
         setIsLoadingRecipe(true)
         const loadedRecipe = (await recipesApi.findById(id)) as LoadedRecipe
 
-        // Extrair IDs de beerStyle e equipment (podem vir como objeto ou string)
         const beerStyleId =
           typeof loadedRecipe.beerStyle === 'string'
             ? loadedRecipe.beerStyle
@@ -241,7 +237,6 @@ const SaveRecipesContent: React.FC = () => {
             ? loadedRecipe.equipment
             : null
 
-        // Atualiza o formulário react-hook-form
         resetForm({
           name: loadedRecipe.name || '',
           beerStyle: beerStyleId,
@@ -257,7 +252,6 @@ const SaveRecipesContent: React.FC = () => {
           notes: loadedRecipe.notes || null,
         })
 
-        // Atualiza o contexto
         updateRecipe({
           name: loadedRecipe.name || '',
           beerStyle: beerStyleObj,
@@ -428,7 +422,26 @@ const SaveRecipesContent: React.FC = () => {
 
     try {
       setIsSaving(true)
+      updateRecipe({
+        originalGravity: calculations.originalGravity,
+        finalGravity: calculations.finalGravity,
+        estimatedIbu: calculations.estimatedIbu,
+        estimatedColor: calculations.estimatedColor,
+        estimatedAbv: calculations.estimatedAbv,
+      })
+
       const recipeInput = getRecipeUpsertInput()
+
+      recipeInput.recipe.originalGravity =
+        calculations.originalGravity ?? recipeInput.recipe.originalGravity
+      recipeInput.recipe.finalGravity =
+        calculations.finalGravity ?? recipeInput.recipe.finalGravity
+      recipeInput.recipe.estimatedIbu =
+        calculations.estimatedIbu ?? recipeInput.recipe.estimatedIbu
+      recipeInput.recipe.estimatedColor =
+        calculations.estimatedColor ?? recipeInput.recipe.estimatedColor
+      recipeInput.recipe.estimatedAbv =
+        calculations.estimatedAbv ?? recipeInput.recipe.estimatedAbv
 
       if (isEditMode && id) {
         recipeInput.recipe.id = id

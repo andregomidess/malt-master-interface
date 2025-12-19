@@ -36,7 +36,7 @@ export interface TastingNote {
 
 export interface TastingNoteInput {
   id?: string
-  batchId: string
+  batch: string
   tastingDate?: string
   appearanceScore?: number
   aromaScore?: number

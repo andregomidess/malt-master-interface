@@ -26,17 +26,20 @@ export const TastingNoteCard = ({
   onEdit,
   onDelete,
 }: TastingNoteCardProps) => {
-  const overallScoreConfig = getScoreColor(tastingNote.overallScore)
+  const overallScore =
+    typeof tastingNote.overallScore === 'number'
+      ? tastingNote.overallScore
+      : Number(tastingNote.overallScore) || 0
+
+  const overallScoreConfig = getScoreColor(overallScore)
   const batchStatusConfig =
     BatchStatusColors[tastingNote.batch.status || 'planned']
 
-  // Nome do lote (prioridade: name > batchCode > "Sem nome")
   const batchName =
     tastingNote.batch.name ||
     tastingNote.batch.batchCode ||
     `Lote #${tastingNote.batch.id.slice(0, 8)}`
 
-  // Scores secundários (apenas os que existem)
   const secondaryScores = [
     {
       label: 'Aparência',
@@ -46,7 +49,14 @@ export const TastingNoteCard = ({
     { label: 'Aroma', value: tastingNote.aromaScore, emoji: '👃' },
     { label: 'Sabor', value: tastingNote.flavorScore, emoji: '👅' },
     { label: 'Sensação', value: tastingNote.mouthfeelScore, emoji: '🫧' },
-  ].filter(score => score.value !== null && score.value !== undefined)
+  ]
+    .filter(score => score.value !== null && score.value !== undefined)
+    .map(score => ({
+      ...score,
+      value:
+        typeof score.value === 'number' ? score.value : Number(score.value),
+    }))
+    .filter(score => !isNaN(score.value))
 
   return (
     <View style={styles.card}>
@@ -132,7 +142,7 @@ export const TastingNoteCard = ({
                 { color: overallScoreConfig.color },
               ]}
             >
-              {tastingNote.overallScore.toFixed(1)}
+              {overallScore.toFixed(1)}
             </Text>
           </View>
         </View>
@@ -143,7 +153,7 @@ export const TastingNoteCard = ({
             <Text style={styles.secondaryScoresTitle}>Outras Notas</Text>
             <View style={styles.secondaryScoresGrid}>
               {secondaryScores.map((score, index) => {
-                const scoreConfig = getScoreColor(score.value!)
+                const scoreConfig = getScoreColor(score.value)
                 return (
                   <View key={index} style={styles.secondaryScoreItem}>
                     <Text style={styles.secondaryScoreEmoji}>
@@ -165,7 +175,7 @@ export const TastingNoteCard = ({
                             { color: scoreConfig.color },
                           ]}
                         >
-                          {score.value!.toFixed(1)}
+                          {score.value.toFixed(1)}
                         </Text>
                       </View>
                     </View>

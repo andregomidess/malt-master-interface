@@ -7,6 +7,7 @@ import { z } from 'zod/v3'
 import { Layout } from '../../../shared/components/Layout'
 import { Heading, Text } from '../../../shared/components/Typography'
 import { InputText } from '../../../shared/components/InputText'
+import { DecimalInput } from '../../../shared/components/DecimalInput'
 import { DateInput } from '../../../shared/components/DateInput'
 import { Button } from '../../../shared/components/Button'
 import { Select } from '../../recipes/components/Select'
@@ -17,7 +18,7 @@ import { useTastingNoteById } from '../hooks/useTastingNoteById'
 import { useBatchesList } from '../../brewing/hooks/useBatchesList'
 
 const tastingNoteSchema = z.object({
-  batchId: z.string().min(1, 'Selecione um lote'),
+  batch: z.string().min(1, 'Selecione um lote'),
   tastingDate: z.string().optional(),
   appearanceScore: z.number().min(0).max(10).optional(),
   aromaScore: z.number().min(0).max(10).optional(),
@@ -55,7 +56,7 @@ export const SaveReviews = () => {
     resolver: zodResolver(tastingNoteSchema),
     mode: 'onChange',
     defaultValues: {
-      batchId: '',
+      batch: '',
       tastingDate: '',
       pros: '',
       cons: '',
@@ -69,7 +70,7 @@ export const SaveReviews = () => {
         ? new Date(existingNote.tastingDate).toISOString().split('T')[0]
         : ''
       reset({
-        batchId: existingNote.batch.id,
+        batch: existingNote.batch.id,
         tastingDate: date,
         appearanceScore: existingNote.appearanceScore || undefined,
         aromaScore: existingNote.aromaScore || undefined,
@@ -93,7 +94,7 @@ export const SaveReviews = () => {
   const onSubmit = (data: FormData) => {
     const cleanData: TastingNoteInput = {
       ...(isEditMode && id && { id }),
-      batchId: data.batchId,
+      batch: data.batch,
       ...(data.tastingDate && { tastingDate: data.tastingDate }),
       ...(data.appearanceScore && { appearanceScore: data.appearanceScore }),
       ...(data.aromaScore && { aromaScore: data.aromaScore }),
@@ -136,7 +137,6 @@ export const SaveReviews = () => {
         </View>
 
         <View style={styles.form}>
-          {/* Informações Básicas */}
           <View style={styles.section}>
             <Text style={styles.sectionTitle}>Informações Básicas</Text>
           </View>
@@ -144,7 +144,7 @@ export const SaveReviews = () => {
           <View style={styles.section}>
             <Controller
               control={control}
-              name="batchId"
+              name="batch"
               render={({ field: { value, onChange } }) => (
                 <Select
                   label="Lote *"
@@ -152,8 +152,8 @@ export const SaveReviews = () => {
                   value={value || ''}
                   options={batchOptions}
                   onSelect={onChange}
-                  error={!!errors.batchId}
-                  errorMessage={errors.batchId?.message}
+                  error={!!errors.batch}
+                  errorMessage={errors.batch?.message}
                 />
               )}
             />
@@ -185,14 +185,11 @@ export const SaveReviews = () => {
                 control={control}
                 name="appearanceScore"
                 render={({ field: { value, onChange } }) => (
-                  <InputText
+                  <DecimalInput
                     label="Aparência"
                     placeholder="0-10"
-                    value={value?.toString() || ''}
-                    onChangeText={value =>
-                      onChange(value ? parseFloat(value) : undefined)
-                    }
-                    keyboardType="numeric"
+                    value={value}
+                    onChange={onChange}
                     error={!!errors.appearanceScore}
                     errorMessage={errors.appearanceScore?.message}
                   />
@@ -205,14 +202,11 @@ export const SaveReviews = () => {
                 control={control}
                 name="aromaScore"
                 render={({ field: { value, onChange } }) => (
-                  <InputText
+                  <DecimalInput
                     label="Aroma"
                     placeholder="0-10"
-                    value={value?.toString() || ''}
-                    onChangeText={value =>
-                      onChange(value ? parseFloat(value) : undefined)
-                    }
-                    keyboardType="numeric"
+                    value={value}
+                    onChange={onChange}
                     error={!!errors.aromaScore}
                     errorMessage={errors.aromaScore?.message}
                   />
@@ -227,14 +221,11 @@ export const SaveReviews = () => {
                 control={control}
                 name="flavorScore"
                 render={({ field: { value, onChange } }) => (
-                  <InputText
+                  <DecimalInput
                     label="Sabor"
                     placeholder="0-10"
-                    value={value?.toString() || ''}
-                    onChangeText={value =>
-                      onChange(value ? parseFloat(value) : undefined)
-                    }
-                    keyboardType="numeric"
+                    value={value}
+                    onChange={onChange}
                     error={!!errors.flavorScore}
                     errorMessage={errors.flavorScore?.message}
                   />
@@ -247,14 +238,11 @@ export const SaveReviews = () => {
                 control={control}
                 name="mouthfeelScore"
                 render={({ field: { value, onChange } }) => (
-                  <InputText
+                  <DecimalInput
                     label="Sensação na Boca"
                     placeholder="0-10"
-                    value={value?.toString() || ''}
-                    onChangeText={value =>
-                      onChange(value ? parseFloat(value) : undefined)
-                    }
-                    keyboardType="numeric"
+                    value={value}
+                    onChange={onChange}
                     error={!!errors.mouthfeelScore}
                     errorMessage={errors.mouthfeelScore?.message}
                   />
@@ -268,14 +256,11 @@ export const SaveReviews = () => {
               control={control}
               name="overallScore"
               render={({ field: { value, onChange } }) => (
-                <InputText
+                <DecimalInput
                   label="Pontuação Geral *"
                   placeholder="0-10"
-                  value={value?.toString() || ''}
-                  onChangeText={value =>
-                    onChange(value ? parseFloat(value) : undefined)
-                  }
-                  keyboardType="numeric"
+                  value={value}
+                  onChange={onChange}
                   error={!!errors.overallScore}
                   errorMessage={errors.overallScore?.message}
                 />

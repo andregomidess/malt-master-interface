@@ -23,6 +23,8 @@ import { recipesApi } from '../api/recipesApi'
 import { RecipeType } from '../interfaces/Recipe'
 import { COLORS } from '../../../shared/styles/colors'
 import toast from 'react-hot-toast'
+import { generateRecipePdf } from '../utils/generateRecipePdf'
+import { BiDownload } from 'react-icons/bi'
 
 // Helper para converter valores numéricos que podem vir como string do backend
 const toNumber = (
@@ -469,6 +471,20 @@ const SaveRecipesContent: React.FC = () => {
     navigate('/recipes')
   }
 
+  const handleExportPdf = async () => {
+    try {
+      await generateRecipePdf({
+        recipe,
+        calculations,
+        brewDate: recipe.brewDate,
+      })
+      toast.success('PDF gerado com sucesso!')
+    } catch (error) {
+      console.error('Erro ao gerar PDF:', error)
+      toast.error('Erro ao gerar PDF')
+    }
+  }
+
   const renderTabContent = () => {
     switch (activeTab) {
       case 'basic':
@@ -511,6 +527,20 @@ const SaveRecipesContent: React.FC = () => {
             {isEditMode ? 'Editar Receita' : 'Detalhes Básicos da Receita'}
           </Heading>
           <View style={styles.headerActions}>
+            {isEditMode && (
+              <Button
+                variant="outline"
+                size="medium"
+                onPress={handleExportPdf}
+                disabled={isSaving}
+                style={styles.exportButton}
+              >
+                <View style={styles.buttonContent}>
+                  <BiDownload size={18} color={COLORS.brand.primary} />
+                  <Text style={styles.buttonText}>Exportar PDF</Text>
+                </View>
+              </Button>
+            )}
             <Button
               variant="outline"
               size="medium"
@@ -582,6 +612,22 @@ const styles = StyleSheet.create({
   headerActions: {
     flexDirection: 'row',
     gap: 12,
+    alignItems: 'center',
+  },
+  exportButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  buttonContent: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+  },
+  buttonText: {
+    color: COLORS.brand.primary,
+    fontSize: 14,
+    fontWeight: '600',
   },
   mainContent: {
     flexDirection: 'row',

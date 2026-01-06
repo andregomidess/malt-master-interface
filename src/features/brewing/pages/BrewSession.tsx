@@ -1,4 +1,4 @@
-import React, { useState, useMemo, useEffect } from 'react'
+import { useState, useMemo, useEffect } from 'react'
 import {
   View,
   StyleSheet,
@@ -18,9 +18,10 @@ import { HopSchedule } from '../components/HopSchedule'
 import { formatGravity, formatPercentage } from '../interfaces/Brewing'
 import { useSaveBatch, type BatchInput } from '../hooks/useSaveBatch'
 import { Button } from '../../../shared/components/Button'
-import { BiChevronLeft, BiChevronRight } from 'react-icons/bi'
+import { BiChevronLeft, BiChevronRight, BiDownload } from 'react-icons/bi'
 import { useNavigate } from 'react-router'
 import toast from 'react-hot-toast'
+import { generateBrewPdf } from '../utils/generateBrewPdf'
 
 type PhaseType = 'planning' | 'mash' | 'fermenting' | 'completed'
 
@@ -42,7 +43,6 @@ export function BrewSession({ batchId }: BrewSessionProps) {
     mashPh: null as number | null,
   })
 
-  // Carregar estado do localStorage (persistência local)
   useEffect(() => {
     const saved = localStorage.getItem(`brew_session_${batchId}`)
     if (saved) {
@@ -54,12 +54,11 @@ export function BrewSession({ batchId }: BrewSessionProps) {
         }
         setActiveStepIndex(data.activeStepIndex || 0)
       } catch {
-        // Ignorar erros de parse
+        console.error('Erro ao carregar estado do localStorage')
       }
     }
   }, [batchId])
 
-  // Salvar estado no localStorage
   useEffect(() => {
     const data = {
       completedSteps: Array.from(completedSteps),
@@ -174,7 +173,6 @@ export function BrewSession({ batchId }: BrewSessionProps) {
       return
     }
 
-    // Função auxiliar para converter valores para número ou null
     const toNumberOrNull = (
       value: number | string | null | undefined,
     ): number | null => {
@@ -183,8 +181,6 @@ export function BrewSession({ batchId }: BrewSessionProps) {
       return isNaN(num) ? null : num
     }
 
-    // Mapear valores medidos para campos do batch
-    // postBoilGravity → actualOriginalGravity (OG real)
     const batchData: BatchInput = {
       id: detail.batch.id,
       user: user.id,
@@ -196,13 +192,10 @@ export function BrewSession({ batchId }: BrewSessionProps) {
       batchCode: detail.batch.batchCode || null,
       brewDate: detail.batch.brewDate || null,
       status: detail.batch.status,
-      // Converter valores numéricos garantindo que sejam números válidos
       plannedVolume: toNumberOrNull(detail.batch.plannedVolume),
-      // Salvar valores medidos
       ...(measuredValues.postBoilGravity && {
         actualOriginalGravity: measuredValues.postBoilGravity,
       }),
-      // Manter valores existentes se não foram medidos
       actualFinalGravity: toNumberOrNull(detail.batch.actualFinalGravity),
       actualAbv: toNumberOrNull(detail.batch.actualAbv),
       actualEfficiency: toNumberOrNull(detail.batch.actualEfficiency),
@@ -212,12 +205,29 @@ export function BrewSession({ batchId }: BrewSessionProps) {
     saveBatch(batchData, {
       onSuccess: () => {
         toast.success('Valores salvos no lote com sucesso!')
-        // Atualizar dados do batch
         setTimeout(() => {
           refetch()
         }, 500)
       },
     })
+  }
+
+  const handleExportPdf = async () => {
+    if (!detail) {
+      toast.error('Erro ao carregar dados do lote')
+      return
+    }
+
+    try {
+      await generateBrewPdf({
+        batchDetail: detail,
+        measuredValues,
+      })
+      toast.success('PDF gerado com sucesso!')
+    } catch (error) {
+      console.error('Erro ao gerar PDF:', error)
+      toast.error('Erro ao gerar PDF')
+    }
   }
 
   const phases: Array<{ key: PhaseType; label: string }> = [
@@ -235,7 +245,6 @@ export function BrewSession({ batchId }: BrewSessionProps) {
         showsVerticalScrollIndicator={false}
         contentContainerStyle={styles.container}
       >
-        {/* Header */}
         <View style={styles.header}>
           <View style={styles.headerTop}>
             <View style={styles.headerLeft}>
@@ -244,10 +253,22 @@ export function BrewSession({ batchId }: BrewSessionProps) {
               </Heading>
               <Text style={styles.code}>{batch.batchCode || '—'}</Text>
             </View>
-            <BatchStatusBadge status={batch.status} />
+            <View style={styles.headerRight}>
+              <Button
+                variant="outline"
+                size="small"
+                onPress={handleExportPdf}
+                style={styles.exportButton}
+              >
+                <View style={styles.buttonContent}>
+                  <BiDownload size={18} color={COLORS.brand.primary} />
+                  <Text style={styles.buttonText}>Exportar PDF</Text>
+                </View>
+              </Button>
+              <BatchStatusBadge status={batch.status} />
+            </View>
           </View>
 
-          {/* Fases de Navegação */}
           <View style={styles.phasesNav}>
             {phases.map(phase => (
               <TouchableOpacity
@@ -271,10 +292,8 @@ export function BrewSession({ batchId }: BrewSessionProps) {
           </View>
         </View>
 
-        {/* Conteúdo da Fase Ativa */}
         {activePhase === 'mash' && (
           <View style={styles.phaseContent}>
-            {/* Timer do Passo Atual */}
             {activeStep && (
               <View style={styles.timerSection}>
                 <BrewTimer
@@ -287,7 +306,6 @@ export function BrewSession({ batchId }: BrewSessionProps) {
               </View>
             )}
 
-            {/* Passo Atual */}
             {activeStep && (
               <View style={styles.currentStepSection}>
                 <View style={styles.stepHeader}>
@@ -350,7 +368,6 @@ export function BrewSession({ batchId }: BrewSessionProps) {
               </View>
             )}
 
-            {/* Lista de Passos Completos */}
             {currentSteps.length > 0 && (
               <View style={styles.stepsList}>
                 <Text style={styles.sectionTitle}>Passos da Mostura</Text>
@@ -373,7 +390,6 @@ export function BrewSession({ batchId }: BrewSessionProps) {
               </View>
             )}
 
-            {/* Ingredientes para Mostura */}
             {mashIngredients.length > 0 && (
               <View style={styles.ingredientsSection}>
                 <Text style={styles.sectionTitle}>
@@ -389,7 +405,6 @@ export function BrewSession({ batchId }: BrewSessionProps) {
               </View>
             )}
 
-            {/* Cronograma de Lúpulos */}
             {hopSchedule.length > 0 && (
               <View style={styles.hopScheduleSection}>
                 <Text style={styles.sectionTitle}>Cronograma de Lúpulos</Text>
@@ -397,7 +412,6 @@ export function BrewSession({ batchId }: BrewSessionProps) {
               </View>
             )}
 
-            {/* Valores Mensurados */}
             <View style={styles.measuredValuesSection}>
               <MeasuredValuesPanel
                 values={[
@@ -512,7 +526,6 @@ export function BrewSession({ batchId }: BrewSessionProps) {
               </View>
             </View>
 
-            {/* Valores Medidos Durante a Sessão */}
             {(measuredValues.preBoilGravity !== null ||
               measuredValues.preBoilVolume !== null ||
               measuredValues.postBoilGravity !== null ||
@@ -583,7 +596,6 @@ export function BrewSession({ batchId }: BrewSessionProps) {
               </View>
             )}
 
-            {/* Botão para criar nova brassagem */}
             <View style={styles.newBatchSection}>
               <Text style={styles.sectionTitle}>Nova Brassagem</Text>
               <Text style={styles.newBatchDescription}>
@@ -641,6 +653,26 @@ const styles = StyleSheet.create({
   headerLeft: {
     flex: 1,
     gap: 6,
+  },
+  headerRight: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+  },
+  exportButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  buttonContent: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+  },
+  buttonText: {
+    color: COLORS.brand.primary,
+    fontSize: 14,
+    fontWeight: '600',
   },
   title: {
     fontSize: 24,

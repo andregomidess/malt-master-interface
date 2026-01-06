@@ -84,7 +84,7 @@ export interface RecipeCarbonation {
   co2Volumes?: number | null
 }
 
-interface RecipeFormState {
+export interface RecipeFormState {
   // Básico
   name: string
   beerStyle: BeerStyle | null

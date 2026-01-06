@@ -1,4 +1,4 @@
-import React, { useState } from 'react'
+import React, { useState, useMemo } from 'react'
 import {
   View,
   StyleSheet,
@@ -18,8 +18,16 @@ import {
   BiX,
   BiBeer,
   BiDroplet,
+  BiCheckCircle,
+  BiErrorCircle,
 } from 'react-icons/bi'
 import { FaFlask, FaLeaf } from 'react-icons/fa'
+import { BeerStyle as FullBeerStyle } from '../../beer-style/interfaces/BeerStyle'
+import {
+  validateStyleRange,
+  getValidationTooltip,
+  StyleValidationResult,
+} from '../utils/validateStyleRanges'
 
 interface CollapsibleSectionProps {
   title: string
@@ -58,6 +66,103 @@ const CollapsibleSection: React.FC<CollapsibleSectionProps> = ({
   )
 }
 
+interface TooltipProps {
+  children: React.ReactNode
+  content: string
+  show: boolean
+}
+
+const Tooltip: React.FC<TooltipProps> = ({ children, content, show }) => {
+  const [isHovered, setIsHovered] = useState(false)
+
+  if (!show) return <>{children}</>
+
+  return (
+    <View
+      style={styles.tooltipContainer}
+      onMouseEnter={() => setIsHovered(true)}
+      onMouseLeave={() => setIsHovered(false)}
+    >
+      {children}
+      {isHovered && (
+        <View style={styles.tooltip}>
+          <Text variant="caption" style={styles.tooltipText}>
+            {content}
+          </Text>
+        </View>
+      )}
+    </View>
+  )
+}
+
+interface StatCardProps {
+  label: string
+  value: string | number
+  validation?: StyleValidationResult | null
+  cardStyle?: object
+}
+
+const StatCard: React.FC<StatCardProps> = ({
+  label,
+  value,
+  validation,
+  cardStyle,
+}) => {
+  const displayValue = value
+  const hasValidation = validation && validation.isValid !== null
+  const isValid = validation?.isValid
+  const tooltipContent = validation ? getValidationTooltip(validation) : ''
+  const showTooltip = isValid === false && tooltipContent !== ''
+
+  const cardStyles = hasValidation
+    ? [
+        cardStyle,
+        {
+          borderWidth: 2,
+          borderColor:
+            isValid === true
+              ? COLORS.status.success
+              : isValid === false
+                ? COLORS.status.error
+                : COLORS.border.light,
+        },
+      ]
+    : cardStyle
+
+  const cardContent = (
+    <Card style={cardStyles as object}>
+      <View style={styles.statCardHeader}>
+        <Text variant="caption" style={styles.statLabel}>
+          {label}
+        </Text>
+        {hasValidation && (
+          <View style={styles.validationIconSmall}>
+            {isValid === true ? (
+              <BiCheckCircle size={16} color={COLORS.status.success} />
+            ) : isValid === false ? (
+              <BiErrorCircle size={16} color={COLORS.status.error} />
+            ) : null}
+          </View>
+        )}
+      </View>
+      <Heading variant="h4" style={styles.statValue}>
+        {displayValue}
+      </Heading>
+      {validation && validation.range !== '—' && (
+        <Text variant="caption" style={styles.statRange}>
+          Estilo: {validation.range}
+        </Text>
+      )}
+    </Card>
+  )
+
+  return (
+    <Tooltip content={tooltipContent} show={showTooltip}>
+      {cardContent}
+    </Tooltip>
+  )
+}
+
 export const RecipeSidebar: React.FC = () => {
   const { recipe } = useRecipe()
   const calculations = useRecipeCalculations()
@@ -79,6 +184,52 @@ export const RecipeSidebar: React.FC = () => {
     fermentation: !!recipe.fermentation,
     carbonation: !!recipe.carbonation,
   }
+
+  const styleValidations = useMemo(() => {
+    const beerStyle = recipe.beerStyle as FullBeerStyle | null
+    if (!beerStyle) {
+      return {
+        og: null as StyleValidationResult | null,
+        fg: null as StyleValidationResult | null,
+        abv: null as StyleValidationResult | null,
+        ibu: null as StyleValidationResult | null,
+        ebc: null as StyleValidationResult | null,
+      }
+    }
+
+    return {
+      og: validateStyleRange(
+        calculations.originalGravity,
+        beerStyle.minOg,
+        beerStyle.maxOg,
+        'OG (Original Gravity)',
+      ),
+      fg: validateStyleRange(
+        calculations.finalGravity,
+        beerStyle.minFg,
+        beerStyle.maxFg,
+        'FG (Final Gravity)',
+      ),
+      abv: validateStyleRange(
+        calculations.estimatedAbv,
+        beerStyle.minAbv,
+        beerStyle.maxAbv,
+        'ABV (Álcool por Volume)',
+      ),
+      ibu: validateStyleRange(
+        calculations.estimatedIbu,
+        beerStyle.minIbu,
+        beerStyle.maxIbu,
+        'IBU (Unidades de Amargor)',
+      ),
+      ebc: validateStyleRange(
+        calculations.estimatedEbc,
+        beerStyle.minColorEbc,
+        beerStyle.maxColorEbc,
+        'EBC (Cor)',
+      ),
+    }
+  }, [recipe.beerStyle, calculations])
 
   return (
     <ScrollView style={styles.container} showsVerticalScrollIndicator={false}>
@@ -103,67 +254,64 @@ export const RecipeSidebar: React.FC = () => {
         <Text variant="body" style={styles.sectionTitle}>
           Estatísticas
         </Text>
+        {recipe.beerStyle && (
+          <Text variant="caption" style={styles.styleHint}>
+            Validação baseada no estilo: {recipe.beerStyle.name}
+          </Text>
+        )}
         <View style={styles.statsGrid}>
-          <Card style={styles.statCardOrange}>
-            <Text variant="caption" style={styles.statLabel}>
-              OG Calculado
-            </Text>
-            <Heading variant="h4" style={styles.statValue}>
-              {calculations.originalGravity?.toFixed(3) || '—'}
-            </Heading>
-          </Card>
+          <StatCard
+            label="OG Calculado"
+            value={calculations.originalGravity?.toFixed(3) || '—'}
+            validation={styleValidations.og}
+            cardStyle={styles.statCardOrange}
+          />
 
-          <Card style={styles.statCardRed}>
-            <Text variant="caption" style={styles.statLabel}>
-              FG Esperado
-            </Text>
-            <Heading variant="h4" style={styles.statValue}>
-              {calculations.finalGravity?.toFixed(3) || '—'}
-            </Heading>
-          </Card>
+          <StatCard
+            label="FG Esperado"
+            value={calculations.finalGravity?.toFixed(3) || '—'}
+            validation={styleValidations.fg}
+            cardStyle={styles.statCardRed}
+          />
 
-          <Card style={styles.statCardOrange}>
-            <Text variant="caption" style={styles.statLabel}>
-              ABV Percentual
-            </Text>
-            <Heading variant="h4" style={styles.statValue}>
-              {calculations.estimatedAbv
-                ? `${calculations.estimatedAbv} %`
-                : '—'}
-            </Heading>
-          </Card>
+          <StatCard
+            label="ABV Percentual"
+            value={
+              calculations.estimatedAbv ? `${calculations.estimatedAbv} %` : '—'
+            }
+            validation={styleValidations.abv}
+            cardStyle={styles.statCardOrange}
+          />
 
-          <Card style={styles.statCardRed}>
-            <Text variant="caption" style={styles.statLabel}>
-              IBU Soma Lúpulos
-            </Text>
-            <Heading variant="h4" style={styles.statValue}>
-              {calculations.estimatedIbu !== null &&
+          <StatCard
+            label="IBU Soma Lúpulos"
+            value={
+              calculations.estimatedIbu !== null &&
               calculations.estimatedIbu !== undefined
                 ? calculations.estimatedIbu.toFixed(1)
-                : '—'}
-            </Heading>
-          </Card>
+                : '—'
+            }
+            validation={styleValidations.ibu}
+            cardStyle={styles.statCardRed}
+          />
 
-          <Card style={styles.statCardYellow}>
-            <Text variant="caption" style={styles.statLabel}>
-              SRM Cor
-            </Text>
-            <Heading variant="h4" style={styles.statValue}>
-              {calculations.estimatedColor || '—'}
-            </Heading>
-          </Card>
+          <StatCard
+            label="SRM Cor"
+            value={calculations.estimatedColor || '—'}
+            validation={null}
+            cardStyle={styles.statCardYellow}
+          />
 
-          <Card style={styles.statCardYellow}>
-            <Text variant="caption" style={styles.statLabel}>
-              EBC Cor
-            </Text>
-            <Heading variant="h4" style={styles.statValue}>
-              {calculations.estimatedEbc || '—'}
-            </Heading>
-          </Card>
+          <StatCard
+            label="EBC Cor"
+            value={calculations.estimatedEbc || '—'}
+            validation={styleValidations.ebc}
+            cardStyle={styles.statCardYellow}
+          />
 
-          <Card style={styles.statCardWhite}>
+          <Card
+            style={[styles.statCardWhite, styles.statCardFullWidth] as object}
+          >
             <Text variant="caption" style={styles.statLabel}>
               Eficiência
             </Text>
@@ -347,6 +495,28 @@ const styles = StyleSheet.create({
     color: COLORS.text.primary,
     marginBottom: 12,
   },
+  styleHint: {
+    color: COLORS.text.secondary,
+    marginBottom: 8,
+    fontStyle: 'italic',
+  },
+  statCardHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 4,
+  },
+  validationIconSmall: {
+    width: 16,
+    height: 16,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  statRange: {
+    color: COLORS.text.secondary,
+    marginTop: 4,
+    fontSize: 10,
+  },
   statsGrid: {
     flexDirection: 'row',
     flexWrap: 'wrap',
@@ -368,7 +538,7 @@ const styles = StyleSheet.create({
   },
   statCardYellow: {
     flex: 1,
-    minWidth: '48%',
+    minWidth: '43%',
     padding: 12,
     minHeight: 80,
     backgroundColor: '#FFF4CC',
@@ -379,6 +549,10 @@ const styles = StyleSheet.create({
     padding: 12,
     minHeight: 80,
     backgroundColor: COLORS.neutral.white,
+  },
+  statCardFullWidth: {
+    minWidth: '100%',
+    flex: 0,
   },
   statLabel: {
     color: COLORS.text.secondary,
@@ -456,5 +630,31 @@ const styles = StyleSheet.create({
   validationLabelValid: {
     color: COLORS.text.primary,
     fontWeight: '500',
+  },
+  tooltipContainer: {
+    position: 'relative',
+    width: '48.9%',
+  },
+  tooltip: {
+    position: 'absolute',
+    bottom: '100%',
+    left: 0,
+    right: 0,
+    marginBottom: 8,
+    backgroundColor: COLORS.text.primary,
+    padding: 8,
+    borderRadius: 6,
+    zIndex: 1000,
+    maxWidth: 250,
+    shadowColor: COLORS.shadow,
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.25,
+    shadowRadius: 4,
+    elevation: 5,
+  },
+  tooltipText: {
+    color: COLORS.neutral.white,
+    fontSize: 11,
+    lineHeight: 14,
   },
 })

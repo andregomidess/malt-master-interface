@@ -260,7 +260,7 @@ const styles = StyleSheet.create({
     fontWeight: '600',
   },
   sapButton: {
-    position: 'fixed',
+    position: 'absolute',
     bottom: 32,
     left: 32,
     zIndex: 1000,

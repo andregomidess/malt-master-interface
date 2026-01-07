@@ -173,7 +173,6 @@ const styles = StyleSheet.create({
     fontSize: FONT_SIZE.sm,
     fontWeight: FONT_WEIGHT.medium,
     color: COLORS.text.secondary,
-    whiteSpace: 'nowrap',
   },
   tabTextActive: {
     color: COLORS.brand.primary,

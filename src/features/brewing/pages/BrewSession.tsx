@@ -15,9 +15,15 @@ import { BrewTimer } from '../components/BrewTimer'
 import { GuidedStepCard } from '../components/GuidedStepCard'
 import { MeasuredValuesPanel } from '../components/MeasuredValuesPanel'
 import { HopSchedule } from '../components/HopSchedule'
-import { formatGravity, formatPercentage } from '../interfaces/Brewing'
+import {
+  formatGravity,
+  formatPercentage,
+  BatchStatus,
+} from '../interfaces/Brewing'
 import { useSaveBatch, type BatchInput } from '../hooks/useSaveBatch'
 import { Button } from '../../../shared/components/Button'
+import { InputText } from '../../../shared/components/InputText'
+import { DateInput } from '../../../shared/components/DateInput'
 import { BiChevronLeft, BiChevronRight, BiDownload } from 'react-icons/bi'
 import { useNavigate } from 'react-router'
 import toast from 'react-hot-toast'
@@ -37,10 +43,31 @@ export function BrewSession({ batchId }: BrewSessionProps) {
   const [activeStepIndex, setActiveStepIndex] = useState<number>(0)
   const [completedSteps, setCompletedSteps] = useState<Set<string>>(new Set())
   const [measuredValues, setMeasuredValues] = useState({
+    // Mostura
+    mashPh: null as number | null,
+    // Fervura
     preBoilGravity: null as number | null,
     preBoilVolume: null as number | null,
     postBoilGravity: null as number | null,
-    mashPh: null as number | null,
+    postBoilVolume: null as number | null,
+    // Fermentação
+    waterInFermenter: null as number | null,
+    fermenterVolume: null as number | null,
+    actualFinalGravity: null as number | null,
+    peakFermentationTemp: null as number | null,
+    bottlingVolume: null as number | null,
+  })
+
+  const [finalValues, setFinalValues] = useState({
+    finalVolume: null as number | null,
+    actualAbv: null as number | null,
+    actualIbu: null as number | null,
+    actualColor: null as number | null,
+    actualCarbonation: null as number | null,
+    fermentationTemperature: null as number | null,
+    fermentationTime: null as number | null,
+    packagingDate: null as string | null,
+    readyDate: null as string | null,
   })
 
   useEffect(() => {
@@ -52,6 +79,9 @@ export function BrewSession({ batchId }: BrewSessionProps) {
         if (data.measuredValues) {
           setMeasuredValues(data.measuredValues)
         }
+        if (data.finalValues) {
+          setFinalValues(data.finalValues)
+        }
         setActiveStepIndex(data.activeStepIndex || 0)
       } catch {
         console.error('Erro ao carregar estado do localStorage')
@@ -60,13 +90,44 @@ export function BrewSession({ batchId }: BrewSessionProps) {
   }, [batchId])
 
   useEffect(() => {
+    if (detail?.batch) {
+      const batch = detail.batch
+      setMeasuredValues(prev => ({
+        ...prev,
+        mashPh: batch.mashPh ?? prev.mashPh,
+        preBoilGravity: batch.preBoilGravity ?? prev.preBoilGravity,
+        preBoilVolume: batch.preBoilVolume ?? prev.preBoilVolume,
+        postBoilVolume: batch.postBoilVolume ?? prev.postBoilVolume,
+        waterInFermenter: batch.waterInFermenter ?? prev.waterInFermenter,
+        fermenterVolume: batch.fermenterVolume ?? prev.fermenterVolume,
+        actualFinalGravity: batch.actualFinalGravity ?? prev.actualFinalGravity,
+        peakFermentationTemp:
+          batch.peakFermentationTemp ?? prev.peakFermentationTemp,
+        bottlingVolume: batch.bottlingVolume ?? prev.bottlingVolume,
+      }))
+      setFinalValues({
+        finalVolume: batch.finalVolume || null,
+        actualAbv: batch.actualAbv || null,
+        actualIbu: batch.actualIbu || null,
+        actualColor: batch.actualColor || null,
+        actualCarbonation: batch.actualCarbonation || null,
+        fermentationTemperature: batch.fermentationTemperature || null,
+        fermentationTime: batch.fermentationTime || null,
+        packagingDate: batch.packagingDate || null,
+        readyDate: batch.readyDate || null,
+      })
+    }
+  }, [detail])
+
+  useEffect(() => {
     const data = {
       completedSteps: Array.from(completedSteps),
       measuredValues,
+      finalValues,
       activeStepIndex,
     }
     localStorage.setItem(`brew_session_${batchId}`, JSON.stringify(data))
-  }, [completedSteps, measuredValues, activeStepIndex, batchId])
+  }, [completedSteps, measuredValues, finalValues, activeStepIndex, batchId])
 
   const currentSteps = useMemo(() => {
     if (!detail) return []
@@ -161,6 +222,51 @@ export function BrewSession({ batchId }: BrewSessionProps) {
     }
   }
 
+  const calculateABV = (
+    og: number | null,
+    fg: number | null,
+  ): number | null => {
+    if (!og || !fg) return null
+    // Fórmula padrão de ABV: ((OG - FG) * 131.25)
+    return (og - fg) * 131.25
+  }
+
+  const handleUpdateFinalValue = (
+    field: string,
+    value: number | string | null,
+  ) => {
+    setFinalValues(prev => {
+      return { ...prev, [field]: value }
+    })
+  }
+
+  const handleUpdateMeasuredValueWithABV = (
+    id: string,
+    value: number | null,
+  ) => {
+    handleUpdateMeasuredValue(id, value)
+
+    // Calcular ABV automaticamente se FG foi atualizado
+    if (id === 'actualFinalGravity') {
+      const og =
+        measuredValues.postBoilGravity ||
+        detail?.batch.actualOriginalGravity ||
+        null
+      if (og && value) {
+        const calculatedABV = calculateABV(og, value)
+        setFinalValues(prev => ({ ...prev, actualAbv: calculatedABV }))
+      }
+    }
+  }
+
+  const calculateAttenuation = (
+    og: number | null,
+    fg: number | null,
+  ): number | null => {
+    if (!og || !fg) return null
+    return ((og - fg) / (og - 1.0)) * 100
+  }
+
   const handleSaveBatchValues = () => {
     if (!detail?.batch) {
       toast.error('Erro ao carregar dados do lote')
@@ -196,15 +302,204 @@ export function BrewSession({ batchId }: BrewSessionProps) {
       ...(measuredValues.postBoilGravity && {
         actualOriginalGravity: measuredValues.postBoilGravity,
       }),
-      actualFinalGravity: toNumberOrNull(detail.batch.actualFinalGravity),
-      actualAbv: toNumberOrNull(detail.batch.actualAbv),
+      actualFinalGravity: toNumberOrNull(measuredValues.actualFinalGravity),
+      actualAbv: toNumberOrNull(finalValues.actualAbv),
       actualEfficiency: toNumberOrNull(detail.batch.actualEfficiency),
+      // Valores medidos durante a sessão
+      mashPh: toNumberOrNull(measuredValues.mashPh),
+      preBoilGravity: toNumberOrNull(measuredValues.preBoilGravity),
+      preBoilVolume: toNumberOrNull(measuredValues.preBoilVolume),
+      postBoilVolume: toNumberOrNull(measuredValues.postBoilVolume),
+      waterInFermenter: toNumberOrNull(measuredValues.waterInFermenter),
+      fermenterVolume: toNumberOrNull(measuredValues.fermenterVolume),
+      peakFermentationTemp: toNumberOrNull(measuredValues.peakFermentationTemp),
+      bottlingVolume: toNumberOrNull(measuredValues.bottlingVolume),
       observations: detail.batch.observations || null,
     }
 
     saveBatch(batchData, {
       onSuccess: () => {
         toast.success('Valores salvos no lote com sucesso!')
+        setTimeout(() => {
+          refetch()
+        }, 500)
+      },
+    })
+  }
+
+  const handleChangeStatus = (newStatus: BatchStatus) => {
+    if (!detail?.batch) {
+      toast.error('Erro ao carregar dados do lote')
+      return
+    }
+
+    const user = JSON.parse(localStorage.getItem('user') || '{}')
+    if (!user?.id) {
+      toast.error('Usuário não encontrado')
+      return
+    }
+
+    const toNumberOrNull = (
+      value: number | string | null | undefined,
+    ): number | null => {
+      if (value === null || value === undefined) return null
+      const num = typeof value === 'string' ? parseFloat(value) : value
+      return isNaN(num) ? null : num
+    }
+
+    // Calcular ABV se OG e FG estiverem disponíveis
+    const og =
+      measuredValues.postBoilGravity ||
+      detail.batch.actualOriginalGravity ||
+      null
+    const fg =
+      measuredValues.actualFinalGravity ||
+      detail.batch.actualFinalGravity ||
+      null
+    const calculatedABV =
+      og && fg ? calculateABV(og, fg) : finalValues.actualAbv
+
+    const batchData: BatchInput = {
+      id: detail.batch.id,
+      user: user.id,
+      recipe: detail.batch.recipe?.id || '',
+      ...(detail.batch.equipment?.id && {
+        equipment: detail.batch.equipment.id,
+      }),
+      name: detail.batch.name || null,
+      batchCode: detail.batch.batchCode || null,
+      brewDate: detail.batch.brewDate || null,
+      packagingDate:
+        finalValues.packagingDate || detail.batch.packagingDate || null,
+      readyDate: finalValues.readyDate || detail.batch.readyDate || null,
+      status: newStatus,
+      plannedVolume: toNumberOrNull(detail.batch.plannedVolume),
+      finalVolume: toNumberOrNull(
+        finalValues.finalVolume || detail.batch.finalVolume,
+      ),
+      ...(measuredValues.postBoilGravity && {
+        actualOriginalGravity: measuredValues.postBoilGravity,
+      }),
+      actualFinalGravity: toNumberOrNull(measuredValues.actualFinalGravity),
+      actualAbv: toNumberOrNull(calculatedABV || detail.batch.actualAbv),
+      actualIbu: toNumberOrNull(
+        finalValues.actualIbu || detail.batch.actualIbu,
+      ),
+      actualColor: toNumberOrNull(
+        finalValues.actualColor || detail.batch.actualColor,
+      ),
+      actualCarbonation: toNumberOrNull(finalValues.actualCarbonation),
+      actualEfficiency: toNumberOrNull(detail.batch.actualEfficiency),
+      fermentationTemperature: toNumberOrNull(
+        finalValues.fermentationTemperature,
+      ),
+      fermentationTime: toNumberOrNull(finalValues.fermentationTime),
+      // Valores medidos durante a sessão
+      mashPh: toNumberOrNull(measuredValues.mashPh),
+      preBoilGravity: toNumberOrNull(measuredValues.preBoilGravity),
+      preBoilVolume: toNumberOrNull(measuredValues.preBoilVolume),
+      postBoilVolume: toNumberOrNull(measuredValues.postBoilVolume),
+      waterInFermenter: toNumberOrNull(measuredValues.waterInFermenter),
+      fermenterVolume: toNumberOrNull(measuredValues.fermenterVolume),
+      peakFermentationTemp: toNumberOrNull(measuredValues.peakFermentationTemp),
+      bottlingVolume: toNumberOrNull(measuredValues.bottlingVolume),
+      observations: detail.batch.observations || null,
+    }
+
+    saveBatch(batchData, {
+      onSuccess: () => {
+        const statusLabels: Record<BatchStatus, string> = {
+          planned: 'Planejada',
+          fermenting: 'Fermentando',
+          maturing: 'Maturando',
+          packaged: 'Envasada',
+          completed: 'Finalizada',
+        }
+        toast.success(
+          `Status alterado para "${statusLabels[newStatus]}" com sucesso!`,
+        )
+        setTimeout(() => {
+          refetch()
+        }, 500)
+      },
+    })
+  }
+
+  const handleCompleteBatch = () => {
+    if (!detail?.batch) {
+      toast.error('Erro ao carregar dados do lote')
+      return
+    }
+
+    const user = JSON.parse(localStorage.getItem('user') || '{}')
+    if (!user?.id) {
+      toast.error('Usuário não encontrado')
+      return
+    }
+
+    const toNumberOrNull = (
+      value: number | string | null | undefined,
+    ): number | null => {
+      if (value === null || value === undefined) return null
+      const num = typeof value === 'string' ? parseFloat(value) : value
+      return isNaN(num) ? null : num
+    }
+
+    // Calcular ABV se OG e FG estiverem disponíveis
+    const og =
+      measuredValues.postBoilGravity ||
+      detail.batch.actualOriginalGravity ||
+      null
+    const fg =
+      measuredValues.actualFinalGravity ||
+      detail.batch.actualFinalGravity ||
+      null
+    const calculatedABV =
+      og && fg ? calculateABV(og, fg) : finalValues.actualAbv
+
+    const batchData: BatchInput = {
+      id: detail.batch.id,
+      user: user.id,
+      recipe: detail.batch.recipe?.id || '',
+      ...(detail.batch.equipment?.id && {
+        equipment: detail.batch.equipment.id,
+      }),
+      name: detail.batch.name || null,
+      batchCode: detail.batch.batchCode || null,
+      brewDate: detail.batch.brewDate || null,
+      packagingDate: finalValues.packagingDate || null,
+      readyDate: finalValues.readyDate || null,
+      status: 'completed',
+      plannedVolume: toNumberOrNull(detail.batch.plannedVolume),
+      finalVolume: toNumberOrNull(finalValues.finalVolume),
+      ...(measuredValues.postBoilGravity && {
+        actualOriginalGravity: measuredValues.postBoilGravity,
+      }),
+      actualFinalGravity: toNumberOrNull(measuredValues.actualFinalGravity),
+      actualAbv: toNumberOrNull(calculatedABV),
+      actualIbu: toNumberOrNull(finalValues.actualIbu),
+      actualColor: toNumberOrNull(finalValues.actualColor),
+      actualCarbonation: toNumberOrNull(finalValues.actualCarbonation),
+      actualEfficiency: toNumberOrNull(detail.batch.actualEfficiency),
+      fermentationTemperature: toNumberOrNull(
+        finalValues.fermentationTemperature,
+      ),
+      fermentationTime: toNumberOrNull(finalValues.fermentationTime),
+      // Valores medidos durante a sessão
+      mashPh: toNumberOrNull(measuredValues.mashPh),
+      preBoilGravity: toNumberOrNull(measuredValues.preBoilGravity),
+      preBoilVolume: toNumberOrNull(measuredValues.preBoilVolume),
+      postBoilVolume: toNumberOrNull(measuredValues.postBoilVolume),
+      waterInFermenter: toNumberOrNull(measuredValues.waterInFermenter),
+      fermenterVolume: toNumberOrNull(measuredValues.fermenterVolume),
+      peakFermentationTemp: toNumberOrNull(measuredValues.peakFermentationTemp),
+      bottlingVolume: toNumberOrNull(measuredValues.bottlingVolume),
+      observations: detail.batch.observations || null,
+    }
+
+    saveBatch(batchData, {
+      onSuccess: () => {
+        toast.success('Lote completado com sucesso!')
         setTimeout(() => {
           refetch()
         }, 500)
@@ -413,13 +708,13 @@ export function BrewSession({ batchId }: BrewSessionProps) {
             )}
 
             <View style={styles.measuredValuesSection}>
+              <Text style={styles.sectionTitle}>Valores Mensurados</Text>
               <MeasuredValuesPanel
                 values={[
                   {
-                    id: 'preBoilGravity',
-                    label: 'Densidade Pré Fervura',
-                    value: measuredValues.preBoilGravity,
-                    unit: 'SG',
+                    id: 'mashPh',
+                    label: 'pH da Mostura',
+                    value: measuredValues.mashPh,
                   },
                   {
                     id: 'preBoilVolume',
@@ -428,15 +723,22 @@ export function BrewSession({ batchId }: BrewSessionProps) {
                     unit: 'L',
                   },
                   {
+                    id: 'preBoilGravity',
+                    label: 'Densidade Pré Fervura',
+                    value: measuredValues.preBoilGravity,
+                    unit: 'SG',
+                  },
+                  {
                     id: 'postBoilGravity',
-                    label: 'Densidade Pós Fervura',
+                    label: 'Densidade Pós Fervura (OG)',
                     value: measuredValues.postBoilGravity,
                     unit: 'SG',
                   },
                   {
-                    id: 'mashPh',
-                    label: 'pH da Mostura',
-                    value: measuredValues.mashPh,
+                    id: 'postBoilVolume',
+                    label: 'Volume Pós Fervura',
+                    value: measuredValues.postBoilVolume,
+                    unit: 'L',
                   },
                 ]}
                 onUpdate={(id, value) => handleUpdateMeasuredValue(id, value)}
@@ -453,7 +755,10 @@ export function BrewSession({ batchId }: BrewSessionProps) {
               <View style={styles.infoRow}>
                 <Text style={styles.infoLabel}>Estilo:</Text>
                 <Text style={styles.infoValue}>
-                  {batch.recipe?.styleName || '—'}
+                  {typeof batch.recipe?.beerStyle === 'object' &&
+                  batch.recipe?.beerStyle
+                    ? batch.recipe.beerStyle.name
+                    : batch.recipe?.styleName || '—'}
                 </Text>
               </View>
               <View style={styles.infoRow}>
@@ -469,6 +774,19 @@ export function BrewSession({ batchId }: BrewSessionProps) {
                 </Text>
               </View>
             </View>
+
+            {batch.status !== 'planned' && (
+              <View style={styles.statusChangeSection}>
+                <Button
+                  variant="outline"
+                  size="medium"
+                  onPress={() => handleChangeStatus('planned')}
+                  disabled={isSaving}
+                >
+                  Mudar Status para Planejada
+                </Button>
+              </View>
+            )}
           </View>
         )}
 
@@ -493,38 +811,430 @@ export function BrewSession({ batchId }: BrewSessionProps) {
                 ))}
               </View>
             )}
+
+            <View style={styles.measuredValuesSection}>
+              <Text style={styles.sectionTitle}>Valores Mensurados</Text>
+              <MeasuredValuesPanel
+                values={[
+                  {
+                    id: 'postBoilVolume',
+                    label: 'Volume Pós Fervura',
+                    value: measuredValues.postBoilVolume,
+                    unit: 'L',
+                  },
+                  {
+                    id: 'waterInFermenter',
+                    label: 'Água no Fermentador',
+                    value: measuredValues.waterInFermenter,
+                    unit: 'L',
+                  },
+                  {
+                    id: 'fermenterVolume',
+                    label: 'Volume do Fermentador',
+                    value: measuredValues.fermenterVolume,
+                    unit: 'L',
+                  },
+                  {
+                    id: 'actualFinalGravity',
+                    label: 'Densidade Final (FG)',
+                    value: measuredValues.actualFinalGravity,
+                    unit: 'SG',
+                  },
+                  {
+                    id: 'peakFermentationTemp',
+                    label: 'Pico de Temp. na Fermentação',
+                    value: measuredValues.peakFermentationTemp,
+                    unit: '°C',
+                  },
+                  {
+                    id: 'bottlingVolume',
+                    label: 'Volume de Engarrafamento',
+                    value: measuredValues.bottlingVolume,
+                    unit: 'L',
+                  },
+                ]}
+                onUpdate={(id, value) => {
+                  if (id === 'actualFinalGravity') {
+                    handleUpdateMeasuredValueWithABV(id, value)
+                  } else {
+                    handleUpdateMeasuredValue(id, value)
+                  }
+                }}
+                onSave={handleSaveMeasuredValues}
+              />
+            </View>
+
+            {/* Estatísticas Calculadas */}
+            {(measuredValues.postBoilGravity ||
+              measuredValues.actualFinalGravity ||
+              detail?.batch.actualOriginalGravity) && (
+              <View style={styles.statisticsSection}>
+                <Text style={styles.sectionTitle}>Estatísticas</Text>
+                <View style={styles.statisticsGrid}>
+                  <View style={styles.statisticCard}>
+                    <Text style={styles.statisticLabel}>ABV</Text>
+                    <Text style={styles.statisticValue}>
+                      {formatPercentage(
+                        (() => {
+                          const og =
+                            measuredValues.postBoilGravity ||
+                            detail?.batch.actualOriginalGravity ||
+                            null
+                          const fg = measuredValues.actualFinalGravity || null
+                          return calculateABV(og, fg)
+                        })(),
+                      )}
+                    </Text>
+                  </View>
+                  <View style={styles.statisticCard}>
+                    <Text style={styles.statisticLabel}>Atenuação</Text>
+                    <Text style={styles.statisticValue}>
+                      {formatPercentage(
+                        (() => {
+                          const og =
+                            measuredValues.postBoilGravity ||
+                            detail?.batch.actualOriginalGravity ||
+                            null
+                          const fg = measuredValues.actualFinalGravity || null
+                          return calculateAttenuation(og, fg)
+                        })(),
+                      )}
+                    </Text>
+                  </View>
+                </View>
+              </View>
+            )}
+
+            {/* Carbonatação */}
+            {measuredValues.bottlingVolume && (
+              <View style={styles.carbonationSection}>
+                <Text style={styles.sectionTitle}>Carbonatação</Text>
+                <View style={styles.carbonationCard}>
+                  <Text style={styles.carbonationText}>
+                    {finalValues.actualCarbonation
+                      ? `Para ${finalValues.actualCarbonation} vols de CO₂ em ${measuredValues.bottlingVolume} L a ${finalValues.fermentationTemperature || 20}°C:`
+                      : 'Configure a carbonatação desejada'}
+                  </Text>
+                  <View style={styles.formRow}>
+                    <View style={styles.formFieldHalf}>
+                      <InputText
+                        label="Carbonatação Desejada (vols CO₂)"
+                        placeholder="Ex: 2.5"
+                        value={finalValues.actualCarbonation?.toString() || ''}
+                        onChangeText={val => {
+                          const num = parseFloat(val)
+                          handleUpdateFinalValue(
+                            'actualCarbonation',
+                            isNaN(num) ? null : num,
+                          )
+                        }}
+                        keyboardType="numeric"
+                      />
+                    </View>
+                    <View style={styles.formFieldHalf}>
+                      <InputText
+                        label="Temp. de Fermentação (°C)"
+                        placeholder="Ex: 20"
+                        value={
+                          finalValues.fermentationTemperature?.toString() || ''
+                        }
+                        onChangeText={val => {
+                          const num = parseFloat(val)
+                          handleUpdateFinalValue(
+                            'fermentationTemperature',
+                            isNaN(num) ? null : num,
+                          )
+                        }}
+                        keyboardType="numeric"
+                      />
+                    </View>
+                  </View>
+                </View>
+              </View>
+            )}
+
+            {/* Botão para mudar status */}
+            {batch.status !== 'fermenting' && (
+              <View style={styles.statusChangeSection}>
+                <Button
+                  variant="outline"
+                  size="medium"
+                  onPress={() => handleChangeStatus('fermenting')}
+                  disabled={isSaving}
+                >
+                  Mudar Status para Fermentando
+                </Button>
+              </View>
+            )}
+
+            {batch.status === 'fermenting' && (
+              <View style={styles.statusChangeSection}>
+                <View style={styles.statusChangeButtons}>
+                  <Button
+                    variant="outline"
+                    size="medium"
+                    onPress={() => handleChangeStatus('maturing')}
+                    disabled={isSaving}
+                  >
+                    Mudar Status para Maturando
+                  </Button>
+                  <Button
+                    variant="outline"
+                    size="medium"
+                    onPress={() => handleChangeStatus('packaged')}
+                    disabled={isSaving}
+                  >
+                    Mudar Status para Envasada
+                  </Button>
+                </View>
+              </View>
+            )}
           </View>
         )}
 
         {activePhase === 'completed' && (
           <View style={styles.phaseContent}>
-            <Text style={styles.sectionTitle}>Resultados Finais</Text>
-            <View style={styles.resultsGrid}>
-              <View style={styles.resultCard}>
-                <Text style={styles.resultLabel}>OG Real</Text>
-                <Text style={styles.resultValue}>
-                  {formatGravity(batch.actualOriginalGravity)}
-                </Text>
+            <Text style={styles.sectionTitle}>Completar Lote</Text>
+
+            {batch.status === 'completed' ? (
+              <>
+                <Text style={styles.sectionTitle}>Resultados Finais</Text>
+                <View style={styles.resultsGrid}>
+                  <View style={styles.resultCard}>
+                    <Text style={styles.resultLabel}>OG Real</Text>
+                    <Text style={styles.resultValue}>
+                      {formatGravity(batch.actualOriginalGravity)}
+                    </Text>
+                  </View>
+                  <View style={styles.resultCard}>
+                    <Text style={styles.resultLabel}>FG Real</Text>
+                    <Text style={styles.resultValue}>
+                      {formatGravity(batch.actualFinalGravity)}
+                    </Text>
+                  </View>
+                  <View style={styles.resultCard}>
+                    <Text style={styles.resultLabel}>ABV</Text>
+                    <Text style={styles.resultValue}>
+                      {formatPercentage(batch.actualAbv)}
+                    </Text>
+                  </View>
+                  <View style={styles.resultCard}>
+                    <Text style={styles.resultLabel}>Volume Final</Text>
+                    <Text style={styles.resultValue}>
+                      {batch.finalVolume ? `${batch.finalVolume} L` : '—'}
+                    </Text>
+                  </View>
+                  <View style={styles.resultCard}>
+                    <Text style={styles.resultLabel}>Eficiência</Text>
+                    <Text style={styles.resultValue}>
+                      {formatPercentage(batch.actualEfficiency)}
+                    </Text>
+                  </View>
+                  {batch.packagingDate && (
+                    <View style={styles.resultCard}>
+                      <Text style={styles.resultLabel}>
+                        Data de Envasamento
+                      </Text>
+                      <Text style={styles.resultValue}>
+                        {new Date(batch.packagingDate).toLocaleDateString(
+                          'pt-BR',
+                        )}
+                      </Text>
+                    </View>
+                  )}
+                  {batch.readyDate && (
+                    <View style={styles.resultCard}>
+                      <Text style={styles.resultLabel}>Data de Pronto</Text>
+                      <Text style={styles.resultValue}>
+                        {new Date(batch.readyDate).toLocaleDateString('pt-BR')}
+                      </Text>
+                    </View>
+                  )}
+                </View>
+              </>
+            ) : (
+              <View style={styles.completeForm}>
+                <Text style={styles.formSectionTitle}>Valores Finais</Text>
+
+                <View style={styles.formRow}>
+                  <View style={styles.formFieldHalf}>
+                    <InputText
+                      label="Volume Final (L)"
+                      placeholder="Ex: 19"
+                      value={finalValues.finalVolume?.toString() || ''}
+                      onChangeText={val => {
+                        const num = parseFloat(val)
+                        handleUpdateFinalValue(
+                          'finalVolume',
+                          isNaN(num) ? null : num,
+                        )
+                      }}
+                      keyboardType="numeric"
+                    />
+                  </View>
+                  <View style={styles.formFieldHalf}>
+                    <InputText
+                      label="Densidade Final (FG)"
+                      placeholder="Ex: 1.012"
+                      value={
+                        measuredValues.actualFinalGravity?.toString() || ''
+                      }
+                      onChangeText={val => {
+                        const num = parseFloat(val)
+                        handleUpdateMeasuredValue(
+                          'actualFinalGravity',
+                          isNaN(num) ? null : num,
+                        )
+                      }}
+                      keyboardType="numeric"
+                    />
+                  </View>
+                </View>
+
+                <View style={styles.formRow}>
+                  <View style={styles.formFieldHalf}>
+                    <InputText
+                      label="ABV (%)"
+                      placeholder="Calculado automaticamente"
+                      value={finalValues.actualAbv?.toString() || ''}
+                      onChangeText={val => {
+                        const num = parseFloat(val)
+                        handleUpdateFinalValue(
+                          'actualAbv',
+                          isNaN(num) ? null : num,
+                        )
+                      }}
+                      keyboardType="numeric"
+                      editable={true}
+                    />
+                  </View>
+                  <View style={styles.formFieldHalf}>
+                    <InputText
+                      label="IBU Real"
+                      placeholder="Ex: 45"
+                      value={finalValues.actualIbu?.toString() || ''}
+                      onChangeText={val => {
+                        const num = parseFloat(val)
+                        handleUpdateFinalValue(
+                          'actualIbu',
+                          isNaN(num) ? null : num,
+                        )
+                      }}
+                      keyboardType="numeric"
+                    />
+                  </View>
+                </View>
+
+                <View style={styles.formRow}>
+                  <View style={styles.formFieldHalf}>
+                    <InputText
+                      label="Cor Real (EBC)"
+                      placeholder="Ex: 12"
+                      value={finalValues.actualColor?.toString() || ''}
+                      onChangeText={val => {
+                        const num = parseFloat(val)
+                        handleUpdateFinalValue(
+                          'actualColor',
+                          isNaN(num) ? null : num,
+                        )
+                      }}
+                      keyboardType="numeric"
+                    />
+                  </View>
+                  <View style={styles.formFieldHalf}>
+                    <InputText
+                      label="Carbonatação (vols CO₂)"
+                      placeholder="Ex: 2.5"
+                      value={finalValues.actualCarbonation?.toString() || ''}
+                      onChangeText={val => {
+                        const num = parseFloat(val)
+                        handleUpdateFinalValue(
+                          'actualCarbonation',
+                          isNaN(num) ? null : num,
+                        )
+                      }}
+                      keyboardType="numeric"
+                    />
+                  </View>
+                </View>
+
+                <Text style={styles.formSectionTitle}>Fermentação</Text>
+
+                <View style={styles.formRow}>
+                  <View style={styles.formFieldHalf}>
+                    <InputText
+                      label="Temperatura de Fermentação (°C)"
+                      placeholder="Ex: 18"
+                      value={
+                        finalValues.fermentationTemperature?.toString() || ''
+                      }
+                      onChangeText={val => {
+                        const num = parseFloat(val)
+                        handleUpdateFinalValue(
+                          'fermentationTemperature',
+                          isNaN(num) ? null : num,
+                        )
+                      }}
+                      keyboardType="numeric"
+                    />
+                  </View>
+                  <View style={styles.formFieldHalf}>
+                    <InputText
+                      label="Tempo de Fermentação (dias)"
+                      placeholder="Ex: 14"
+                      value={finalValues.fermentationTime?.toString() || ''}
+                      onChangeText={val => {
+                        const num = parseFloat(val)
+                        handleUpdateFinalValue(
+                          'fermentationTime',
+                          isNaN(num) ? null : num,
+                        )
+                      }}
+                      keyboardType="numeric"
+                    />
+                  </View>
+                </View>
+
+                <Text style={styles.formSectionTitle}>Datas</Text>
+
+                <View style={styles.formRow}>
+                  <View style={styles.formFieldHalf}>
+                    <DateInput
+                      label="Data de Envasamento"
+                      value={finalValues.packagingDate || undefined}
+                      onChange={date =>
+                        handleUpdateFinalValue('packagingDate', date)
+                      }
+                    />
+                  </View>
+                  <View style={styles.formFieldHalf}>
+                    <DateInput
+                      label="Data de Pronto"
+                      value={finalValues.readyDate || undefined}
+                      onChange={date =>
+                        handleUpdateFinalValue('readyDate', date)
+                      }
+                    />
+                  </View>
+                </View>
+
+                <View style={styles.completeButtonContainer}>
+                  <Button
+                    variant="primary"
+                    size="large"
+                    onPress={handleCompleteBatch}
+                    disabled={isSaving}
+                    loading={isSaving}
+                  >
+                    {isSaving ? 'Completando...' : 'Completar Lote'}
+                  </Button>
+                  <Text style={styles.completeButtonHint}>
+                    Marca o lote como completado e salva todos os valores
+                    finais.
+                  </Text>
+                </View>
               </View>
-              <View style={styles.resultCard}>
-                <Text style={styles.resultLabel}>FG Real</Text>
-                <Text style={styles.resultValue}>
-                  {formatGravity(batch.actualFinalGravity)}
-                </Text>
-              </View>
-              <View style={styles.resultCard}>
-                <Text style={styles.resultLabel}>ABV</Text>
-                <Text style={styles.resultValue}>
-                  {formatPercentage(batch.actualAbv)}
-                </Text>
-              </View>
-              <View style={styles.resultCard}>
-                <Text style={styles.resultLabel}>Eficiência</Text>
-                <Text style={styles.resultValue}>
-                  {formatPercentage(batch.actualEfficiency)}
-                </Text>
-              </View>
-            </View>
+            )}
 
             {(measuredValues.preBoilGravity !== null ||
               measuredValues.preBoilVolume !== null ||
@@ -902,5 +1612,92 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: COLORS.text.secondary,
     lineHeight: 20,
+  },
+  completeForm: {
+    gap: 24,
+    backgroundColor: COLORS.neutral.white,
+    padding: 20,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: COLORS.border.light,
+  },
+  formSectionTitle: {
+    fontSize: 16,
+    fontWeight: '700',
+    color: COLORS.text.primary,
+    marginBottom: 16,
+    marginTop: 8,
+  },
+  formRow: {
+    flexDirection: 'row',
+    gap: 12,
+    marginBottom: 16,
+  },
+  formFieldHalf: {
+    flex: 1,
+  },
+  completeButtonContainer: {
+    marginTop: 24,
+    gap: 8,
+  },
+  completeButtonHint: {
+    fontSize: 12,
+    color: COLORS.text.secondary,
+    fontStyle: 'italic',
+    textAlign: 'center',
+  },
+  statisticsSection: {
+    marginTop: 24,
+    gap: 16,
+  },
+  statisticsGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 12,
+  },
+  statisticCard: {
+    minWidth: 120,
+    backgroundColor: COLORS.neutral.white,
+    borderRadius: 8,
+    padding: 16,
+    borderWidth: 1,
+    borderColor: COLORS.border.light,
+    gap: 4,
+  },
+  statisticLabel: {
+    fontSize: 12,
+    color: COLORS.text.secondary,
+    fontWeight: '500',
+  },
+  statisticValue: {
+    fontSize: 20,
+    fontWeight: '700',
+    color: COLORS.brand.primary,
+  },
+  carbonationSection: {
+    marginTop: 24,
+    gap: 16,
+  },
+  carbonationCard: {
+    backgroundColor: COLORS.neutral.white,
+    borderRadius: 12,
+    padding: 20,
+    borderWidth: 1,
+    borderColor: COLORS.border.light,
+    gap: 16,
+  },
+  carbonationText: {
+    fontSize: 14,
+    color: COLORS.text.secondary,
+    lineHeight: 20,
+  },
+  statusChangeSection: {
+    marginTop: 24,
+    gap: 12,
+  },
+  statusChangeButtons: {
+    flexDirection: 'row',
+    gap: 12,
+    flexWrap: 'wrap',
   },
 })

@@ -90,9 +90,6 @@ const styles = StyleSheet.create({
   actionCard: {
     alignItems: 'flex-start',
     gap: 6,
-    cursor: 'pointer',
-    transition: 'all 0.2s',
-    height: '100%',
   },
   actionCardIcon: {},
   actionCardContent: {

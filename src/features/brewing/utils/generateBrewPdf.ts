@@ -313,15 +313,12 @@ export async function generateBrewPdf(data: BrewPdfData) {
         colors.primary,
       )
     }
-    if (batch.recipe.styleName || batch.recipe.beerStyle?.name) {
-      yPos = addText(
-        batch.recipe.styleName || batch.recipe.beerStyle?.name || '',
-        margin,
-        yPos,
-        11,
-        false,
-        colors.text,
-      )
+    const styleName =
+      typeof batch.recipe.beerStyle === 'object' && batch.recipe.beerStyle
+        ? batch.recipe.beerStyle.name
+        : batch.recipe.styleName
+    if (styleName) {
+      yPos = addText(styleName || '', margin, yPos, 11, false, colors.text)
     }
     yPos += 10
   }

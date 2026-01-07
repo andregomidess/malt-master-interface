@@ -73,25 +73,26 @@ interface TooltipProps {
 }
 
 const Tooltip: React.FC<TooltipProps> = ({ children, content, show }) => {
-  const [isHovered, setIsHovered] = useState(false)
+  const [isPressed, setIsPressed] = useState(false)
 
   if (!show) return <>{children}</>
 
   return (
-    <View
+    <TouchableOpacity
       style={styles.tooltipContainer}
-      onMouseEnter={() => setIsHovered(true)}
-      onMouseLeave={() => setIsHovered(false)}
+      onPressIn={() => setIsPressed(true)}
+      onPressOut={() => setIsPressed(false)}
+      activeOpacity={1}
     >
       {children}
-      {isHovered && (
+      {isPressed && (
         <View style={styles.tooltip}>
           <Text variant="caption" style={styles.tooltipText}>
             {content}
           </Text>
         </View>
       )}
-    </View>
+    </TouchableOpacity>
   )
 }
 
@@ -633,7 +634,7 @@ const styles = StyleSheet.create({
   },
   tooltipContainer: {
     position: 'relative',
-    width: '48.9%',
+    width: '48.5%',
   },
   tooltip: {
     position: 'absolute',

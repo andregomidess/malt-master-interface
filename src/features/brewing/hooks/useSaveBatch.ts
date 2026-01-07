@@ -39,6 +39,15 @@ export interface BatchInput {
   fermentationTemperature?: number | null
   fermentationTime?: number | null
   actualCarbonation?: number | null
+  // Valores medidos durante a sessão
+  mashPh?: number | null
+  preBoilGravity?: number | null
+  preBoilVolume?: number | null
+  postBoilVolume?: number | null
+  waterInFermenter?: number | null
+  fermenterVolume?: number | null
+  peakFermentationTemp?: number | null
+  bottlingVolume?: number | null
   observations?: string | null
   mashSteps?: MashStepInput[]
 }

@@ -9,7 +9,7 @@ import { BiPlus, BiX } from 'react-icons/bi'
 interface MeasuredValue {
   id: string
   label: string
-  value: number | null
+  value: number | null | undefined
   unit?: string
 }
 
@@ -30,8 +30,14 @@ export function MeasuredValuesPanel({
     value: string
   } | null>(null)
 
-  const handleEdit = (id: string, currentValue: number | null) => {
-    setEditingValue({ id, value: currentValue?.toString() || '' })
+  const handleEdit = (id: string, currentValue: number | null | undefined) => {
+    setEditingValue({
+      id,
+      value:
+        currentValue !== null && currentValue !== undefined
+          ? currentValue.toString()
+          : '',
+    })
     setIsModalOpen(true)
   }
 
@@ -78,7 +84,7 @@ export function MeasuredValuesPanel({
               </Text>
             </View>
             <Text style={styles.valueDisplay}>
-              {value.value !== null
+              {value.value !== null && value.value !== undefined
                 ? value.unit === 'SG'
                   ? value.value.toFixed(3)
                   : value.value.toString()

@@ -42,9 +42,19 @@ export function BatchCard({
 
       {batch.recipe && (
         <View style={styles.recipeInfo}>
+          <Text style={styles.recipeLabel}>Receita:</Text>
+          <Text style={styles.recipeValue}>{batch.recipe.name ?? '—'}</Text>
+        </View>
+      )}
+
+      {batch.recipe && (
+        <View style={styles.recipeInfo}>
           <Text style={styles.recipeLabel}>Estilo:</Text>
           <Text style={styles.recipeValue}>
-            {batch.recipe.styleName || batch.recipe.beerStyle?.name || '—'}
+            {typeof batch.recipe.beerStyle === 'object' &&
+            batch.recipe.beerStyle
+              ? batch.recipe.beerStyle.name
+              : batch.recipe.styleName || '—'}
           </Text>
         </View>
       )}

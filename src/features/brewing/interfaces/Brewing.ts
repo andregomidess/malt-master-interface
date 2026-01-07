@@ -35,10 +35,13 @@ export interface Batch {
     id: string
     name: string
     styleName?: string | null
-    beerStyle?: {
-      id: string
-      name: string
-    } | null
+    beerStyle?:
+      | string
+      | {
+          id: string
+          name: string
+        }
+      | null
     og?: number | null
     fg?: number | null
     ibu?: number | null
@@ -57,6 +60,18 @@ export interface Batch {
   actualColor?: number | null
   actualAbv?: number | null
   actualEfficiency?: number | null
+  fermentationTemperature?: number | null
+  fermentationTime?: number | null
+  actualCarbonation?: number | null
+  // Valores medidos durante a sessão
+  mashPh?: number | null
+  preBoilGravity?: number | null
+  preBoilVolume?: number | null
+  postBoilVolume?: number | null
+  waterInFermenter?: number | null
+  fermenterVolume?: number | null
+  peakFermentationTemp?: number | null
+  bottlingVolume?: number | null
   observations?: string | null
   createdAt?: string
   updatedAt?: string

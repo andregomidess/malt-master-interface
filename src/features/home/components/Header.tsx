@@ -61,14 +61,13 @@ export const Header = ({
                   </Text>
                 </View>
               )}
-              <MdKeyboardArrowDown
-                size={20}
-                color={COLORS.icons}
+              <View
                 style={{
-                  transform: menuVisible ? 'rotate(180deg)' : 'rotate(0deg)',
-                  transition: 'transform 0.2s',
+                  transform: [{ rotate: menuVisible ? '180deg' : '0deg' }],
                 }}
-              />
+              >
+                <MdKeyboardArrowDown size={20} color={COLORS.icons} />
+              </View>
             </TouchableOpacity>
           </View>
         </View>
@@ -156,10 +155,9 @@ const styles = StyleSheet.create({
     paddingHorizontal: 12,
     borderRadius: 24,
     backgroundColor: COLORS.neutral.gray[50],
-    cursor: 'pointer',
   },
   overlay: {
-    position: 'fixed',
+    position: 'absolute',
     top: 0,
     left: 0,
     right: 0,
@@ -168,7 +166,7 @@ const styles = StyleSheet.create({
     backgroundColor: 'rgba(0, 0, 0, 0.1)',
   },
   dropdownMenu: {
-    position: 'fixed',
+    position: 'absolute',
     top: 60,
     right: 20,
     zIndex: 9999,
@@ -192,7 +190,6 @@ const styles = StyleSheet.create({
     gap: 12,
     paddingVertical: 10,
     paddingHorizontal: 16,
-    cursor: 'pointer',
     backgroundColor: 'transparent',
   },
   menuItemHover: {

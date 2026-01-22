@@ -229,8 +229,19 @@ export const ListBeerStyle = () => {
                     <BeerStyleCard
                       beerStyle={style}
                       onView={() => console.log('Ver detalhes:', style.id)}
-                      onEdit={() => navigate(`/beer-styles/${style.id}/edit`)}
-                      onDelete={() => handleDelete(style.id)}
+                      onEdit={
+                        style.user
+                          ? () => navigate(`/beer-styles/${style.id}/edit`)
+                          : undefined
+                      }
+                      onDelete={
+                        style.user ? () => handleDelete(style.id) : undefined
+                      }
+                      onUseAsBase={
+                        !style.user
+                          ? () => navigate(`/beer-styles/new?base=${style.id}`)
+                          : undefined
+                      }
                     />
                   </View>
                 ))}

@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo } from 'react'
 import { View, StyleSheet, ScrollView, TouchableOpacity } from 'react-native'
-import { useNavigate, useParams } from 'react-router'
+import { useNavigate, useParams, useSearchParams } from 'react-router'
 import { Controller, useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod/v3'
@@ -111,12 +111,14 @@ export type FormData = z.infer<typeof beerStyleSchema>
 export const SaveBeerStyle = () => {
   const navigate = useNavigate()
   const { id } = useParams<{ id?: string }>()
+  const [searchParams] = useSearchParams()
+  const baseId = searchParams.get('base')
   const isEditMode = !!id
 
   const { mutate: saveBeerStyle, isPending: isSaving } = useSaveBeerStyle()
 
   const { data: existingBeerStyle, isLoading: isLoadingBeerStyle } =
-    useBeerStyleById(id)
+    useBeerStyleById(id || baseId || undefined)
 
   const {
     control,
@@ -164,7 +166,7 @@ export const SaveBeerStyle = () => {
   useEffect(() => {
     if (existingBeerStyle) {
       reset({
-        name: existingBeerStyle.name,
+        name: baseId ? '' : existingBeerStyle.name, // Limpa o nome se for usar como base
         category: existingBeerStyle.category || '',
         subCategory: existingBeerStyle.subCategory || '',
         minAbv: toNumber(existingBeerStyle.minAbv),
@@ -192,7 +194,7 @@ export const SaveBeerStyle = () => {
       } as FormData)
       trigger()
     }
-  }, [existingBeerStyle, reset, trigger])
+  }, [existingBeerStyle, reset, trigger, baseId])
 
   const glasswareOptions = useMemo(
     () =>

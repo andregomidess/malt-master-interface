@@ -3,21 +3,20 @@ import {
   StyleSheet,
   TouchableOpacity,
   ScrollView,
-  NativeSyntheticEvent,
-  NativeScrollEvent,
   ActivityIndicator,
 } from 'react-native'
-import { useState, useCallback, useMemo } from 'react'
+import { useState, useMemo, useEffect } from 'react'
 import { useNavigate } from 'react-router'
 import { Layout } from '../../../shared/components/Layout'
 import { Heading, Text } from '../../../shared/components/Typography'
 import { InputText } from '../../../shared/components/InputText'
+import { Pagination } from '../../../shared/components/Pagination'
 import { COLORS } from '../../../shared/styles/colors'
 import { BiPlus, BiSearch } from 'react-icons/bi'
 import { MdSort } from 'react-icons/md'
 import { YeastStats } from '../components/YeastStats'
 import { YeastCard } from '../components/YeastCard'
-import { useYeastsList } from '../hooks/useYeasts'
+import { useYeastsPaginated } from '../hooks/useYeastsPaginated'
 import { useDeleteYeast } from '../hooks/useDeleteYeast'
 import {
   YeastType,
@@ -35,6 +34,7 @@ export const ListYeast = () => {
   const [activeFilter, setActiveFilter] = useState<FilterType>('all')
   const [searchQuery, setSearchQuery] = useState('')
   const [sortBy, setSortBy] = useState<SortByOption>('name')
+  const [currentPage, setCurrentPage] = useState(1)
   const order = SortOrder.DESC
 
   const mapSortByToBackend = (sort: string): YeastSortBy => {
@@ -53,13 +53,19 @@ export const ListYeast = () => {
   }
 
   const {
-    yeasts,
+    data: yeastsData,
     isLoading,
     error,
-    fetchNextPage,
-    hasNextPage,
-    isFetchingNextPage,
-  } = useYeastsList(searchQuery, mapSortByToBackend(sortBy), order)
+  } = useYeastsPaginated(
+    currentPage,
+    searchQuery,
+    mapSortByToBackend(sortBy),
+    order,
+  )
+
+  const yeasts = useMemo(() => yeastsData?.data || [], [yeastsData?.data])
+  const totalItems = yeastsData?.total || 0
+  const totalPages = yeastsData?.totalPages || 1
 
   const { deleteYeast } = useDeleteYeast()
 
@@ -76,22 +82,10 @@ export const ListYeast = () => {
   // Calcular estatísticas
   const stats = useMemo(() => calculateYeastStats(yeasts), [yeasts])
 
-  const handleScroll = useCallback(
-    (event: NativeSyntheticEvent<NativeScrollEvent>) => {
-      const { layoutMeasurement, contentOffset, contentSize } =
-        event.nativeEvent
-      const paddingToBottom = 20
-
-      const isCloseToBottom =
-        layoutMeasurement.height + contentOffset.y >=
-        contentSize.height - paddingToBottom
-
-      if (isCloseToBottom && hasNextPage && !isFetchingNextPage) {
-        fetchNextPage()
-      }
-    },
-    [hasNextPage, isFetchingNextPage, fetchNextPage],
-  )
+  // Resetar para página 1 quando busca, filtro ou ordenação mudar
+  useEffect(() => {
+    setCurrentPage(1)
+  }, [searchQuery, activeFilter, sortBy])
 
   const handleDelete = async (id: string) => {
     if (confirm('Tem certeza que deseja deletar esta levedura?')) {
@@ -209,8 +203,6 @@ export const ListYeast = () => {
         <ScrollView
           style={styles.scrollView}
           contentContainerStyle={styles.scrollContent}
-          onScroll={handleScroll}
-          scrollEventThrottle={400}
         >
           {isLoading ? (
             <View style={styles.loadingContainer}>
@@ -245,12 +237,17 @@ export const ListYeast = () => {
                 ))}
               </View>
 
-              {isFetchingNextPage && (
-                <View style={styles.loadingMoreContainer}>
-                  <Text style={styles.loadingText}>
-                    Carregando mais leveduras...
-                  </Text>
-                </View>
+              {/* Componente de Paginação */}
+              {totalPages > 1 && (
+                <Pagination
+                  currentPage={currentPage}
+                  totalPages={totalPages}
+                  totalItems={totalItems}
+                  itemsPerPage={20}
+                  onPageChange={setCurrentPage}
+                  itemLabel="levedura"
+                  itemLabelPlural="leveduras"
+                />
               )}
             </>
           )}
@@ -417,11 +414,6 @@ const styles = StyleSheet.create({
   loadingText: {
     fontSize: 14,
     color: COLORS.text.secondary,
-  },
-  loadingMoreContainer: {
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingVertical: 24,
   },
   errorContainer: {
     alignItems: 'center',

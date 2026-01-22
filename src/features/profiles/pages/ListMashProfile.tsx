@@ -3,12 +3,14 @@ import {
   StyleSheet,
   TouchableOpacity,
   ActivityIndicator,
+  ScrollView,
 } from 'react-native'
-import { useState } from 'react'
+import { useState, useMemo, useEffect } from 'react'
 import { useNavigate } from 'react-router'
 import { Layout } from '../../../shared/components/Layout'
 import { Heading, Text } from '../../../shared/components/Typography'
 import { InputText } from '../../../shared/components/InputText'
+import { Pagination } from '../../../shared/components/Pagination'
 import { COLORS } from '../../../shared/styles/colors'
 import { BiPlus, BiSearch } from 'react-icons/bi'
 import { MashProfileCard } from '../components/MashProfileCard'
@@ -17,12 +19,30 @@ import { useMashProfiles } from '../hooks/useMashProfiles'
 export const ListMashProfile = () => {
   const navigate = useNavigate()
   const [searchQuery, setSearchQuery] = useState('')
+  const [currentPage, setCurrentPage] = useState(1)
+  const itemsPerPage = 20
 
   const { data: profiles, isLoading, error } = useMashProfiles()
 
-  const filteredProfiles = profiles?.filter(profile =>
-    profile.name.toLowerCase().includes(searchQuery.toLowerCase()),
+  const filteredProfiles = useMemo(
+    () =>
+      profiles?.filter(profile =>
+        profile.name.toLowerCase().includes(searchQuery.toLowerCase()),
+      ) || [],
+    [profiles, searchQuery],
   )
+
+  // Resetar para página 1 quando busca mudar
+  useEffect(() => {
+    setCurrentPage(1)
+  }, [searchQuery])
+
+  // Calcular paginação
+  const totalItems = filteredProfiles.length
+  const totalPages = Math.ceil(totalItems / itemsPerPage)
+  const startIndex = (currentPage - 1) * itemsPerPage
+  const endIndex = startIndex + itemsPerPage
+  const paginatedProfiles = filteredProfiles.slice(startIndex, endIndex)
 
   const handleEdit = (profileId: string) => {
     navigate(`/mash-profiles/${profileId}/edit`)
@@ -79,30 +99,58 @@ export const ListMashProfile = () => {
 
         {/* Lista de perfis */}
         {!isLoading && !error && (
-          <View style={styles.profilesGrid}>
-            {filteredProfiles?.map(profile => (
-              <View key={profile.id} style={styles.cardWrapper}>
-                <MashProfileCard
-                  profile={profile}
-                  onEdit={() => handleEdit(profile.id)}
-                />
+          <ScrollView
+            style={styles.scrollView}
+            contentContainerStyle={styles.scrollContent}
+          >
+            {paginatedProfiles.length > 0 ? (
+              <>
+                <View style={styles.profilesGrid}>
+                  {paginatedProfiles.map(profile => (
+                    <View key={profile.id} style={styles.cardWrapper}>
+                      <MashProfileCard
+                        profile={profile}
+                        onEdit={() => handleEdit(profile.id)}
+                      />
+                    </View>
+                  ))}
+                </View>
+
+                {/* Componente de Paginação */}
+                {totalPages > 1 && (
+                  <Pagination
+                    currentPage={currentPage}
+                    totalPages={totalPages}
+                    totalItems={totalItems}
+                    itemsPerPage={itemsPerPage}
+                    onPageChange={setCurrentPage}
+                    itemLabel="perfil"
+                    itemLabelPlural="perfis"
+                  />
+                )}
+              </>
+            ) : (
+              <View style={styles.emptyState}>
+                <Text style={styles.emptyStateText}>
+                  {searchQuery
+                    ? 'Nenhum perfil encontrado para a busca.'
+                    : 'Nenhum perfil de mostura cadastrado.'}
+                </Text>
               </View>
-            ))}
-          </View>
+            )}
+          </ScrollView>
         )}
 
         {/* Empty state */}
-        {!isLoading &&
-          !error &&
-          (!filteredProfiles || filteredProfiles.length === 0) && (
-            <View style={styles.emptyState}>
-              <Text style={styles.emptyStateText}>
-                {searchQuery
-                  ? 'Nenhum perfil encontrado para a busca.'
-                  : 'Nenhum perfil de mostura cadastrado.'}
-              </Text>
-            </View>
-          )}
+        {!isLoading && !error && filteredProfiles.length === 0 && (
+          <View style={styles.emptyState}>
+            <Text style={styles.emptyStateText}>
+              {searchQuery
+                ? 'Nenhum perfil encontrado para a busca.'
+                : 'Nenhum perfil de mostura cadastrado.'}
+            </Text>
+          </View>
+        )}
       </View>
     </Layout>
   )
@@ -166,6 +214,12 @@ const styles = StyleSheet.create({
     flex: 1,
     minWidth: 320,
     maxWidth: 400,
+  },
+  scrollView: {
+    flex: 1,
+  },
+  scrollContent: {
+    paddingBottom: 24,
   },
   emptyState: {
     alignItems: 'center',

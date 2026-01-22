@@ -1,34 +1,27 @@
-import { useInfiniteQuery } from '@tanstack/react-query'
+import { useQuery } from '@tanstack/react-query'
 import { beerStylesApi } from '../api/beerStylesApi'
-import type { BeerStyle, BeerStyleQueryParams } from '../interfaces/BeerStyle'
+import type { BeerStyleQueryParams } from '../interfaces/BeerStyle'
 import { BeerStyleSortBy, SortOrder } from '../interfaces/BeerStyle'
 import { useMemo } from 'react'
 
-interface PaginatedResult {
-  data: BeerStyle[]
-  total: number
-  page: number
-  totalPages: number
-}
-
-export const useBeerStyles = (params?: Omit<BeerStyleQueryParams, 'page'>) => {
-  return useInfiniteQuery({
-    queryKey: ['beer-styles', params] as const,
-    queryFn: async ({ pageParam }: { pageParam: number }) => {
+export const useBeerStylesPaginated = (
+  page: number,
+  params?: Omit<BeerStyleQueryParams, 'page'>,
+) => {
+  return useQuery({
+    queryKey: ['beer-styles', 'paginated', page, params] as const,
+    queryFn: async () => {
       const result = await beerStylesApi.findAllPaginated({
         ...params,
-        page: pageParam,
+        page,
       })
       return result
-    },
-    initialPageParam: 1,
-    getNextPageParam: (lastPage: PaginatedResult) => {
-      return lastPage.page < lastPage.totalPages ? lastPage.page + 1 : undefined
     },
   })
 }
 
 export const useBeerStylesList = (
+  page: number,
   searchQuery?: string,
   sortBy?: BeerStyleSortBy,
   order?: SortOrder,
@@ -43,15 +36,15 @@ export const useBeerStylesList = (
     [searchQuery, sortBy, order],
   )
 
-  const query = useBeerStyles(queryParams)
-
-  const beerStyles = useMemo(() => {
-    if (!query.data?.pages) return []
-    return query.data.pages.flatMap(page => page.data)
-  }, [query.data])
+  const query = useBeerStylesPaginated(page, queryParams)
 
   return {
-    ...query,
-    beerStyles,
+    beerStyles: query.data?.data || [],
+    total: query.data?.total || 0,
+    currentPage: query.data?.page || 1,
+    totalPages: query.data?.totalPages || 1,
+    isLoading: query.isLoading,
+    error: query.error,
+    refetch: query.refetch,
   }
 }

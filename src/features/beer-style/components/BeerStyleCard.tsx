@@ -80,10 +80,7 @@ export const BeerStyleCard = ({
                 ]}
               >
                 <Text
-                  style={[
-                    styles.badgeText,
-                    { color: COLORS.brand.primary },
-                  ]}
+                  style={[styles.badgeText, { color: COLORS.brand.primary }]}
                 >
                   {beerStyle.category}
                 </Text>
@@ -131,10 +128,7 @@ export const BeerStyleCard = ({
                 ]}
               >
                 <Text
-                  style={[
-                    styles.intensityText,
-                    { color: abvIntensity.color },
-                  ]}
+                  style={[styles.intensityText, { color: abvIntensity.color }]}
                 >
                   {abvIntensity.label}
                 </Text>
@@ -154,10 +148,7 @@ export const BeerStyleCard = ({
                 ]}
               >
                 <Text
-                  style={[
-                    styles.intensityText,
-                    { color: ibuIntensity.color },
-                  ]}
+                  style={[styles.intensityText, { color: ibuIntensity.color }]}
                 >
                   {ibuIntensity.label}
                 </Text>
@@ -200,22 +191,26 @@ export const BeerStyleCard = ({
           <View style={styles.tagsSection}>
             <Text style={styles.sectionTitle}>Características</Text>
             <View style={styles.tagsGrid}>
-              {visibleTags.map(tag => {
-                const tagConfig = BeerTagColors[tag]
-                return (
-                  <View
-                    key={tag}
-                    style={[
-                      styles.tagBadge,
-                      { backgroundColor: tagConfig.bgColor },
-                    ]}
-                  >
-                    <Text style={[styles.tagText, { color: tagConfig.color }]}>
-                      {BeerTagLabels[tag]}
-                    </Text>
-                  </View>
-                )
-              })}
+              {visibleTags
+                .filter(tag => BeerTagColors[tag])
+                .map(tag => {
+                  const tagConfig = BeerTagColors[tag]
+                  return (
+                    <View
+                      key={tag}
+                      style={[
+                        styles.tagBadge,
+                        { backgroundColor: tagConfig.bgColor },
+                      ]}
+                    >
+                      <Text
+                        style={[styles.tagText, { color: tagConfig.color }]}
+                      >
+                        {BeerTagLabels[tag] || tag}
+                      </Text>
+                    </View>
+                  )
+                })}
               {remainingTags > 0 && (
                 <View
                   style={[
@@ -530,4 +525,3 @@ const styles = StyleSheet.create({
     color: '#EF4444',
   },
 })
-

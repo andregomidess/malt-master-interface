@@ -4,14 +4,13 @@ import {
   ActivityIndicator,
   TouchableOpacity,
   ScrollView,
-  NativeSyntheticEvent,
-  NativeScrollEvent,
 } from 'react-native'
-import { useState, useCallback } from 'react'
+import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router'
 import { Layout } from '../../../shared/components/Layout'
 import { Heading, Text } from '../../../shared/components/Typography'
 import { InputText } from '../../../shared/components/InputText'
+import { Pagination } from '../../../shared/components/Pagination'
 import { COLORS } from '../../../shared/styles/colors'
 import { BiPlus, BiSearch } from 'react-icons/bi'
 import { MdSort, MdRefresh } from 'react-icons/md'
@@ -22,7 +21,7 @@ import {
   SortOrder,
   BatchStatusLabels,
 } from '../interfaces/Brewing'
-import { useBatchesList } from '../hooks/useBatchesList'
+import { useBatchesListPaginated } from '../hooks/useBatchesListPaginated'
 import { useDeleteBatch } from '../hooks/useDeleteBatch'
 import toast from 'react-hot-toast'
 
@@ -32,20 +31,16 @@ export const ListBrewing = () => {
   const [activeFilter, setActiveFilter] = useState<BatchStatus | 'all'>('all')
   const [sortBy, setSortBy] = useState<BatchSortBy>(BatchSortBy.BREW_DATE)
   const [order, setOrder] = useState<SortOrder>(SortOrder.DESC)
+  const [currentPage, setCurrentPage] = useState(1)
 
-  const {
-    batches,
-    isLoading,
-    isFetchingNextPage,
-    hasNextPage,
-    error,
-    refetch,
-  } = useBatchesList(
-    searchQuery,
-    activeFilter === 'all' ? undefined : activeFilter,
-    sortBy,
-    order,
-  )
+  const { batches, total, totalPages, isLoading, error, refetch } =
+    useBatchesListPaginated(
+      currentPage,
+      searchQuery,
+      activeFilter === 'all' ? undefined : activeFilter,
+      sortBy,
+      order,
+    )
 
   const { deleteBatch } = useDeleteBatch()
 
@@ -62,18 +57,10 @@ export const ListBrewing = () => {
     }
   }
 
-  const handleScroll = useCallback(
-    (event: NativeSyntheticEvent<NativeScrollEvent>) => {
-      const { layoutMeasurement, contentOffset, contentSize } =
-        event.nativeEvent
-      const isCloseToBottom =
-        layoutMeasurement.height + contentOffset.y >= contentSize.height - 50
-      if (isCloseToBottom && hasNextPage && !isFetchingNextPage) {
-        // fetchNextPage()
-      }
-    },
-    [hasNextPage, isFetchingNextPage],
-  )
+  // Resetar para página 1 quando busca, filtro ou ordenação mudar
+  useEffect(() => {
+    setCurrentPage(1)
+  }, [searchQuery, activeFilter, sortBy, order])
 
   const handleRefresh = async () => {
     await refetch()
@@ -212,11 +199,7 @@ export const ListBrewing = () => {
         ) : error ? (
           renderErrorState()
         ) : (
-          <ScrollView
-            onScroll={handleScroll}
-            scrollEventThrottle={400}
-            contentContainerStyle={styles.scrollViewContent}
-          >
+          <ScrollView contentContainerStyle={styles.scrollViewContent}>
             <View style={styles.batchesList}>
               {batches
                 .filter(item => item != null && item.id != null)
@@ -232,11 +215,17 @@ export const ListBrewing = () => {
                   />
                 ))}
             </View>
-            {isFetchingNextPage && (
-              <ActivityIndicator
-                size="small"
-                color={COLORS.brand.primary}
-                style={styles.loadingMoreIndicator}
+
+            {/* Componente de Paginação */}
+            {totalPages > 1 && (
+              <Pagination
+                currentPage={currentPage}
+                totalPages={totalPages}
+                totalItems={total}
+                itemsPerPage={20}
+                onPageChange={setCurrentPage}
+                itemLabel="brassagem"
+                itemLabelPlural="brassagens"
               />
             )}
           </ScrollView>
@@ -392,9 +381,6 @@ const styles = StyleSheet.create({
   loadingText: {
     fontSize: 14,
     color: COLORS.text.secondary,
-  },
-  loadingMoreIndicator: {
-    marginTop: 20,
   },
   emptyState: {
     paddingVertical: 60,

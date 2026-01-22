@@ -3,21 +3,20 @@ import {
   StyleSheet,
   TouchableOpacity,
   ScrollView,
-  NativeSyntheticEvent,
-  NativeScrollEvent,
   ActivityIndicator,
 } from 'react-native'
-import { useState, useCallback, useMemo } from 'react'
+import { useState, useMemo, useEffect } from 'react'
 import { useNavigate } from 'react-router'
 import { Layout } from '../../../shared/components/Layout'
 import { Heading, Text } from '../../../shared/components/Typography'
 import { InputText } from '../../../shared/components/InputText'
+import { Pagination } from '../../../shared/components/Pagination'
 import { COLORS } from '../../../shared/styles/colors'
 import { BiPlus, BiSearch } from 'react-icons/bi'
 import { MdSort } from 'react-icons/md'
 import { FermentableStats } from '../components/FermentableStats'
 import { FermentableCard } from '../components/FermentableCard'
-import { useFermentablesList } from '../hooks/useFermentables'
+import { useFermentablesPaginated } from '../hooks/useFermentablesPaginated'
 import { useDeleteFermentable } from '../hooks/useDeleteFermentable'
 import {
   FermentableType,
@@ -38,6 +37,7 @@ export const ListFermentable = () => {
   const [searchQuery, setSearchQuery] = useState('')
   const [sortBy, setSortBy] = useState<SortByOption>('name')
   const [showSortMenu, setShowSortMenu] = useState(false)
+  const [currentPage, setCurrentPage] = useState(1)
   const order = SortOrder.DESC
 
   const mapSortByToBackend = (sort: string): FermentableSortBy => {
@@ -56,13 +56,22 @@ export const ListFermentable = () => {
   }
 
   const {
-    fermentables,
+    data: fermentablesData,
     isLoading,
     error,
-    fetchNextPage,
-    hasNextPage,
-    isFetchingNextPage,
-  } = useFermentablesList(searchQuery, mapSortByToBackend(sortBy), order)
+  } = useFermentablesPaginated(
+    currentPage,
+    searchQuery,
+    mapSortByToBackend(sortBy),
+    order,
+  )
+
+  const fermentables = useMemo(
+    () => fermentablesData?.data || [],
+    [fermentablesData?.data],
+  )
+  const totalItems = fermentablesData?.total || 0
+  const totalPages = fermentablesData?.totalPages || 1
 
   const { deleteFermentable } = useDeleteFermentable()
 
@@ -77,22 +86,10 @@ export const ListFermentable = () => {
     [fermentables],
   )
 
-  const handleScroll = useCallback(
-    (event: NativeSyntheticEvent<NativeScrollEvent>) => {
-      const { layoutMeasurement, contentOffset, contentSize } =
-        event.nativeEvent
-      const paddingToBottom = 20
-
-      const isCloseToBottom =
-        layoutMeasurement.height + contentOffset.y >=
-        contentSize.height - paddingToBottom
-
-      if (isCloseToBottom && hasNextPage && !isFetchingNextPage) {
-        fetchNextPage()
-      }
-    },
-    [hasNextPage, isFetchingNextPage, fetchNextPage],
-  )
+  // Resetar para página 1 quando busca, filtro ou ordenação mudar
+  useEffect(() => {
+    setCurrentPage(1)
+  }, [searchQuery, activeFilter, sortBy])
 
   const handleEdit = (fermentableId: string) => {
     navigate(`/fermentable/${fermentableId}/edit`)
@@ -239,8 +236,6 @@ export const ListFermentable = () => {
         <ScrollView
           style={styles.scrollView}
           contentContainerStyle={styles.scrollContent}
-          onScroll={handleScroll}
-          scrollEventThrottle={400}
         >
           {isLoading ? (
             <View style={styles.loadingContainer}>
@@ -275,12 +270,17 @@ export const ListFermentable = () => {
                 ))}
               </View>
 
-              {isFetchingNextPage && (
-                <View style={styles.loadingMoreContainer}>
-                  <Text style={styles.loadingText}>
-                    Carregando mais fermentáveis...
-                  </Text>
-                </View>
+              {/* Componente de Paginação */}
+              {totalPages > 1 && (
+                <Pagination
+                  currentPage={currentPage}
+                  totalPages={totalPages}
+                  totalItems={totalItems}
+                  itemsPerPage={20}
+                  onPageChange={setCurrentPage}
+                  itemLabel="fermentável"
+                  itemLabelPlural="fermentáveis"
+                />
               )}
             </>
           )}
@@ -462,11 +462,6 @@ const styles = StyleSheet.create({
   loadingText: {
     fontSize: 14,
     color: COLORS.text.secondary,
-  },
-  loadingMoreContainer: {
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingVertical: 24,
   },
   errorContainer: {
     alignItems: 'center',

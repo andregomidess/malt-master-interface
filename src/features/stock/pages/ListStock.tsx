@@ -1,21 +1,15 @@
-import {
-  View,
-  StyleSheet,
-  TouchableOpacity,
-  ScrollView,
-  NativeSyntheticEvent,
-  NativeScrollEvent,
-} from 'react-native'
-import { useState, useRef, useCallback } from 'react'
+import { View, StyleSheet, TouchableOpacity, ScrollView } from 'react-native'
+import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router'
 import { Layout } from '../../../shared/components/Layout'
 import { Heading, Text } from '../../../shared/components/Typography'
 import { InputText } from '../../../shared/components/InputText'
+import { Pagination } from '../../../shared/components/Pagination'
 import { COLORS } from '../../../shared/styles/colors'
 import { BiPlus, BiSearch } from 'react-icons/bi'
 import { StockStats } from '../components/StockStats'
 import { StockCard } from '../components/StockCard'
-import { useInfiniteInventoryItems } from '../hooks/useInfiniteInventoryItems'
+import { useInventoryItemsPaginated } from '../hooks/useInventoryItemsPaginated'
 import { useInventoryStats } from '../hooks/useInventoryStats'
 import { InventoryItemType } from '../interfaces/inventory'
 
@@ -25,18 +19,18 @@ export const ListStock = () => {
   const navigate = useNavigate()
   const [activeFilter, setActiveFilter] = useState<FilterType>('all')
   const [searchQuery, setSearchQuery] = useState('')
-  const scrollViewRef = useRef<ScrollView>(null)
+  const [currentPage, setCurrentPage] = useState(1)
 
   const {
-    items,
-    totalItems,
+    data: inventoryData,
     isLoading,
     isError,
     error,
-    fetchNextPage,
-    hasMore,
-    isFetchingNextPage,
-  } = useInfiniteInventoryItems(activeFilter, searchQuery)
+  } = useInventoryItemsPaginated(currentPage, activeFilter, searchQuery)
+
+  const items = inventoryData?.items || []
+  const totalItems = inventoryData?.meta.total || 0
+  const totalPages = inventoryData?.meta.totalPages || 1
 
   const {
     data: stats,
@@ -44,22 +38,10 @@ export const ListStock = () => {
     isError: isErrorStats,
   } = useInventoryStats()
 
-  const handleScroll = useCallback(
-    (event: NativeSyntheticEvent<NativeScrollEvent>) => {
-      const { layoutMeasurement, contentOffset, contentSize } =
-        event.nativeEvent
-      const paddingToBottom = 20
-
-      const isCloseToBottom =
-        layoutMeasurement.height + contentOffset.y >=
-        contentSize.height - paddingToBottom
-
-      if (isCloseToBottom && hasMore && !isFetchingNextPage) {
-        fetchNextPage()
-      }
-    },
-    [hasMore, isFetchingNextPage, fetchNextPage],
-  )
+  // Resetar para página 1 quando busca ou filtro mudar
+  useEffect(() => {
+    setCurrentPage(1)
+  }, [searchQuery, activeFilter])
 
   const handleEdit = (itemId: string) => {
     navigate(`/stock/${itemId}/edit`)
@@ -158,11 +140,8 @@ export const ListStock = () => {
         </View>
 
         <ScrollView
-          ref={scrollViewRef}
           style={styles.scrollView}
           contentContainerStyle={styles.scrollContent}
-          onScroll={handleScroll}
-          scrollEventThrottle={400}
         >
           {isLoading ? (
             <View style={styles.loadingContainer}>
@@ -186,20 +165,17 @@ export const ListStock = () => {
                 ))}
               </View>
 
-              {isFetchingNextPage && (
-                <View style={styles.loadingMoreContainer}>
-                  <Text style={styles.loadingText}>
-                    Carregando mais itens...
-                  </Text>
-                </View>
-              )}
-
-              {!hasMore && items.length > 0 && (
-                <View style={styles.endMessageContainer}>
-                  <Text style={styles.endMessageText}>
-                    {items.length} de {totalItems} itens carregados
-                  </Text>
-                </View>
+              {/* Componente de Paginação */}
+              {totalPages > 1 && (
+                <Pagination
+                  currentPage={currentPage}
+                  totalPages={totalPages}
+                  totalItems={totalItems}
+                  itemsPerPage={20}
+                  onPageChange={setCurrentPage}
+                  itemLabel="item"
+                  itemLabelPlural="itens"
+                />
               )}
             </>
           )}
@@ -314,11 +290,6 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: COLORS.text.secondary,
   },
-  loadingMoreContainer: {
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingVertical: 24,
-  },
   emptyState: {
     alignItems: 'center',
     justifyContent: 'center',
@@ -338,14 +309,5 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: '#EF4444',
     textAlign: 'center',
-  },
-  endMessageContainer: {
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingVertical: 16,
-  },
-  endMessageText: {
-    fontSize: 12,
-    color: COLORS.text.secondary,
   },
 })

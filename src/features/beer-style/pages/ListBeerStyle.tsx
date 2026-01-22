@@ -4,14 +4,13 @@ import {
   ActivityIndicator,
   TouchableOpacity,
   ScrollView,
-  NativeSyntheticEvent,
-  NativeScrollEvent,
 } from 'react-native'
-import { useState, useCallback, useMemo } from 'react'
+import { useState, useMemo, useEffect } from 'react'
 import { useNavigate } from 'react-router'
 import { Layout } from '../../../shared/components/Layout'
 import { Heading, Text } from '../../../shared/components/Typography'
 import { InputText } from '../../../shared/components/InputText'
+import { Pagination } from '../../../shared/components/Pagination'
 import { COLORS } from '../../../shared/styles/colors'
 import { BiPlus, BiSearch } from 'react-icons/bi'
 import { MdSort } from 'react-icons/md'
@@ -32,6 +31,7 @@ export const ListBeerStyle = () => {
   const [activeFilter, setActiveFilter] = useState<BeerStyleCategory>('all')
   const [searchQuery, setSearchQuery] = useState('')
   const [sortBy, setSortBy] = useState<SortByOption>('name')
+  const [currentPage, setCurrentPage] = useState(1)
   const order = SortOrder.DESC
 
   const mapSortByToBackend = (sort: string): BeerStyleSortBy => {
@@ -47,14 +47,17 @@ export const ListBeerStyle = () => {
     }
   }
 
-  const {
-    beerStyles,
-    isLoading,
-    error,
-    fetchNextPage,
-    hasNextPage,
-    isFetchingNextPage,
-  } = useBeerStylesList(searchQuery, mapSortByToBackend(sortBy), order)
+  const { beerStyles, isLoading, error, total, totalPages } = useBeerStylesList(
+    currentPage,
+    searchQuery,
+    mapSortByToBackend(sortBy),
+    order,
+  )
+
+  // Resetar para página 1 quando busca ou filtro mudar
+  useEffect(() => {
+    setCurrentPage(1)
+  }, [searchQuery, activeFilter, sortBy])
 
   const { deleteStyle } = useDeleteBeerStyle()
 
@@ -70,25 +73,8 @@ export const ListBeerStyle = () => {
     })
   }, [beerStyles, activeFilter])
 
-  // Calcular estatísticas
+  // Calcular estatísticas (usando todos os estilos carregados)
   const stats = useMemo(() => calculateBeerStyleStats(beerStyles), [beerStyles])
-
-  const handleScroll = useCallback(
-    (event: NativeSyntheticEvent<NativeScrollEvent>) => {
-      const { layoutMeasurement, contentOffset, contentSize } =
-        event.nativeEvent
-      const paddingToBottom = 20
-
-      const isCloseToBottom =
-        layoutMeasurement.height + contentOffset.y >=
-        contentSize.height - paddingToBottom
-
-      if (isCloseToBottom && hasNextPage && !isFetchingNextPage) {
-        fetchNextPage()
-      }
-    },
-    [hasNextPage, isFetchingNextPage, fetchNextPage],
-  )
 
   // Filtros
   const filters: Array<{
@@ -214,8 +200,7 @@ export const ListBeerStyle = () => {
         <ScrollView
           style={styles.scrollView}
           contentContainerStyle={styles.scrollContent}
-          onScroll={handleScroll}
-          scrollEventThrottle={400}
+          showsVerticalScrollIndicator={true}
         >
           {isLoading ? (
             <View style={styles.loadingContainer}>
@@ -251,13 +236,16 @@ export const ListBeerStyle = () => {
                 ))}
               </View>
 
-              {isFetchingNextPage && (
-                <View style={styles.loadingMoreContainer}>
-                  <Text style={styles.loadingText}>
-                    Carregando mais estilos...
-                  </Text>
-                </View>
-              )}
+              {/* Componente de Paginação */}
+              <Pagination
+                currentPage={currentPage}
+                totalPages={totalPages}
+                totalItems={total}
+                itemsPerPage={20}
+                onPageChange={setCurrentPage}
+                itemLabel="estilo"
+                itemLabelPlural="estilos"
+              />
             </>
           )}
         </ScrollView>
@@ -421,11 +409,6 @@ const styles = StyleSheet.create({
   scrollContent: {
     paddingBottom: 24,
   },
-  loadingMoreContainer: {
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingVertical: 24,
-  },
   errorContainer: {
     alignItems: 'center',
     justifyContent: 'center',
@@ -436,5 +419,9 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: '#EF4444',
     textAlign: 'center',
+  },
+  sentinel: {
+    height: 1,
+    width: '100%',
   },
 })

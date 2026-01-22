@@ -3,21 +3,20 @@ import {
   StyleSheet,
   TouchableOpacity,
   ScrollView,
-  NativeSyntheticEvent,
-  NativeScrollEvent,
   ActivityIndicator,
 } from 'react-native'
-import { useState, useCallback, useMemo } from 'react'
+import { useState, useMemo, useEffect } from 'react'
 import { useNavigate } from 'react-router'
 import { Layout } from '../../../shared/components/Layout'
 import { Heading, Text } from '../../../shared/components/Typography'
 import { InputText } from '../../../shared/components/InputText'
+import { Pagination } from '../../../shared/components/Pagination'
 import { COLORS } from '../../../shared/styles/colors'
 import { BiPlus, BiSearch } from 'react-icons/bi'
 import { MdSort } from 'react-icons/md'
 import { HopStats } from '../components/HopStats'
 import { HopCard } from '../components/HopCard'
-import { useHopsList } from '../hooks/useHops'
+import { useHopsPaginated } from '../hooks/useHopsPaginated'
 import { useDeleteHop } from '../hooks/useDeleteHop'
 import { HopUse, HopSortBy, SortOrder } from '../interfaces/Hop'
 import { calculateHopStats, filterHopsByUse } from '../helpers/hopHelpers'
@@ -31,6 +30,7 @@ export const ListHops = () => {
   const [searchQuery, setSearchQuery] = useState('')
   const [sortBy, setSortBy] = useState<SortByOption>('name')
   const [showSortMenu, setShowSortMenu] = useState(false)
+  const [currentPage, setCurrentPage] = useState(1)
   const order = SortOrder.DESC
 
   const mapSortByToBackend = (sort: string): HopSortBy => {
@@ -49,40 +49,31 @@ export const ListHops = () => {
   }
 
   const {
-    hops,
+    data: hopsData,
     isLoading,
     error,
-    fetchNextPage,
-    hasNextPage,
-    isFetchingNextPage,
-  } = useHopsList(searchQuery, mapSortByToBackend(sortBy), order)
+  } = useHopsPaginated(
+    currentPage,
+    searchQuery,
+    mapSortByToBackend(sortBy),
+    order,
+  )
+
+  const hops = useMemo(() => hopsData?.data || [], [hopsData?.data])
+  const totalItems = hopsData?.total || 0
+  const totalPages = hopsData?.totalPages || 1
 
   const { deleteHop } = useDeleteHop()
 
-  // Filtrar por uso no front-end
   const filteredHops = useMemo(() => {
     return filterHopsByUse(hops, activeFilter)
   }, [hops, activeFilter])
 
-  // Calcular estatísticas
   const stats = useMemo(() => calculateHopStats(hops), [hops])
 
-  const handleScroll = useCallback(
-    (event: NativeSyntheticEvent<NativeScrollEvent>) => {
-      const { layoutMeasurement, contentOffset, contentSize } =
-        event.nativeEvent
-      const paddingToBottom = 20
-
-      const isCloseToBottom =
-        layoutMeasurement.height + contentOffset.y >=
-        contentSize.height - paddingToBottom
-
-      if (isCloseToBottom && hasNextPage && !isFetchingNextPage) {
-        fetchNextPage()
-      }
-    },
-    [hasNextPage, isFetchingNextPage, fetchNextPage],
-  )
+  useEffect(() => {
+    setCurrentPage(1)
+  }, [searchQuery, activeFilter, sortBy])
 
   const handleEdit = (hopId: string) => {
     navigate(`/hops/${hopId}/edit`)
@@ -226,8 +217,6 @@ export const ListHops = () => {
         <ScrollView
           style={styles.scrollView}
           contentContainerStyle={styles.scrollContent}
-          onScroll={handleScroll}
-          scrollEventThrottle={400}
         >
           {isLoading ? (
             <View style={styles.loadingContainer}>
@@ -262,12 +251,16 @@ export const ListHops = () => {
                 ))}
               </View>
 
-              {isFetchingNextPage && (
-                <View style={styles.loadingMoreContainer}>
-                  <Text style={styles.loadingText}>
-                    Carregando mais lúpulos...
-                  </Text>
-                </View>
+              {totalPages > 1 && (
+                <Pagination
+                  currentPage={currentPage}
+                  totalPages={totalPages}
+                  totalItems={totalItems}
+                  itemsPerPage={20}
+                  onPageChange={setCurrentPage}
+                  itemLabel="lúpulo"
+                  itemLabelPlural="lúpulos"
+                />
               )}
             </>
           )}
@@ -449,11 +442,6 @@ const styles = StyleSheet.create({
   loadingText: {
     fontSize: 14,
     color: COLORS.text.secondary,
-  },
-  loadingMoreContainer: {
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingVertical: 24,
   },
   errorContainer: {
     alignItems: 'center',

@@ -27,6 +27,8 @@ export enum BeerTag {
   EARTHY = 'EARTHY',
   HERBAL = 'HERBAL',
   SMOKY = 'SMOKY',
+  BALANCED = 'BALANCED',
+  ROASTY = 'ROASTY',
 }
 
 export enum GlasswareType {
@@ -137,6 +139,8 @@ export const BeerTagLabels: Record<BeerTag, string> = {
   [BeerTag.EARTHY]: 'Terroso',
   [BeerTag.HERBAL]: 'Herbal',
   [BeerTag.SMOKY]: 'Defumado',
+  [BeerTag.BALANCED]: 'Equilibrado',
+  [BeerTag.ROASTY]: 'Tostado',
 }
 
 // Cores para Tags
@@ -172,6 +176,8 @@ export const BeerTagColors: Record<
   [BeerTag.EARTHY]: { color: '#78350F', bgColor: '#FED7AA' },
   [BeerTag.HERBAL]: { color: '#059669', bgColor: '#D1FAE5' },
   [BeerTag.SMOKY]: { color: '#374151', bgColor: '#E5E7EB' },
+  [BeerTag.BALANCED]: { color: '#3B82F6', bgColor: '#DBEAFE' },
+  [BeerTag.ROASTY]: { color: '#78350F', bgColor: '#FED7AA' },
 }
 
 export const GlasswareLabels: Record<GlasswareType, string> = {

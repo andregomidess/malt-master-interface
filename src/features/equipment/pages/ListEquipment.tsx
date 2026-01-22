@@ -3,18 +3,20 @@ import {
   StyleSheet,
   TouchableOpacity,
   ActivityIndicator,
+  ScrollView,
 } from 'react-native'
-import { useState, useMemo, useRef, useCallback, useEffect } from 'react'
+import { useState, useMemo, useEffect } from 'react'
 import { useNavigate } from 'react-router'
 import { Layout } from '../../../shared/components/Layout'
 import { Heading, Text } from '../../../shared/components/Typography'
 import { InputText } from '../../../shared/components/InputText'
+import { Pagination } from '../../../shared/components/Pagination'
 import { COLORS } from '../../../shared/styles/colors'
 import { BiPlus, BiSearch } from 'react-icons/bi'
 import { MdSort } from 'react-icons/md'
 import { EquipmentStats } from '../components/EquipmentStats'
 import { EquipmentCard } from '../components/EquipmentCard'
-import { useEquipments } from '../hooks/useEquipments'
+import { useEquipmentsPaginated } from '../hooks/useEquipmentsPaginated'
 import { calculateEquipmentStats } from '../utils/equipmentHelpers'
 import {
   EquipmentType,
@@ -22,7 +24,6 @@ import {
   SortOrder,
   type FilterType,
   type SortBy,
-  EquipmentWithPublicFlag,
 } from '../interfaces/equipment'
 
 export const ListEquipment = () => {
@@ -31,7 +32,7 @@ export const ListEquipment = () => {
   const [searchQuery, setSearchQuery] = useState('')
   const [sortBy, setSortBy] = useState<SortBy>('name')
   const [showSortMenu, setShowSortMenu] = useState(false)
-  const observerTarget = useRef<View>(null)
+  const [currentPage, setCurrentPage] = useState(1)
 
   const mapSortByToBackend = (sort: SortBy): EquipmentSortBy => {
     switch (sort) {
@@ -58,48 +59,24 @@ export const ListEquipment = () => {
   )
 
   const {
-    data,
+    data: equipmentData,
     isLoading,
     error,
-    fetchNextPage,
-    hasNextPage,
-    isFetchingNextPage,
-  } = useEquipments(queryParams)
+  } = useEquipmentsPaginated(currentPage, queryParams)
 
-  const equipments = useMemo(() => {
-    if (!data?.pages) return []
-    return data.pages.flatMap(
-      (page: { data: EquipmentWithPublicFlag[] }) => page.data,
-    )
-  }, [data])
+  const equipments = useMemo(
+    () => equipmentData?.data || [],
+    [equipmentData?.data],
+  )
+  const totalItems = equipmentData?.total || 0
+  const totalPages = equipmentData?.totalPages || 1
 
-  const sortedEquipments = equipments
   const stats = useMemo(() => calculateEquipmentStats(equipments), [equipments])
 
-  const handleObserver = useCallback(
-    (entries: IntersectionObserverEntry[]) => {
-      const [target] = entries
-      if (target.isIntersecting && hasNextPage && !isFetchingNextPage) {
-        fetchNextPage()
-      }
-    },
-    [fetchNextPage, hasNextPage, isFetchingNextPage],
-  )
-
+  // Resetar para página 1 quando busca, filtro ou ordenação mudar
   useEffect(() => {
-    const element = observerTarget.current
-    if (!element) return
-
-    const option = { threshold: 0 }
-    const observer = new IntersectionObserver(handleObserver, option)
-    // @ts-expect-error - IntersectionObserver funciona com View no React Native Web
-    observer.observe(element)
-
-    return () => {
-      // @ts-expect-error - IntersectionObserver funciona com View no React Native Web
-      observer.unobserve(element)
-    }
-  }, [handleObserver])
+    setCurrentPage(1)
+  }, [searchQuery, activeFilter, sortBy])
 
   const handleEdit = (equipmentId: string) => {
     navigate(`/equipment/${equipmentId}/edit`)
@@ -248,37 +225,48 @@ export const ListEquipment = () => {
 
         {/* Lista de equipamentos */}
         {!isLoading && !error && (
-          <>
-            <View style={styles.equipmentsGrid}>
-              {sortedEquipments.map(
-                (equipment: (typeof sortedEquipments)[0]) => (
-                  <View key={equipment.id} style={styles.cardWrapper}>
-                    <EquipmentCard
-                      equipment={equipment}
-                      onEdit={() => handleEdit(equipment.id)}
-                    />
-                  </View>
-                ),
-              )}
-            </View>
+          <ScrollView
+            style={styles.scrollView}
+            contentContainerStyle={styles.scrollContent}
+          >
+            {equipments.length > 0 ? (
+              <>
+                <View style={styles.equipmentsGrid}>
+                  {equipments.map((equipment: (typeof equipments)[0]) => (
+                    <View key={equipment.id} style={styles.cardWrapper}>
+                      <EquipmentCard
+                        equipment={equipment}
+                        onEdit={() => handleEdit(equipment.id)}
+                      />
+                    </View>
+                  ))}
+                </View>
 
-            {/* Observer target para infinite scroll */}
-            <View ref={observerTarget} style={styles.observerTarget} />
-
-            {/* Loading de próxima página */}
-            {isFetchingNextPage && (
-              <View style={styles.loadingMore}>
-                <ActivityIndicator size="small" color={COLORS.brand.primary} />
-                <Text style={styles.loadingMoreText}>
-                  Carregando mais equipamentos...
+                {totalPages > 1 && (
+                  <Pagination
+                    currentPage={currentPage}
+                    totalPages={totalPages}
+                    totalItems={totalItems}
+                    itemsPerPage={20}
+                    onPageChange={setCurrentPage}
+                    itemLabel="equipamento"
+                    itemLabelPlural="equipamentos"
+                  />
+                )}
+              </>
+            ) : (
+              <View style={styles.emptyState}>
+                <Text style={styles.emptyStateText}>
+                  {searchQuery
+                    ? 'Nenhum equipamento encontrado para a busca.'
+                    : 'Nenhum equipamento nesta categoria.'}
                 </Text>
               </View>
             )}
-          </>
+          </ScrollView>
         )}
 
-        {/* Empty state */}
-        {!isLoading && !error && sortedEquipments.length === 0 && (
+        {!isLoading && !error && equipments.length === 0 && (
           <View style={styles.emptyState}>
             <Text style={styles.emptyStateText}>
               {searchQuery
@@ -474,19 +462,10 @@ const styles = StyleSheet.create({
     color: '#DC2626',
     textAlign: 'center',
   },
-  observerTarget: {
-    height: 20,
-    width: '100%',
+  scrollView: {
+    flex: 1,
   },
-  loadingMore: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 12,
-    paddingVertical: 24,
-  },
-  loadingMoreText: {
-    fontSize: 14,
-    color: COLORS.text.secondary,
+  scrollContent: {
+    paddingBottom: 24,
   },
 })

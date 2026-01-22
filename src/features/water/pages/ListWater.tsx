@@ -70,18 +70,15 @@ export const ListWater = () => {
 
   const { deleteWaterProfile } = useDeleteWaterProfile()
 
-  // Filtrar por tipo no front-end
   const filteredProfiles = useMemo(() => {
     return filterProfilesByType(waterProfiles, activeFilter)
   }, [waterProfiles, activeFilter])
 
-  // Calcular estatísticas
   const stats = useMemo(
     () => calculateWaterStats(waterProfiles),
     [waterProfiles],
   )
 
-  // Resetar para página 1 quando busca, filtro ou ordenação mudar
   useEffect(() => {
     setCurrentPage(1)
   }, [searchQuery, activeFilter, sortBy])
@@ -388,11 +385,14 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     flexWrap: 'wrap',
     gap: 20,
+    alignItems: 'stretch',
+    justifyContent: 'flex-start',
   },
   profileCardWrapper: {
     flex: 1,
-    minWidth: 320,
-    maxWidth: 420,
+    minWidth: 300,
+    maxWidth: 300,
+    height: 800,
   },
   emptyState: {
     paddingVertical: 60,

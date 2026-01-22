@@ -32,7 +32,6 @@ export const WaterProfileCard = ({
   onEdit,
   onDelete,
 }: WaterProfileCardProps) => {
-  // Cálculos dos índices
   const so4ClRatio = calculateSO4ClRatio(profile)
   const profileType = getProfileType(profile)
   const totalHardness = calculateTotalHardness(profile)
@@ -40,18 +39,15 @@ export const WaterProfileCard = ({
   const residualAlkalinity = calculateResidualAlkalinity(profile)
   const phLevel = getPhLevel(profile.ph ?? null)
 
-  // Características especiais
   const highSulfate = hasHighSulfate(profile)
   const highChloride = hasHighChloride(profile)
   const highBicarbonate = hasHighBicarbonate(profile)
   const softWater = isVerySoftWater(profile)
 
-  // Cores do tipo de perfil
   const typeConfig = profileType
     ? profileTypeColors[profileType]
     : { color: '#6B7280', bgColor: '#F3F4F6' }
 
-  // Configuração de cores para dureza
   const hardnessColors: Record<
     WaterHardness,
     { color: string; bgColor: string }
@@ -66,7 +62,6 @@ export const WaterProfileCard = ({
 
   return (
     <View style={styles.card}>
-      {/* Header */}
       <View style={styles.header}>
         <View
           style={[
@@ -106,9 +101,7 @@ export const WaterProfileCard = ({
         </View>
       </View>
 
-      {/* Content */}
       <View style={styles.content}>
-        {/* Badges Especiais */}
         {(softWater || highSulfate || highChloride || highBicarbonate) && (
           <View style={styles.specialBadges}>
             {softWater && (
@@ -146,11 +139,9 @@ export const WaterProfileCard = ({
           </View>
         )}
 
-        {/* Composição Mineral */}
         <View style={styles.compositionSection}>
           <Text style={styles.sectionTitle}>Composição Mineral:</Text>
           <View style={styles.mineralGrid}>
-            {/* Coluna 1 - Cátions */}
             <View style={styles.mineralColumn}>
               <View style={styles.mineralRow}>
                 <Text style={styles.mineralLabel}>Ca²⁺</Text>
@@ -172,7 +163,6 @@ export const WaterProfileCard = ({
               </View>
             </View>
 
-            {/* Coluna 2 - Ânions */}
             <View style={styles.mineralColumn}>
               <View style={styles.mineralRow}>
                 <Text style={styles.mineralLabel}>SO₄²⁻</Text>
@@ -195,7 +185,6 @@ export const WaterProfileCard = ({
             </View>
           </View>
 
-          {/* pH */}
           <View style={styles.phRow}>
             <Text style={styles.mineralLabel}>pH:</Text>
             <View style={styles.phValueRow}>
@@ -213,11 +202,9 @@ export const WaterProfileCard = ({
           </View>
         </View>
 
-        {/* Índices Calculados */}
         <View style={styles.indicesSection}>
           <Text style={styles.sectionTitle}>Índices Calculados:</Text>
 
-          {/* Relação SO4:Cl */}
           {so4ClRatio !== null && (
             <View style={styles.indexRow}>
               <Text style={styles.indexLabel}>Relação SO₄:Cl:</Text>
@@ -244,7 +231,6 @@ export const WaterProfileCard = ({
             </View>
           )}
 
-          {/* Dureza Total */}
           <View style={styles.indexRow}>
             <Text style={styles.indexLabel}>Dureza Total:</Text>
             <View style={styles.indexValueRow}>
@@ -267,7 +253,6 @@ export const WaterProfileCard = ({
             </View>
           </View>
 
-          {/* Alcalinidade Residual */}
           {residualAlkalinity !== null && (
             <View style={styles.indexRow}>
               <Text style={styles.indexLabel}>Alc. Residual (RA):</Text>
@@ -303,7 +288,6 @@ export const WaterProfileCard = ({
           )}
         </View>
 
-        {/* Estilos Recomendados */}
         {profile.recommendedStyle && (
           <View style={styles.stylesSection}>
             <Text style={styles.sectionTitle}>Estilos Recomendados:</Text>
@@ -317,7 +301,6 @@ export const WaterProfileCard = ({
           </View>
         )}
 
-        {/* Notas */}
         {profile.notes && (
           <View style={styles.notesSection}>
             <Text style={styles.notesText} numberOfLines={3}>
@@ -327,7 +310,6 @@ export const WaterProfileCard = ({
         )}
       </View>
 
-      {/* Footer */}
       <View style={styles.footer}>
         <View style={styles.actions}>
           {onEdit && (
@@ -356,6 +338,9 @@ const styles = StyleSheet.create({
     borderColor: COLORS.border.light,
     overflow: 'hidden',
     width: '100%',
+    height: 800,
+    flexDirection: 'column',
+    justifyContent: 'space-between',
   },
   header: {
     flexDirection: 'row',
@@ -402,6 +387,8 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     paddingVertical: 12,
     gap: 12,
+    flex: 1,
+    justifyContent: 'flex-start',
   },
   specialBadges: {
     flexDirection: 'row',

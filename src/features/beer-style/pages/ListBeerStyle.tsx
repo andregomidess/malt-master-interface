@@ -236,7 +236,6 @@ export const ListBeerStyle = () => {
                 ))}
               </View>
 
-              {/* Componente de Paginação */}
               <Pagination
                 currentPage={currentPage}
                 totalPages={totalPages}
@@ -388,11 +387,14 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     flexWrap: 'wrap',
     gap: 20,
+    alignItems: 'stretch',
+    justifyContent: 'flex-start',
   },
   styleCardWrapper: {
     flex: 1,
-    minWidth: 320,
-    maxWidth: 420,
+    minWidth: 300,
+    maxWidth: 300,
+    height: 800,
   },
   emptyState: {
     paddingVertical: 60,

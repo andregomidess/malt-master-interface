@@ -69,7 +69,6 @@ export const ListYeast = () => {
 
   const { deleteYeast } = useDeleteYeast()
 
-  // Filtrar por tipo no front-end
   const filteredYeasts = useMemo(() => {
     if (activeFilter === 'wild-bacteria') {
       return yeasts.filter(
@@ -79,10 +78,8 @@ export const ListYeast = () => {
     return filterYeastsByType(yeasts, activeFilter)
   }, [yeasts, activeFilter])
 
-  // Calcular estatísticas
   const stats = useMemo(() => calculateYeastStats(yeasts), [yeasts])
 
-  // Resetar para página 1 quando busca, filtro ou ordenação mudar
   useEffect(() => {
     setCurrentPage(1)
   }, [searchQuery, activeFilter, sortBy])
@@ -237,7 +234,6 @@ export const ListYeast = () => {
                 ))}
               </View>
 
-              {/* Componente de Paginação */}
               {totalPages > 1 && (
                 <Pagination
                   currentPage={currentPage}
@@ -384,11 +380,14 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     flexWrap: 'wrap',
     gap: 20,
+    alignItems: 'stretch',
+    justifyContent: 'flex-start',
   },
   yeastCardWrapper: {
     flex: 1,
-    minWidth: 320,
-    maxWidth: 420,
+    minWidth: 300,
+    maxWidth: 300,
+    height: 800,
   },
   emptyState: {
     paddingVertical: 60,

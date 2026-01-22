@@ -215,6 +215,9 @@ const styles = StyleSheet.create({
     borderColor: COLORS.border.light,
     overflow: 'hidden',
     width: '100%',
+    height: 550,
+    flexDirection: 'column',
+    justifyContent: 'space-between',
   },
   header: {
     flexDirection: 'row',
@@ -282,6 +285,8 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     paddingVertical: 12,
     gap: 12,
+    flex: 1,
+    justifyContent: 'flex-start',
   },
   descriptionContainer: {
     paddingBottom: 8,

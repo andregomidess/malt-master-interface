@@ -33,30 +33,24 @@ export const BeerStyleCard = ({
 }: BeerStyleCardProps) => {
   const isPublic = !beerStyle.user
 
-  // Intensidades
   const abvIntensity = getAbvIntensity(beerStyle.maxAbv || undefined)
   const ibuIntensity = getIbuIntensity(beerStyle.maxIbu || undefined)
 
-  // Cor EBC
   const colorRgb = ebcToRgb(beerStyle.maxColorEbc || undefined)
 
-  // Emoji do copo
   const glassEmoji = beerStyle.glassware
     ? GlasswareEmojis[beerStyle.glassware]
     : '🍺'
 
-  // Bandeira do país
   const countryFlag = beerStyle.origin
     ? countryFlags[beerStyle.origin] || '🌍'
     : null
 
-  // Tags visíveis (máximo 5)
   const visibleTags = beerStyle.tags.slice(0, 5)
   const remainingTags = beerStyle.tags.length - 5
 
   return (
     <View style={styles.card}>
-      {/* Header */}
       <View style={styles.header}>
         <View style={[styles.iconContainer, { backgroundColor: '#FEF3C7' }]}>
           <Text style={styles.glassEmoji}>{glassEmoji}</Text>
@@ -109,13 +103,10 @@ export const BeerStyleCard = ({
         </View>
       </View>
 
-      {/* Content */}
       <View style={styles.content}>
-        {/* Parâmetros Técnicos */}
         <View style={styles.parametersSection}>
           <Text style={styles.sectionTitle}>Parâmetros Técnicos</Text>
           <View style={styles.parametersGrid}>
-            {/* ABV */}
             <View style={styles.parameterItem}>
               <Text style={styles.parameterLabel}>ABV</Text>
               <Text style={styles.parameterValue}>
@@ -135,7 +126,6 @@ export const BeerStyleCard = ({
               </View>
             </View>
 
-            {/* IBU */}
             <View style={styles.parameterItem}>
               <Text style={styles.parameterLabel}>IBU</Text>
               <Text style={styles.parameterValue}>
@@ -155,7 +145,6 @@ export const BeerStyleCard = ({
               </View>
             </View>
 
-            {/* OG */}
             <View style={styles.parameterItem}>
               <Text style={styles.parameterLabel}>OG</Text>
               <Text style={styles.parameterValue}>
@@ -163,7 +152,6 @@ export const BeerStyleCard = ({
               </Text>
             </View>
 
-            {/* FG */}
             <View style={styles.parameterItem}>
               <Text style={styles.parameterLabel}>FG</Text>
               <Text style={styles.parameterValue}>
@@ -171,7 +159,6 @@ export const BeerStyleCard = ({
               </Text>
             </View>
 
-            {/* Cor EBC */}
             <View style={styles.parameterItem}>
               <Text style={styles.parameterLabel}>Cor EBC</Text>
               <View style={styles.colorRow}>
@@ -186,7 +173,6 @@ export const BeerStyleCard = ({
           </View>
         </View>
 
-        {/* Tags */}
         {beerStyle.tags.length > 0 && (
           <View style={styles.tagsSection}>
             <Text style={styles.sectionTitle}>Características</Text>
@@ -229,7 +215,6 @@ export const BeerStyleCard = ({
           </View>
         )}
 
-        {/* Descrição */}
         {beerStyle.description && (
           <View style={styles.descriptionSection}>
             <Text style={styles.sectionTitle}>Descrição</Text>
@@ -239,7 +224,6 @@ export const BeerStyleCard = ({
           </View>
         )}
 
-        {/* Aroma/Sabor */}
         {(beerStyle.aroma || beerStyle.flavor) && (
           <View style={styles.sensorySection}>
             {beerStyle.aroma && (
@@ -262,7 +246,6 @@ export const BeerStyleCard = ({
         )}
       </View>
 
-      {/* Footer */}
       <View style={styles.footer}>
         {beerStyle.origin && (
           <View style={styles.originContainer}>
@@ -304,6 +287,9 @@ const styles = StyleSheet.create({
     borderColor: COLORS.border.light,
     overflow: 'hidden',
     width: '100%',
+    height: 800,
+    flexDirection: 'column',
+    justifyContent: 'space-between',
   },
   header: {
     flexDirection: 'row',
@@ -379,6 +365,8 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     paddingVertical: 12,
     gap: 12,
+    flex: 1,
+    justifyContent: 'flex-start',
   },
   parametersSection: {
     gap: 8,

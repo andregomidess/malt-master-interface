@@ -46,7 +46,6 @@ export const YeastCard = ({ yeast, onEdit, onDelete }: YeastCardProps) => {
 
   const TypeIcon = getTypeIcon()
 
-  // Classificações
   const attenuationLevel = getAttenuationLevel(
     yeast.attenuation != null ? yeast.attenuation : null,
   )
@@ -56,7 +55,6 @@ export const YeastCard = ({ yeast, onEdit, onDelete }: YeastCardProps) => {
   )
   const flocculationConfig = getFlocculationConfig(yeast.flocculation)
 
-  // Características especiais
   const isClean = isCleanYeast(yeast)
   const isCharacteristic = isCharacteristicYeast(yeast)
   const hasHighAttenuation = isHighAttenuation(yeast)
@@ -299,6 +297,9 @@ const styles = StyleSheet.create({
     borderColor: COLORS.border.light,
     overflow: 'hidden',
     width: '100%',
+    height: 800,
+    flexDirection: 'column',
+    justifyContent: 'space-between',
   },
   header: {
     flexDirection: 'row',
@@ -371,6 +372,8 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     paddingVertical: 12,
     gap: 12,
+    flex: 1,
+    justifyContent: 'flex-start',
   },
   specialBadges: {
     flexDirection: 'row',

@@ -5,7 +5,10 @@ import { MdEdit } from 'react-icons/md'
 import { BiWorld } from 'react-icons/bi'
 import { GiBubbles } from 'react-icons/gi'
 import type { CarbonationProfile } from '../interfaces/CarbonationProfile'
-import { CarbonationType, PrimingSugarType } from '../interfaces/CarbonationProfile'
+import {
+  CarbonationType,
+  PrimingSugarType,
+} from '../interfaces/CarbonationProfile'
 
 const carbonationTypeLabels: Record<CarbonationType, string> = {
   [CarbonationType.NATURAL_PRIMING]: 'Priming Natural',
@@ -47,9 +50,7 @@ export const CarbonationProfileCard = ({
             )}
           </View>
           <View style={styles.badges}>
-            <View
-              style={[styles.badge, { backgroundColor: '#DBEAFE' }]}
-            >
+            <View style={[styles.badge, { backgroundColor: '#DBEAFE' }]}>
               <Text style={[styles.badgeText, { color: '#3B82F6' }]}>
                 {carbonationTypeLabels[profile.type]}
               </Text>
@@ -89,16 +90,15 @@ export const CarbonationProfileCard = ({
             </View>
           )}
 
-        {profile.type === CarbonationType.FORCED_CO2 &&
-          profile.kegPressure && (
-            <View style={styles.specificInfo}>
-              <Text style={styles.sectionTitle}>Pressão:</Text>
-              <View style={styles.infoRow}>
-                <Text style={styles.label}>Pressão do Keg:</Text>
-                <Text style={styles.value}>{profile.kegPressure} PSI</Text>
-              </View>
+        {profile.type === CarbonationType.FORCED_CO2 && profile.kegPressure && (
+          <View style={styles.specificInfo}>
+            <Text style={styles.sectionTitle}>Pressão:</Text>
+            <View style={styles.infoRow}>
+              <Text style={styles.label}>Pressão do Keg:</Text>
+              <Text style={styles.value}>{profile.kegPressure} PSI</Text>
             </View>
-          )}
+          </View>
+        )}
 
         {profile.carbonationTime && (
           <View style={styles.infoRow}>
@@ -134,6 +134,9 @@ const styles = StyleSheet.create({
     borderColor: COLORS.border.light,
     overflow: 'hidden',
     width: '100%',
+    height: 650,
+    flexDirection: 'column',
+    justifyContent: 'space-between',
   },
   header: {
     flexDirection: 'row',
@@ -201,6 +204,8 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     paddingVertical: 12,
     gap: 12,
+    flex: 1,
+    justifyContent: 'flex-start',
   },
   infoRow: {
     flexDirection: 'row',
@@ -258,4 +263,3 @@ const styles = StyleSheet.create({
     color: COLORS.text.secondary,
   },
 })
-

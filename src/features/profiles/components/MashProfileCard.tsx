@@ -19,10 +19,7 @@ interface MashProfileCardProps {
   onEdit?: () => void
 }
 
-export const MashProfileCard = ({
-  profile,
-  onEdit,
-}: MashProfileCardProps) => {
+export const MashProfileCard = ({ profile, onEdit }: MashProfileCardProps) => {
   return (
     <View style={styles.card}>
       <View style={styles.header}>
@@ -40,17 +37,13 @@ export const MashProfileCard = ({
             )}
           </View>
           <View style={styles.badges}>
-            <View
-              style={[styles.badge, { backgroundColor: '#FFEDD5' }]}
-            >
+            <View style={[styles.badge, { backgroundColor: '#FFEDD5' }]}>
               <Text style={[styles.badgeText, { color: '#F97316' }]}>
                 {mashTypeLabels[profile.type]}
               </Text>
             </View>
             {profile.estimatedEfficiency && (
-              <View
-                style={[styles.badge, { backgroundColor: '#D1FAE5' }]}
-              >
+              <View style={[styles.badge, { backgroundColor: '#D1FAE5' }]}>
                 <Text style={[styles.badgeText, { color: '#10B981' }]}>
                   {profile.estimatedEfficiency}% eficiência
                 </Text>
@@ -129,6 +122,9 @@ const styles = StyleSheet.create({
     borderColor: COLORS.border.light,
     overflow: 'hidden',
     width: '100%',
+    height: 700,
+    flexDirection: 'column',
+    justifyContent: 'space-between',
   },
   header: {
     flexDirection: 'row',
@@ -196,6 +192,8 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     paddingVertical: 12,
     gap: 12,
+    flex: 1,
+    justifyContent: 'flex-start',
   },
   temperatureRow: {
     flexDirection: 'row',
@@ -282,4 +280,3 @@ const styles = StyleSheet.create({
     color: COLORS.text.secondary,
   },
 })
-

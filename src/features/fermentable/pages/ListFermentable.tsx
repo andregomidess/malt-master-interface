@@ -432,11 +432,14 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     flexWrap: 'wrap',
     gap: 16,
+    alignItems: 'stretch',
+    justifyContent: 'flex-start',
   },
   cardWrapper: {
     flex: 1,
-    minWidth: 280,
-    maxWidth: 350,
+    minWidth: 300,
+    maxWidth: 300,
+    height: 650,
   },
   emptyState: {
     alignItems: 'center',

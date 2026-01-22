@@ -32,12 +32,10 @@ export const ListMashProfile = () => {
     [profiles, searchQuery],
   )
 
-  // Resetar para página 1 quando busca mudar
   useEffect(() => {
     setCurrentPage(1)
   }, [searchQuery])
 
-  // Calcular paginação
   const totalItems = filteredProfiles.length
   const totalPages = Math.ceil(totalItems / itemsPerPage)
   const startIndex = (currentPage - 1) * itemsPerPage
@@ -78,7 +76,6 @@ export const ListMashProfile = () => {
           />
         </View>
 
-        {/* Loading */}
         {isLoading && (
           <View style={styles.loadingContainer}>
             <ActivityIndicator size="large" color={COLORS.brand.primary} />
@@ -88,7 +85,6 @@ export const ListMashProfile = () => {
           </View>
         )}
 
-        {/* Error */}
         {error && (
           <View style={styles.errorContainer}>
             <Text style={styles.errorText}>
@@ -97,7 +93,6 @@ export const ListMashProfile = () => {
           </View>
         )}
 
-        {/* Lista de perfis */}
         {!isLoading && !error && (
           <ScrollView
             style={styles.scrollView}
@@ -116,7 +111,6 @@ export const ListMashProfile = () => {
                   ))}
                 </View>
 
-                {/* Componente de Paginação */}
                 {totalPages > 1 && (
                   <Pagination
                     currentPage={currentPage}
@@ -141,7 +135,6 @@ export const ListMashProfile = () => {
           </ScrollView>
         )}
 
-        {/* Empty state */}
         {!isLoading && !error && filteredProfiles.length === 0 && (
           <View style={styles.emptyState}>
             <Text style={styles.emptyStateText}>
@@ -209,11 +202,14 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     flexWrap: 'wrap',
     gap: 16,
+    alignItems: 'stretch',
+    justifyContent: 'flex-start',
   },
   cardWrapper: {
     flex: 1,
-    minWidth: 320,
-    maxWidth: 400,
+    minWidth: 300,
+    maxWidth: 300,
+    height: 700,
   },
   scrollView: {
     flex: 1,

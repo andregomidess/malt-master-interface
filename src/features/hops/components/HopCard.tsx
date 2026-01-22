@@ -23,14 +23,11 @@ interface HopCardProps {
 export const HopCard = ({ hop, onEdit, onDelete }: HopCardProps) => {
   const isPublic = hop.user === null
 
-  // Uso principal (primeiro da lista)
   const primaryUse = hop.uses?.[0] || HopUse.DUAL_PURPOSE
   const primaryUseConfig = useColors[primaryUse]
 
-  // Nível de alfa ácidos
   const alphaLevel = getAlphaAcidsLevel(hop.alphaAcids)
 
-  // Características especiais
   const isNoble = isNobleHop(hop)
   const isModern = isModernHop(hop)
 
@@ -232,6 +229,9 @@ const styles = StyleSheet.create({
     borderColor: COLORS.border.light,
     overflow: 'hidden',
     width: '100%',
+    height: 650,
+    flexDirection: 'column',
+    justifyContent: 'space-between',
   },
   header: {
     flexDirection: 'row',
@@ -304,6 +304,8 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     paddingVertical: 12,
     gap: 12,
+    flex: 1,
+    justifyContent: 'flex-start',
   },
   aromaSection: {
     paddingBottom: 8,

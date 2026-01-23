@@ -28,6 +28,7 @@ import {
   getValidationTooltip,
   StyleValidationResult,
 } from '../utils/validateStyleRanges'
+import { StyleRangeBar } from './StyleRangeBar'
 
 interface CollapsibleSectionProps {
   title: string
@@ -261,39 +262,36 @@ export const RecipeSidebar: React.FC = () => {
           </Text>
         )}
         <View style={styles.statsGrid}>
-          <StatCard
+          <StyleRangeBar
             label="OG Calculado"
-            value={calculations.originalGravity?.toFixed(3) || '—'}
             validation={styleValidations.og}
-            cardStyle={styles.statCardOrange}
+            valueFormat="gravity"
+            cardBgColor="#FFE5CC"
+            containerStyle={styles.statBarWrapper48}
           />
 
-          <StatCard
+          <StyleRangeBar
             label="FG Esperado"
-            value={calculations.finalGravity?.toFixed(3) || '—'}
             validation={styleValidations.fg}
-            cardStyle={styles.statCardRed}
+            valueFormat="gravity"
+            cardBgColor="#FFCCCC"
+            containerStyle={styles.statBarWrapper48}
           />
 
-          <StatCard
+          <StyleRangeBar
             label="ABV Percentual"
-            value={
-              calculations.estimatedAbv ? `${calculations.estimatedAbv} %` : '—'
-            }
             validation={styleValidations.abv}
-            cardStyle={styles.statCardOrange}
+            valueFormat="percent"
+            cardBgColor="#FFE5CC"
+            containerStyle={styles.statBarWrapper48}
           />
 
-          <StatCard
+          <StyleRangeBar
             label="IBU Soma Lúpulos"
-            value={
-              calculations.estimatedIbu !== null &&
-              calculations.estimatedIbu !== undefined
-                ? calculations.estimatedIbu.toFixed(1)
-                : '—'
-            }
             validation={styleValidations.ibu}
-            cardStyle={styles.statCardRed}
+            valueFormat="decimal"
+            cardBgColor="#FFCCCC"
+            containerStyle={styles.statBarWrapper48}
           />
 
           <StatCard
@@ -303,11 +301,12 @@ export const RecipeSidebar: React.FC = () => {
             cardStyle={styles.statCardYellow}
           />
 
-          <StatCard
+          <StyleRangeBar
             label="EBC Cor"
-            value={calculations.estimatedEbc || '—'}
             validation={styleValidations.ebc}
-            cardStyle={styles.statCardYellow}
+            valueFormat="decimal"
+            cardBgColor="#FFF4CC"
+            containerStyle={styles.statBarWrapper43}
           />
 
           <Card
@@ -522,6 +521,14 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     flexWrap: 'wrap',
     gap: 8,
+  },
+  statBarWrapper48: {
+    flex: 1,
+    minWidth: '48%',
+  },
+  statBarWrapper43: {
+    flex: 1,
+    minWidth: '43%',
   },
   statCardOrange: {
     flex: 1,

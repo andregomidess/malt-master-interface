@@ -263,8 +263,24 @@ export const ListFermentable = () => {
                   <View key={fermentable.id} style={styles.cardWrapper}>
                     <FermentableCard
                       fermentable={fermentable}
-                      onEdit={() => handleEdit(fermentable.id)}
-                      onDelete={() => handleDelete(fermentable.id)}
+                      onEdit={
+                        fermentable.user
+                          ? () => handleEdit(fermentable.id)
+                          : undefined
+                      }
+                      onDelete={
+                        fermentable.user
+                          ? () => handleDelete(fermentable.id)
+                          : undefined
+                      }
+                      onUseAsBase={
+                        !fermentable.user
+                          ? () =>
+                              navigate(
+                                `/fermentable/new?base=${fermentable.id}`,
+                              )
+                          : undefined
+                      }
                     />
                   </View>
                 ))}

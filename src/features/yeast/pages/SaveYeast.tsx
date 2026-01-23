@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo } from 'react'
 import { View, StyleSheet, ScrollView } from 'react-native'
-import { useNavigate, useParams } from 'react-router'
+import { useNavigate, useParams, useSearchParams } from 'react-router'
 import { Controller, useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod/v3'
@@ -65,11 +65,15 @@ const toNumber = (
 export const SaveYeast = () => {
   const navigate = useNavigate()
   const { id } = useParams<{ id?: string }>()
+  const [searchParams] = useSearchParams()
+  const baseId = searchParams.get('base')
   const isEditMode = !!id
 
   const { mutate: saveYeast, isPending: isSaving } = useSaveYeast()
 
-  const { data: existingYeast, isLoading: isLoadingYeast } = useYeastById(id)
+  const { data: existingYeast, isLoading: isLoadingYeast } = useYeastById(
+    id || baseId || undefined,
+  )
 
   const {
     control,
@@ -91,7 +95,7 @@ export const SaveYeast = () => {
   useEffect(() => {
     if (existingYeast) {
       reset({
-        name: existingYeast.name,
+        name: baseId ? '' : existingYeast.name,
         type: existingYeast.type,
         attenuation: toNumber(existingYeast.attenuation),
         flocculation: existingYeast.flocculation,
@@ -105,7 +109,7 @@ export const SaveYeast = () => {
       } as FormData)
       trigger()
     }
-  }, [existingYeast, reset, trigger])
+  }, [existingYeast, reset, trigger, baseId])
 
   const typeOptions = useMemo(
     () =>
@@ -158,7 +162,7 @@ export const SaveYeast = () => {
     navigate('/yeast')
   }
 
-  if (isEditMode && isLoadingYeast) {
+  if ((isEditMode || baseId) && isLoadingYeast) {
     return (
       <Layout activeMenuItem="yeast">
         <View style={styles.container}>

@@ -2,7 +2,7 @@ import { View, StyleSheet, TouchableOpacity } from 'react-native'
 import { Text } from '../../../shared/components/Typography'
 import { COLORS } from '../../../shared/styles/colors'
 import { MdEdit } from 'react-icons/md'
-import { BiWorld } from 'react-icons/bi'
+import { BiWorld, BiCopy } from 'react-icons/bi'
 import { GiBarrel } from 'react-icons/gi'
 import type { FermentationProfile } from '../interfaces/FermentationProfile'
 import { FermentationProfileType } from '../interfaces/FermentationProfile'
@@ -19,12 +19,15 @@ const fermentationTypeLabels: Record<FermentationProfileType, string> = {
 interface FermentationProfileCardProps {
   profile: FermentationProfile
   onEdit?: () => void
+  onUseAsBase?: () => void
 }
 
 export const FermentationProfileCard = ({
   profile,
   onEdit,
+  onUseAsBase,
 }: FermentationProfileCardProps) => {
+  const isPublic = profile.isPublic
   return (
     <View style={styles.card}>
       <View style={styles.header}>
@@ -42,17 +45,13 @@ export const FermentationProfileCard = ({
             )}
           </View>
           <View style={styles.badges}>
-            <View
-              style={[styles.badge, { backgroundColor: '#EDE9FE' }]}
-            >
+            <View style={[styles.badge, { backgroundColor: '#EDE9FE' }]}>
               <Text style={[styles.badgeText, { color: '#8B5CF6' }]}>
                 {fermentationTypeLabels[profile.type]}
               </Text>
             </View>
             {profile.isMultiStage && (
-              <View
-                style={[styles.badge, { backgroundColor: '#D1FAE5' }]}
-              >
+              <View style={[styles.badge, { backgroundColor: '#D1FAE5' }]}>
                 <Text style={[styles.badgeText, { color: '#10B981' }]}>
                   Multi-estágio
                 </Text>
@@ -115,10 +114,22 @@ export const FermentationProfileCard = ({
       </View>
 
       <View style={styles.footer}>
-        <TouchableOpacity style={styles.editButton} onPress={onEdit}>
-          <MdEdit size={16} color={COLORS.text.secondary} />
-          <Text style={styles.editButtonText}>Editar</Text>
-        </TouchableOpacity>
+        {isPublic
+          ? onUseAsBase && (
+              <TouchableOpacity
+                style={styles.useAsBaseButton}
+                onPress={onUseAsBase}
+              >
+                <BiCopy size={16} color={COLORS.brand.primary} />
+                <Text style={styles.useAsBaseButtonText}>Usar como Base</Text>
+              </TouchableOpacity>
+            )
+          : onEdit && (
+              <TouchableOpacity style={styles.editButton} onPress={onEdit}>
+                <MdEdit size={16} color={COLORS.text.secondary} />
+                <Text style={styles.editButtonText}>Editar</Text>
+              </TouchableOpacity>
+            )}
       </View>
     </View>
   )
@@ -279,5 +290,14 @@ const styles = StyleSheet.create({
     fontWeight: '500',
     color: COLORS.text.secondary,
   },
+  useAsBaseButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+  },
+  useAsBaseButtonText: {
+    fontSize: 14,
+    fontWeight: '500',
+    color: COLORS.brand.primary,
+  },
 })
-

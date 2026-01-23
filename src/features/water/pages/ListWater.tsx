@@ -47,7 +47,7 @@ export const ListWater = () => {
         return WaterProfileSortBy.SO4
       case 'hardness':
       case 'ratio':
-        return WaterProfileSortBy.CREATED_AT // Backend não tem esses sorts, usar data
+        return WaterProfileSortBy.CREATED_AT
       default:
         return WaterProfileSortBy.NAME
     }
@@ -231,14 +231,26 @@ export const ListWater = () => {
                   <View key={profile.id} style={styles.profileCardWrapper}>
                     <WaterProfileCard
                       profile={profile}
-                      onEdit={() => navigate(`/water/${profile.id}/edit`)}
-                      onDelete={() => handleDelete(profile.id)}
+                      onEdit={
+                        profile.user
+                          ? () => navigate(`/water/${profile.id}/edit`)
+                          : undefined
+                      }
+                      onDelete={
+                        profile.user
+                          ? () => handleDelete(profile.id)
+                          : undefined
+                      }
+                      onUseAsBase={
+                        !profile.user
+                          ? () => navigate(`/water/new?base=${profile.id}`)
+                          : undefined
+                      }
                     />
                   </View>
                 ))}
               </View>
 
-              {/* Componente de Paginação */}
               {totalPages > 1 && (
                 <Pagination
                   currentPage={currentPage}

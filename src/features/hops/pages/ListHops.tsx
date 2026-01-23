@@ -244,8 +244,15 @@ export const ListHops = () => {
                   <View key={hop.id} style={styles.cardWrapper}>
                     <HopCard
                       hop={hop}
-                      onEdit={() => handleEdit(hop.id)}
-                      onDelete={() => handleDelete(hop.id)}
+                      onEdit={hop.user ? () => handleEdit(hop.id) : undefined}
+                      onDelete={
+                        hop.user ? () => handleDelete(hop.id) : undefined
+                      }
+                      onUseAsBase={
+                        !hop.user
+                          ? () => navigate(`/hops/new?base=${hop.id}`)
+                          : undefined
+                      }
                     />
                   </View>
                 ))}

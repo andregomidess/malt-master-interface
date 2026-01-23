@@ -2,7 +2,7 @@ import { View, StyleSheet, TouchableOpacity } from 'react-native'
 import { Text } from '../../../shared/components/Typography'
 import { COLORS } from '../../../shared/styles/colors'
 import { MdEdit, MdDelete } from 'react-icons/md'
-import { BiWorld } from 'react-icons/bi'
+import { BiWorld, BiCopy } from 'react-icons/bi'
 import { GiWheat, GiHotSpices, GiHoneyJar, GiCorn } from 'react-icons/gi'
 import { BsStars, BsFire } from 'react-icons/bs'
 import { Fermentable, FermentableType } from '../interfaces/Fermentable'
@@ -23,12 +23,14 @@ interface FermentableCardProps {
   fermentable: Fermentable
   onEdit?: () => void
   onDelete?: () => void
+  onUseAsBase?: () => void
 }
 
 export const FermentableCard = ({
   fermentable,
   onEdit,
   onDelete,
+  onUseAsBase,
 }: FermentableCardProps) => {
   const isPublic = fermentable.user === null
   const typeConfig = typeColors[fermentable.type]
@@ -190,17 +192,34 @@ export const FermentableCard = ({
 
       <View style={styles.footer}>
         <View style={styles.actions}>
-          {onEdit && (
-            <TouchableOpacity style={styles.actionButton} onPress={onEdit}>
-              <MdEdit size={16} color={COLORS.text.secondary} />
-              <Text style={styles.actionButtonText}>Editar</Text>
-            </TouchableOpacity>
-          )}
-          {onDelete && (
-            <TouchableOpacity style={styles.deleteButton} onPress={onDelete}>
-              <MdDelete size={16} color="#EF4444" />
-              <Text style={styles.deleteButtonText}>Deletar</Text>
-            </TouchableOpacity>
+          {isPublic ? (
+            onUseAsBase && (
+              <TouchableOpacity
+                style={styles.useAsBaseButton}
+                onPress={onUseAsBase}
+              >
+                <BiCopy size={16} color={COLORS.brand.primary} />
+                <Text style={styles.useAsBaseButtonText}>Usar como Base</Text>
+              </TouchableOpacity>
+            )
+          ) : (
+            <>
+              {onEdit && (
+                <TouchableOpacity style={styles.actionButton} onPress={onEdit}>
+                  <MdEdit size={16} color={COLORS.text.secondary} />
+                  <Text style={styles.actionButtonText}>Editar</Text>
+                </TouchableOpacity>
+              )}
+              {onDelete && (
+                <TouchableOpacity
+                  style={styles.deleteButton}
+                  onPress={onDelete}
+                >
+                  <MdDelete size={16} color="#EF4444" />
+                  <Text style={styles.deleteButtonText}>Deletar</Text>
+                </TouchableOpacity>
+              )}
+            </>
           )}
         </View>
       </View>
@@ -458,5 +477,15 @@ const styles = StyleSheet.create({
     fontSize: 13,
     fontWeight: '500',
     color: '#EF4444',
+  },
+  useAsBaseButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+  },
+  useAsBaseButtonText: {
+    fontSize: 13,
+    fontWeight: '500',
+    color: COLORS.brand.primary,
   },
 })

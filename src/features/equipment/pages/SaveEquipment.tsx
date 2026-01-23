@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo } from 'react'
 import { View, StyleSheet, ScrollView } from 'react-native'
-import { useNavigate, useParams } from 'react-router'
+import { useNavigate, useParams, useSearchParams } from 'react-router'
 import { Controller, useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod/v3'
@@ -249,12 +249,14 @@ export type FormData = z.infer<typeof equipmentSchema>
 export const SaveEquipment = () => {
   const navigate = useNavigate()
   const { id } = useParams<{ id?: string }>()
+  const [searchParams] = useSearchParams()
+  const baseId = searchParams.get('base')
   const isEditMode = !!id
 
   const { mutate: saveEquipment, isPending: isSaving } = useSaveEquipment()
 
   const { data: existingEquipment, isLoading: isLoadingEquipment } =
-    useEquipmentById(id)
+    useEquipmentById(id || baseId || undefined)
 
   const {
     control,
@@ -273,7 +275,7 @@ export const SaveEquipment = () => {
   useEffect(() => {
     if (existingEquipment) {
       const baseData = {
-        name: existingEquipment.name,
+        name: baseId ? '' : existingEquipment.name,
         description: existingEquipment.description || undefined,
         material: existingEquipment.material,
         totalCapacity: existingEquipment.totalCapacity,
@@ -344,7 +346,7 @@ export const SaveEquipment = () => {
         } as FormData)
       }
     }
-  }, [existingEquipment, reset])
+  }, [existingEquipment, reset, baseId])
 
   const materialOptions = useMemo(
     () =>

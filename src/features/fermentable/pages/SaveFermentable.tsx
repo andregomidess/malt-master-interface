@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo } from 'react'
 import { View, StyleSheet, ScrollView } from 'react-native'
-import { useNavigate, useParams } from 'react-router'
+import { useNavigate, useParams, useSearchParams } from 'react-router'
 import { Controller, useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod/v3'
@@ -58,12 +58,14 @@ const toNumber = (
 export const SaveFermentable = () => {
   const navigate = useNavigate()
   const { id } = useParams<{ id?: string }>()
+  const [searchParams] = useSearchParams()
+  const baseId = searchParams.get('base')
   const isEditMode = !!id
 
   const { mutate: saveFermentable, isPending: isSaving } = useSaveFermentable()
 
   const { data: existingFermentable, isLoading: isLoadingFermentable } =
-    useFermentableById(id)
+    useFermentableById(id || baseId || undefined)
 
   const {
     control,
@@ -85,7 +87,7 @@ export const SaveFermentable = () => {
   useEffect(() => {
     if (existingFermentable) {
       reset({
-        name: existingFermentable.name,
+        name: baseId ? '' : existingFermentable.name,
         type: existingFermentable.type,
         form: existingFermentable.form,
         color: toNumber(existingFermentable.color),
@@ -96,7 +98,7 @@ export const SaveFermentable = () => {
       } as FormData)
       trigger()
     }
-  }, [existingFermentable, reset, trigger])
+  }, [existingFermentable, reset, trigger, baseId])
 
   const typeOptions = useMemo(
     () =>

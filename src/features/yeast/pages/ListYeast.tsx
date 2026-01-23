@@ -227,8 +227,19 @@ export const ListYeast = () => {
                   <View key={yeast.id} style={styles.yeastCardWrapper}>
                     <YeastCard
                       yeast={yeast}
-                      onEdit={() => navigate(`/yeast/${yeast.id}/edit`)}
-                      onDelete={() => handleDelete(yeast.id)}
+                      onEdit={
+                        yeast.user
+                          ? () => navigate(`/yeast/${yeast.id}/edit`)
+                          : undefined
+                      }
+                      onDelete={
+                        yeast.user ? () => handleDelete(yeast.id) : undefined
+                      }
+                      onUseAsBase={
+                        !yeast.user
+                          ? () => navigate(`/yeast/new?base=${yeast.id}`)
+                          : undefined
+                      }
                     />
                   </View>
                 ))}

@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo } from 'react'
 import { View, StyleSheet, ScrollView, TouchableOpacity } from 'react-native'
-import { useNavigate, useParams } from 'react-router'
+import { useNavigate, useParams, useSearchParams } from 'react-router'
 import { Controller, useForm, useFieldArray } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod/v3'
@@ -114,12 +114,14 @@ const toNumberRequired = (
 export const SaveMashProfile = () => {
   const navigate = useNavigate()
   const { id } = useParams<{ id?: string }>()
+  const [searchParams] = useSearchParams()
+  const baseId = searchParams.get('base')
   const isEditMode = !!id
 
   const { mutate: saveProfile, isPending: isSaving } = useSaveMashProfile()
 
   const { data: existingProfile, isLoading: isLoadingProfile } =
-    useMashProfileById(id)
+    useMashProfileById(id || baseId || undefined)
 
   const {
     control,
@@ -180,7 +182,7 @@ export const SaveMashProfile = () => {
       }))
 
       reset({
-        name: existingProfile.name,
+        name: baseId ? '' : existingProfile.name,
         type: existingProfile.type,
         estimatedEfficiency: toNumber(existingProfile.estimatedEfficiency),
         grainTemperature: toNumberRequired(
@@ -196,7 +198,7 @@ export const SaveMashProfile = () => {
         tunSpecificHeat: toNumberRequired(existingProfile.tunSpecificHeat, 0.3),
         mashThickness: toNumberRequired(existingProfile.mashThickness, 3.0),
         observations: existingProfile.observations,
-        isPublic: existingProfile.isPublic,
+        isPublic: baseId ? false : existingProfile.isPublic,
         steps,
       })
       // Força validação após reset
@@ -204,7 +206,7 @@ export const SaveMashProfile = () => {
         trigger()
       }, 100)
     }
-  }, [existingProfile, reset, trigger])
+  }, [existingProfile, reset, trigger, baseId])
 
   const mashTypeOptions = useMemo(
     () =>
@@ -277,7 +279,7 @@ export const SaveMashProfile = () => {
     })
   }
 
-  if (isEditMode && isLoadingProfile) {
+  if ((isEditMode || baseId) && isLoadingProfile) {
     return (
       <Layout activeMenuItem="mash-profiles">
         <View style={styles.container}>

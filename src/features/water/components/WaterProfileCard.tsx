@@ -20,17 +20,19 @@ import {
   hardnessLabels,
   WaterHardness,
 } from '../data/mockWaterProfilesData'
+import { BiCopy, BiWorld } from 'react-icons/bi'
 
 interface WaterProfileCardProps {
   profile: WaterProfile
   onEdit?: () => void
   onDelete?: () => void
+  onUseAsBase?: () => void
 }
-
 export const WaterProfileCard = ({
   profile,
   onEdit,
   onDelete,
+  onUseAsBase,
 }: WaterProfileCardProps) => {
   const so4ClRatio = calculateSO4ClRatio(profile)
   const profileType = getProfileType(profile)
@@ -59,6 +61,7 @@ export const WaterProfileCard = ({
   }
 
   const hardnessConfig = hardnessColors[hardnessLevel]
+  const isPublic = profile.user === null
 
   return (
     <View style={styles.card}>
@@ -72,7 +75,15 @@ export const WaterProfileCard = ({
           <IoWater size={32} color={typeConfig.color} />
         </View>
         <View style={styles.headerContent}>
-          <Text style={styles.title}>{profile.name}</Text>
+          <View style={styles.titleRow}>
+            <Text style={styles.title}>{profile.name}</Text>
+            {isPublic && (
+              <View style={styles.publicBadge}>
+                <BiWorld size={12} color="#6B7280" />
+                <Text style={styles.publicBadgeText}>Público</Text>
+              </View>
+            )}
+          </View>
           <View style={styles.badges}>
             {profileType && (
               <View
@@ -312,17 +323,34 @@ export const WaterProfileCard = ({
 
       <View style={styles.footer}>
         <View style={styles.actions}>
-          {onEdit && (
-            <TouchableOpacity style={styles.actionButton} onPress={onEdit}>
-              <MdEdit size={16} color={COLORS.text.secondary} />
-              <Text style={styles.actionButtonText}>Editar</Text>
-            </TouchableOpacity>
-          )}
-          {onDelete && (
-            <TouchableOpacity style={styles.deleteButton} onPress={onDelete}>
-              <MdDelete size={16} color="#EF4444" />
-              <Text style={styles.deleteButtonText}>Deletar</Text>
-            </TouchableOpacity>
+          {isPublic ? (
+            onUseAsBase && (
+              <TouchableOpacity
+                style={styles.useAsBaseButton}
+                onPress={onUseAsBase}
+              >
+                <BiCopy size={16} color={COLORS.brand.primary} />
+                <Text style={styles.useAsBaseButtonText}>Usar como Base</Text>
+              </TouchableOpacity>
+            )
+          ) : (
+            <>
+              {onEdit && (
+                <TouchableOpacity style={styles.actionButton} onPress={onEdit}>
+                  <MdEdit size={16} color={COLORS.text.secondary} />
+                  <Text style={styles.actionButtonText}>Editar</Text>
+                </TouchableOpacity>
+              )}
+              {onDelete && (
+                <TouchableOpacity
+                  style={styles.deleteButton}
+                  onPress={onDelete}
+                >
+                  <MdDelete size={16} color="#EF4444" />
+                  <Text style={styles.deleteButtonText}>Deletar</Text>
+                </TouchableOpacity>
+              )}
+            </>
           )}
         </View>
       </View>
@@ -363,10 +391,31 @@ const styles = StyleSheet.create({
     flex: 1,
     gap: 6,
   },
+  titleRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    flexWrap: 'wrap',
+  },
   title: {
     fontSize: 16,
     fontWeight: '700',
     color: COLORS.text.primary,
+    flex: 1,
+  },
+  publicBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+    borderRadius: 4,
+    backgroundColor: '#F3F4F6',
+  },
+  publicBadgeText: {
+    fontSize: 10,
+    fontWeight: '600',
+    color: '#6B7280',
   },
   badges: {
     flexDirection: 'row',
@@ -556,5 +605,15 @@ const styles = StyleSheet.create({
     fontSize: 13,
     fontWeight: '500',
     color: '#EF4444',
+  },
+  useAsBaseButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+  },
+  useAsBaseButtonText: {
+    fontSize: 13,
+    fontWeight: '500',
+    color: COLORS.brand.primary,
   },
 })

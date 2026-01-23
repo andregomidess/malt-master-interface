@@ -143,7 +143,6 @@ export const BeerTagLabels: Record<BeerTag, string> = {
   [BeerTag.ROASTY]: 'Tostado',
 }
 
-// Cores para Tags
 export const BeerTagColors: Record<
   BeerTag,
   { color: string; bgColor: string }

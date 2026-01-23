@@ -2,7 +2,7 @@ import { View, StyleSheet, TouchableOpacity } from 'react-native'
 import { Text } from '../../../shared/components/Typography'
 import { COLORS } from '../../../shared/styles/colors'
 import { MdEdit } from 'react-icons/md'
-import { BiWorld } from 'react-icons/bi'
+import { BiWorld, BiCopy } from 'react-icons/bi'
 import { GiCookingPot } from 'react-icons/gi'
 import type { MashProfile } from '../interfaces/MashProfile'
 import { MashProfileType } from '../interfaces/MashProfile'
@@ -17,9 +17,15 @@ const mashTypeLabels: Record<MashProfileType, string> = {
 interface MashProfileCardProps {
   profile: MashProfile
   onEdit?: () => void
+  onUseAsBase?: () => void
 }
 
-export const MashProfileCard = ({ profile, onEdit }: MashProfileCardProps) => {
+export const MashProfileCard = ({
+  profile,
+  onEdit,
+  onUseAsBase,
+}: MashProfileCardProps) => {
+  const isPublic = profile.isPublic
   return (
     <View style={styles.card}>
       <View style={styles.header}>
@@ -105,10 +111,22 @@ export const MashProfileCard = ({ profile, onEdit }: MashProfileCardProps) => {
       </View>
 
       <View style={styles.footer}>
-        <TouchableOpacity style={styles.editButton} onPress={onEdit}>
-          <MdEdit size={16} color={COLORS.text.secondary} />
-          <Text style={styles.editButtonText}>Editar</Text>
-        </TouchableOpacity>
+        {isPublic
+          ? onUseAsBase && (
+              <TouchableOpacity
+                style={styles.useAsBaseButton}
+                onPress={onUseAsBase}
+              >
+                <BiCopy size={16} color={COLORS.brand.primary} />
+                <Text style={styles.useAsBaseButtonText}>Usar como Base</Text>
+              </TouchableOpacity>
+            )
+          : onEdit && (
+              <TouchableOpacity style={styles.editButton} onPress={onEdit}>
+                <MdEdit size={16} color={COLORS.text.secondary} />
+                <Text style={styles.editButtonText}>Editar</Text>
+              </TouchableOpacity>
+            )}
       </View>
     </View>
   )
@@ -278,5 +296,15 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontWeight: '500',
     color: COLORS.text.secondary,
+  },
+  useAsBaseButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+  },
+  useAsBaseButtonText: {
+    fontSize: 14,
+    fontWeight: '500',
+    color: COLORS.brand.primary,
   },
 })

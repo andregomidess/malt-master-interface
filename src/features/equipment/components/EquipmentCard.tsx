@@ -9,7 +9,7 @@ import {
   GiThermometerCold,
 } from 'react-icons/gi'
 import { BsLightningChargeFill } from 'react-icons/bs'
-import { BiWorld } from 'react-icons/bi'
+import { BiWorld, BiCopy } from 'react-icons/bi'
 import type { EquipmentWithPublicFlag as Equipment } from '../interfaces/equipment'
 import {
   EquipmentType,
@@ -23,9 +23,15 @@ import {
 interface EquipmentCardProps {
   equipment: Equipment
   onEdit?: () => void
+  onUseAsBase?: () => void
 }
 
-export const EquipmentCard = ({ equipment, onEdit }: EquipmentCardProps) => {
+export const EquipmentCard = ({
+  equipment,
+  onEdit,
+  onUseAsBase,
+}: EquipmentCardProps) => {
+  const isPublic = equipment.isPublic
   const typeConfig = {
     [EquipmentType.KETTLE]: {
       label: equipmentTypeLabels[EquipmentType.KETTLE],
@@ -198,10 +204,22 @@ export const EquipmentCard = ({ equipment, onEdit }: EquipmentCardProps) => {
       </View>
 
       <View style={styles.footer}>
-        <TouchableOpacity style={styles.editButton} onPress={onEdit}>
-          <MdEdit size={16} color={COLORS.text.secondary} />
-          <Text style={styles.editButtonText}>Editar</Text>
-        </TouchableOpacity>
+        {isPublic
+          ? onUseAsBase && (
+              <TouchableOpacity
+                style={styles.useAsBaseButton}
+                onPress={onUseAsBase}
+              >
+                <BiCopy size={16} color={COLORS.brand.primary} />
+                <Text style={styles.useAsBaseButtonText}>Usar como Base</Text>
+              </TouchableOpacity>
+            )
+          : onEdit && (
+              <TouchableOpacity style={styles.editButton} onPress={onEdit}>
+                <MdEdit size={16} color={COLORS.text.secondary} />
+                <Text style={styles.editButtonText}>Editar</Text>
+              </TouchableOpacity>
+            )}
       </View>
     </View>
   )
@@ -372,5 +390,15 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontWeight: '500',
     color: COLORS.text.secondary,
+  },
+  useAsBaseButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+  },
+  useAsBaseButtonText: {
+    fontSize: 14,
+    fontWeight: '500',
+    color: COLORS.brand.primary,
   },
 })

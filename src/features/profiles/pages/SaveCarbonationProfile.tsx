@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo } from 'react'
 import { View, StyleSheet, ScrollView } from 'react-native'
-import { useNavigate, useParams } from 'react-router'
+import { useNavigate, useParams, useSearchParams } from 'react-router'
 import { Controller, useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod/v3'
@@ -115,13 +115,15 @@ const toNumberRequired = (
 export const SaveCarbonationProfile = () => {
   const navigate = useNavigate()
   const { id } = useParams<{ id?: string }>()
+  const [searchParams] = useSearchParams()
+  const baseId = searchParams.get('base')
   const isEditMode = !!id
 
   const { mutate: saveProfile, isPending: isSaving } =
     useSaveCarbonationProfile()
 
   const { data: existingProfile, isLoading: isLoadingProfile } =
-    useCarbonationProfileById(id)
+    useCarbonationProfileById(id || baseId || undefined)
 
   const {
     control,
@@ -152,7 +154,7 @@ export const SaveCarbonationProfile = () => {
   useEffect(() => {
     if (existingProfile) {
       reset({
-        name: existingProfile.name,
+        name: baseId ? '' : existingProfile.name,
         type: existingProfile.type,
         targetCO2Volumes: toNumberRequired(
           existingProfile.targetCO2Volumes,
@@ -168,10 +170,10 @@ export const SaveCarbonationProfile = () => {
         carbonationTime: toNumber(existingProfile.carbonationTime),
         carbonationMethod: existingProfile.carbonationMethod,
         observations: existingProfile.observations,
-        isPublic: existingProfile.isPublic,
+        isPublic: baseId ? false : existingProfile.isPublic,
       })
     }
-  }, [existingProfile, reset])
+  }, [existingProfile, reset, baseId])
 
   const carbonationTypeOptions = useMemo(
     () =>
@@ -215,7 +217,7 @@ export const SaveCarbonationProfile = () => {
     navigate('/carbonation-profiles')
   }
 
-  if (isEditMode && isLoadingProfile) {
+  if ((isEditMode || baseId) && isLoadingProfile) {
     return (
       <Layout activeMenuItem="carbonation-profiles">
         <View style={styles.container}>

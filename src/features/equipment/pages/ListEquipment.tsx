@@ -236,7 +236,17 @@ export const ListEquipment = () => {
                     <View key={equipment.id} style={styles.cardWrapper}>
                       <EquipmentCard
                         equipment={equipment}
-                        onEdit={() => handleEdit(equipment.id)}
+                        onEdit={
+                          !equipment.isPublic
+                            ? () => handleEdit(equipment.id)
+                            : undefined
+                        }
+                        onUseAsBase={
+                          equipment.isPublic
+                            ? () =>
+                                navigate(`/equipment/new?base=${equipment.id}`)
+                            : undefined
+                        }
                       />
                     </View>
                   ))}

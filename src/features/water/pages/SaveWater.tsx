@@ -1,6 +1,6 @@
 import React, { useEffect } from 'react'
 import { View, StyleSheet, ScrollView } from 'react-native'
-import { useNavigate, useParams } from 'react-router'
+import { useNavigate, useParams, useSearchParams } from 'react-router'
 import { Controller, useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod/v3'
@@ -50,13 +50,15 @@ const toNumber = (
 export const SaveWater = () => {
   const navigate = useNavigate()
   const { id } = useParams<{ id?: string }>()
+  const [searchParams] = useSearchParams()
+  const baseId = searchParams.get('base')
   const isEditMode = !!id
 
   const { mutate: saveWaterProfile, isPending: isSaving } =
     useSaveWaterProfile()
 
   const { data: existingProfile, isLoading: isLoadingProfile } =
-    useWaterProfileById(id)
+    useWaterProfileById(id || baseId || undefined)
 
   const {
     control,
@@ -78,7 +80,7 @@ export const SaveWater = () => {
   useEffect(() => {
     if (existingProfile) {
       reset({
-        name: existingProfile.name,
+        name: baseId ? '' : existingProfile.name,
         origin: existingProfile.origin || '',
         ca: toNumber(existingProfile.ca),
         mg: toNumber(existingProfile.mg),
@@ -92,7 +94,7 @@ export const SaveWater = () => {
       } as FormData)
       trigger()
     }
-  }, [existingProfile, reset, trigger])
+  }, [existingProfile, reset, trigger, baseId])
 
   const onSubmit = (data: FormData) => {
     const cleanData: WaterProfileInput = {
@@ -118,7 +120,7 @@ export const SaveWater = () => {
     navigate('/water')
   }
 
-  if (isEditMode && isLoadingProfile) {
+  if ((isEditMode || baseId) && isLoadingProfile) {
     return (
       <Layout activeMenuItem="water">
         <View style={styles.container}>

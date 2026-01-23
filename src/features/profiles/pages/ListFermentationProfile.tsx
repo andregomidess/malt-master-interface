@@ -110,7 +110,19 @@ export const ListFermentationProfile = () => {
                     <View key={profile.id} style={styles.cardWrapper}>
                       <FermentationProfileCard
                         profile={profile}
-                        onEdit={() => handleEdit(profile.id)}
+                        onEdit={
+                          !profile.isPublic
+                            ? () => handleEdit(profile.id)
+                            : undefined
+                        }
+                        onUseAsBase={
+                          profile.isPublic
+                            ? () =>
+                                navigate(
+                                  `/fermentation-profiles/new?base=${profile.id}`,
+                                )
+                            : undefined
+                        }
                       />
                     </View>
                   ))}

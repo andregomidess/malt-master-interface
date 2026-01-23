@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo } from 'react'
 import { View, StyleSheet, ScrollView, TouchableOpacity } from 'react-native'
-import { useNavigate, useParams } from 'react-router'
+import { useNavigate, useParams, useSearchParams } from 'react-router'
 import { Controller, useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod/v3'
@@ -51,11 +51,15 @@ export type FormData = z.infer<typeof hopSchema>
 export const SaveHops = () => {
   const navigate = useNavigate()
   const { id } = useParams<{ id?: string }>()
+  const [searchParams] = useSearchParams()
+  const baseId = searchParams.get('base')
   const isEditMode = !!id
 
   const { mutate: saveHop, isPending: isSaving } = useSaveHop()
 
-  const { data: existingHop, isLoading: isLoadingHop } = useHopById(id)
+  const { data: existingHop, isLoading: isLoadingHop } = useHopById(
+    id || baseId || undefined,
+  )
 
   const {
     control,
@@ -133,7 +137,7 @@ export const SaveHops = () => {
       }
 
       const formData = {
-        name: existingHop.name,
+        name: baseId ? '' : existingHop.name,
         alphaAcids: toNumber(existingHop.alphaAcids) ?? 0,
         betaAcids: toNumber(existingHop.betaAcids) ?? 0,
         cohumulone: toNumber(existingHop.cohumulone),
@@ -153,7 +157,7 @@ export const SaveHops = () => {
       reset(formData as FormData)
       trigger()
     }
-  }, [existingHop, reset, trigger])
+  }, [existingHop, reset, trigger, baseId])
 
   const formOptions = useMemo(
     () =>

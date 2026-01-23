@@ -1,3 +1,5 @@
+import { User } from '../../recipes/interfaces/Recipe'
+
 export interface WaterProfile {
   id: string
   name: string
@@ -13,6 +15,7 @@ export interface WaterProfile {
   notes?: string | null
   createdAt: string
   updatedAt?: string | null
+  user?: User | null
 }
 
 export interface WaterProfileInput {

@@ -105,7 +105,19 @@ export const ListMashProfile = () => {
                     <View key={profile.id} style={styles.cardWrapper}>
                       <MashProfileCard
                         profile={profile}
-                        onEdit={() => handleEdit(profile.id)}
+                        onEdit={
+                          !profile.isPublic
+                            ? () => handleEdit(profile.id)
+                            : undefined
+                        }
+                        onUseAsBase={
+                          profile.isPublic
+                            ? () =>
+                                navigate(
+                                  `/mash-profiles/new?base=${profile.id}`,
+                                )
+                            : undefined
+                        }
                       />
                     </View>
                   ))}

@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo } from 'react'
 import { View, StyleSheet, ScrollView, TouchableOpacity } from 'react-native'
-import { useNavigate, useParams } from 'react-router'
+import { useNavigate, useParams, useSearchParams } from 'react-router'
 import { Controller, useForm, useFieldArray } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod/v3'
@@ -93,13 +93,15 @@ const toNumberRequired = (
 export const SaveFermentationProfile = () => {
   const navigate = useNavigate()
   const { id } = useParams<{ id?: string }>()
+  const [searchParams] = useSearchParams()
+  const baseId = searchParams.get('base')
   const isEditMode = !!id
 
   const { mutate: saveProfile, isPending: isSaving } =
     useSaveFermentationProfile()
 
   const { data: existingProfile, isLoading: isLoadingProfile } =
-    useFermentationProfileById(id)
+    useFermentationProfileById(id || baseId || undefined)
 
   const {
     control,
@@ -156,18 +158,18 @@ export const SaveFermentationProfile = () => {
       }))
 
       reset({
-        name: existingProfile.name,
+        name: baseId ? '' : existingProfile.name,
         type: existingProfile.type,
         yeastStrain: existingProfile.yeastStrain,
         targetFinalGravity: toNumber(existingProfile.targetFinalGravity),
         estimatedAttenuation: toNumber(existingProfile.estimatedAttenuation),
         isMultiStage: existingProfile.isMultiStage,
         observations: existingProfile.observations,
-        isPublic: existingProfile.isPublic,
+        isPublic: baseId ? false : existingProfile.isPublic,
         steps,
       })
     }
-  }, [existingProfile, reset])
+  }, [existingProfile, reset, baseId])
 
   const fermentationTypeOptions = useMemo(
     () =>
@@ -228,7 +230,7 @@ export const SaveFermentationProfile = () => {
     })
   }
 
-  if (isEditMode && isLoadingProfile) {
+  if ((isEditMode || baseId) && isLoadingProfile) {
     return (
       <Layout activeMenuItem="fermentation-profiles">
         <View style={styles.container}>

@@ -12,6 +12,7 @@ export const useSignIn = () => {
     },
     onSuccess: data => {
       localStorage.setItem('token', data.accessToken)
+      localStorage.setItem('refreshToken', data.refreshToken)
       localStorage.setItem('user', JSON.stringify(data.user))
 
       navigate('/')

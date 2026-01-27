@@ -48,3 +48,19 @@ export const useBeerStylesList = (
     refetch: query.refetch,
   }
 }
+
+export const useBeerStylesAll = () => {
+  const query = useQuery({
+    queryKey: ['beer-styles', 'all'] as const,
+    queryFn: async () => {
+      return await beerStylesApi.findAll()
+    },
+  })
+
+  return {
+    beerStyles: query.data || [],
+    isLoading: query.isLoading,
+    error: query.error,
+    refetch: query.refetch,
+  }
+}

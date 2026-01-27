@@ -37,7 +37,6 @@ export const YeastCard = ({
   const isPublic = yeast.user === null
   const typeConfig = typeColors[yeast.type]
 
-  // Ícone baseado no tipo
   const getTypeIcon = () => {
     switch (yeast.type) {
       case YeastType.ALE:

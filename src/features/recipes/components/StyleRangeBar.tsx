@@ -47,16 +47,10 @@ export interface StyleRangeBarProps {
   label: string
   validation: StyleValidationResult | null
   valueFormat?: ValueFormat
-  /** Cor de fundo do card (opcional, para manter consistência com o layout) */
   cardBgColor?: string
-  /** Estilo do container (ex.: flex, minWidth para o grid) */
   containerStyle?: object
 }
 
-/**
- * Régua visual no estilo de softwares de brassagem (Brewfather, BeerSmith, etc.):
- * barra horizontal com faixa do estilo (verde) e marcador do valor atual (azul dentro, vermelho fora).
- */
 export const StyleRangeBar: React.FC<StyleRangeBarProps> = ({
   label,
   validation,
@@ -72,7 +66,6 @@ export const StyleRangeBar: React.FC<StyleRangeBarProps> = ({
   const hasRange = min != null && max != null
   const hasValue = value != null
 
-  // Quando não há faixa definida ou não há valor, exibe apenas label + valor (sem régua)
   if (!hasRange || !hasValue) {
     return (
       <View
@@ -141,7 +134,6 @@ export const StyleRangeBar: React.FC<StyleRangeBarProps> = ({
         </Text>
         <View style={styles.trackWrapper}>
           <View style={styles.track}>
-            {/* Faixa "dentro do estilo" */}
             <View
               style={[
                 styles.rangeSegment,
@@ -151,7 +143,6 @@ export const StyleRangeBar: React.FC<StyleRangeBarProps> = ({
                 },
               ]}
             />
-            {/* Marcador do valor atual */}
             <View
               style={[
                 styles.marker,

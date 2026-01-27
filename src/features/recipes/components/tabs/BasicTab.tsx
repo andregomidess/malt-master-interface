@@ -7,7 +7,7 @@ import { DateInput } from '../../../../shared/components/DateInput'
 import { Select } from '../Select'
 import { Textarea } from '../Textarea'
 import { ImageUploader } from '../ImageUploader'
-import { useBeerStylesList } from '../../../beer-style/hooks/useBeerStyles'
+import { useBeerStylesAll } from '../../../beer-style/hooks/useBeerStyles'
 import { useEquipments } from '../../../equipment/hooks/useEquipments'
 import { useMemo } from 'react'
 import { RecipeType, recipeTypeLabels } from '../../interfaces/Recipe'
@@ -23,7 +23,7 @@ interface BasicTabProps {
 
 export const BasicTab: React.FC<BasicTabProps> = ({ control, errors }) => {
   const { updateRecipe } = useRecipe()
-  const { beerStyles } = useBeerStylesList()
+  const { beerStyles } = useBeerStylesAll()
   const { data: equipmentsData } = useEquipments()
 
   const equipmentOptions = useMemo(() => {

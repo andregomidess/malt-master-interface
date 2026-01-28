@@ -25,6 +25,7 @@ export interface Fermentable {
   type: FermentableType
   color?: number | null
   yield?: number | null
+  ppg?: number | null
   origin?: string | null
   supplier?: string | null
   form: FermentableForm

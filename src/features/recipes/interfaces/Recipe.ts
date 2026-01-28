@@ -71,7 +71,6 @@ export interface RecipeInput {
   brewDate?: string | null
 }
 
-// Inputs para os relacionamentos da receita
 export interface RecipeMashInput {
   id?: string
   mashProfile: string

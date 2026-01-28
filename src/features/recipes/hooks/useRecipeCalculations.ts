@@ -3,7 +3,7 @@ import { useRecipe } from '../context/RecipeContext'
 import { RecipeType } from '../interfaces/Recipe'
 
 const DEFAULT_EFFICIENCY = 70
-const DEFAULT_YIELD = 37
+const DEFAULT_PPG = 37
 
 const getEffectiveEfficiency = (
   plannedEfficiency: number | null | undefined,
@@ -24,7 +24,7 @@ const getEffectiveEfficiency = (
 
   return DEFAULT_EFFICIENCY
 }
-const PPG_TO_METRIC_CONVERSION = 8.345404
+// const PPG_TO_METRIC_CONVERSION = 8.345404
 const GRAVITY_POINTS_DIVISOR = 1000
 const SPECIFIC_GRAVITY_BASE = 1.0
 const ABV_CONVERSION_FACTOR = 131.25
@@ -62,20 +62,30 @@ export const useRecipeCalculations = () => {
 
     let og: number | null = null
     if (recipe.fermentables.length > 0 && finalVolume > 0) {
-      const totalPointsPerLiterExtracted = recipe.fermentables.reduce(
-        (total, f) => {
-          const amount = f.amount || 0
-          const yieldPPG = f.fermentable?.yield || DEFAULT_YIELD
-          const yieldPPL = yieldPPG * PPG_TO_METRIC_CONVERSION
-          return total + amount * yieldPPL
-        },
-        0,
-      )
+      const volumeGallons = finalVolume * LITERS_TO_GALLONS
 
-      const ogPoints =
-        (totalPointsPerLiterExtracted * (efficiency / 100)) / finalVolume
+      const totalGravityPoints = recipe.fermentables.reduce((total, f) => {
+        const amountKg = f.amount || 0
+        const amountLbs = amountKg * KG_TO_LBS
 
-      og = SPECIFIC_GRAVITY_BASE + ogPoints / GRAVITY_POINTS_DIVISOR
+        const fermentable = f.fermentable
+
+        const ppg =
+          fermentable?.ppg ??
+          (fermentable?.yield != null
+            ? (46 * fermentable.yield) / 100
+            : DEFAULT_PPG)
+
+        const points = amountLbs * ppg
+
+        const affectedByEfficiency = fermentable?.form === 'grain'
+
+        return total + points * (affectedByEfficiency ? efficiency / 100 : 1)
+      }, 0)
+
+      const pointsPerGallon = totalGravityPoints / volumeGallons
+      og = 1 + pointsPerGallon / 1000
+
       og = Math.round(og * 1000) / 1000
     }
 

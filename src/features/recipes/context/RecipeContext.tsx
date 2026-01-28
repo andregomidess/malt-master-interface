@@ -6,6 +6,7 @@ import {
   BeerStyle,
   Equipment,
 } from '../interfaces/Recipe'
+import { FermentableForm } from '../../fermentable/interfaces/Fermentable'
 
 export interface RecipeFermentable {
   id?: string
@@ -15,6 +16,8 @@ export interface RecipeFermentable {
     name: string
     color?: number
     yield?: number
+    ppg?: number
+    form?: FermentableForm
   }
 }
 
@@ -85,7 +88,6 @@ export interface RecipeCarbonation {
 }
 
 export interface RecipeFormState {
-  // Básico
   name: string
   beerStyle: BeerStyle | null
   type: RecipeType | ''
@@ -98,18 +100,15 @@ export interface RecipeFormState {
   about: string | null
   notes: string | null
 
-  // Ingredientes
   fermentables: RecipeFermentable[]
   hops: RecipeHop[]
   yeasts: RecipeYeast[]
   waters: RecipeWater[]
 
-  // Processos
   mash: RecipeMash | null
   fermentation: RecipeFermentation | null
   carbonation: RecipeCarbonation | null
 
-  // Calculados
   originalGravity: number | null
   finalGravity: number | null
   estimatedIbu: number | null

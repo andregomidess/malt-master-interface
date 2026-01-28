@@ -31,6 +31,7 @@ const fermentableSchema = z.object({
   }),
   color: z.number().positive().optional(),
   yield: z.number().min(0).max(100).optional(),
+  ppg: z.number().positive().optional(),
   origin: z.string().optional(),
   supplier: z.string().optional(),
   notes: z.string().optional(),
@@ -38,7 +39,6 @@ const fermentableSchema = z.object({
 
 export type FormData = z.infer<typeof fermentableSchema>
 
-// Helper para converter valores numéricos que podem vir como string do backend
 const toNumber = (
   value: number | string | null | undefined,
 ): number | undefined => {
@@ -92,6 +92,7 @@ export const SaveFermentable = () => {
         form: existingFermentable.form,
         color: toNumber(existingFermentable.color),
         yield: toNumber(existingFermentable.yield),
+        ppg: toNumber(existingFermentable.ppg),
         origin: existingFermentable.origin || '',
         supplier: existingFermentable.supplier || '',
         notes: existingFermentable.notes || '',
@@ -124,6 +125,7 @@ export const SaveFermentable = () => {
       name: data.name,
       type: data.type,
       form: data.form,
+      ...(data.ppg && { ppg: data.ppg }),
       ...(data.color && { color: data.color }),
       ...(data.yield && { yield: data.yield }),
       ...(data.origin && { origin: data.origin }),
@@ -258,6 +260,21 @@ export const SaveFermentable = () => {
                   keyboardType="numeric"
                   error={!!errors.yield}
                   errorMessage={errors.yield?.message}
+                />
+              )}
+            />
+          </View>
+
+          <View style={styles.section}>
+            <Controller
+              control={control}
+              name="ppg"
+              render={({ field: { value, onChange } }) => (
+                <DecimalInput
+                  label="PPG"
+                  placeholder="Ex: 37"
+                  value={value}
+                  onChange={onChange}
                 />
               )}
             />

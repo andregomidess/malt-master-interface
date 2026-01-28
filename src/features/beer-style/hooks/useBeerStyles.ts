@@ -58,7 +58,7 @@ export const useBeerStylesAll = () => {
   })
 
   return {
-    beerStyles: query.data || [],
+    beerStyles: query.data?.data || [],
     isLoading: query.isLoading,
     error: query.error,
     refetch: query.refetch,

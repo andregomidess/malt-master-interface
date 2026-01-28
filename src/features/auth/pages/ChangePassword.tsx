@@ -10,11 +10,12 @@ import {
   ChangePasswordFormType,
 } from '../components/ChangePasswordForm'
 import { useChangePassword } from '../hooks/useChangePassword'
-import { useParams } from 'react-router'
+import { useSearchParams } from 'react-router'
 
 export const ChangePassword = () => {
   const { mutate } = useChangePassword()
-  const { token } = useParams()
+  const [searchParams] = useSearchParams()
+  const token = searchParams.get('token')
 
   const handleSubmit = (data: ChangePasswordFormType) =>
     mutate({

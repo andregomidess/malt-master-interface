@@ -9,8 +9,9 @@ import {
 const BEER_STYLES_BASE_URL = '/beer-styles'
 
 export const beerStylesApi = {
-  findAll: async (): Promise<BeerStyle[]> => {
-    const response = await maltMasterApi.get<BeerStyle[]>(BEER_STYLES_BASE_URL)
+  findAll: async (): Promise<PaginatedBeerStyles> => {
+    const response =
+      await maltMasterApi.get<PaginatedBeerStyles>(BEER_STYLES_BASE_URL)
     return response.data
   },
 

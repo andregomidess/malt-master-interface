@@ -228,6 +228,26 @@ export const BasicTab: React.FC<BasicTabProps> = ({ control, errors }) => {
       <View style={styles.section}>
         <Controller
           control={control}
+          name="preBoilVolume"
+          render={({ field: { value, onChange } }) => (
+            <DecimalInput
+              label="Volume Pré-Fervura (Litros)"
+              placeholder="Ex: 25 (ponto de partida para OG)"
+              value={value}
+              onChange={numValue => {
+                onChange(numValue)
+                updateRecipe({ preBoilVolume: numValue || null })
+              }}
+              error={!!errors.preBoilVolume}
+              errorMessage={errors.preBoilVolume?.message}
+            />
+          )}
+        />
+      </View>
+
+      <View style={styles.section}>
+        <Controller
+          control={control}
           name="boilTime"
           render={({ field: { value, onChange } }) => (
             <DecimalInput
@@ -248,24 +268,40 @@ export const BasicTab: React.FC<BasicTabProps> = ({ control, errors }) => {
       <View style={styles.section}>
         <Controller
           control={control}
-          name="plannedEfficiency"
+          name="postBoilVolume"
+          render={({ field: { value, onChange } }) => (
+            <DecimalInput
+              label="Volume Pós-Fervura - Quente (Litros)"
+              placeholder="Ex: 22 (opcional, calcula se vazio)"
+              value={value}
+              onChange={numValue => {
+                onChange(numValue)
+                updateRecipe({ postBoilVolume: numValue || null })
+              }}
+              error={!!errors.postBoilVolume}
+              errorMessage={errors.postBoilVolume?.message}
+            />
+          )}
+        />
+      </View>
+
+      <View style={styles.section}>
+        <Controller
+          control={control}
+          name="mashEfficiency"
           render={({ field: { value, onChange } }) => (
             <>
               <DecimalInput
-                label="Eficiência Planejada (%)"
-                placeholder="Auto (70% para All Grain, 75% para Partial Mash, 100% para Extract)"
+                label="Eficiência de Mostura (%)"
+                placeholder="Ex: 75 (extração do grão)"
                 value={value}
                 onChange={numValue => {
                   onChange(numValue)
-                  updateRecipe({ plannedEfficiency: numValue || null })
+                  updateRecipe({ mashEfficiency: numValue || null })
                 }}
-                error={!!errors.plannedEfficiency}
-                errorMessage={errors.plannedEfficiency?.message}
+                error={!!errors.mashEfficiency}
+                errorMessage={errors.mashEfficiency?.message}
               />
-              <Text variant="bodySmall" style={styles.helperText}>
-                Deixe em branco para usar eficiência padrão baseada no tipo de
-                receita
-              </Text>
             </>
           )}
         />
@@ -379,11 +415,6 @@ const styles = StyleSheet.create({
   },
   radioLabel: {
     color: COLORS.text.primary,
-  },
-  helperText: {
-    marginTop: 4,
-    color: COLORS.text.secondary,
-    fontStyle: 'italic',
   },
   errorText: {
     marginTop: 4,

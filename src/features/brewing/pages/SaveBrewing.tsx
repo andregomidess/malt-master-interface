@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react'
+import React, { useState, useMemo, useEffect, useRef } from 'react'
 import {
   View,
   StyleSheet,
@@ -36,7 +36,6 @@ import {
   BiChevronDown as BiArrowDown,
 } from 'react-icons/bi'
 import { recipesApi } from '../../recipes/api/recipesApi'
-import { useEffect } from 'react'
 import { batchesApi } from '../api/batchesApi'
 
 const BATCH_STATUS_VALUES: BatchStatus[] = [
@@ -95,6 +94,37 @@ interface MashStepForm {
   description?: string
 }
 
+interface FullRecipeForBrewing {
+  finalVolume?: number | null
+  equipment?: { id?: string } | null
+  mash?: {
+    mashProfile?: {
+      type?: string | null
+      grainTemperature?: number | null
+      tunTemperature?: number | null
+      spargeTemperature?: number | null
+      tunWeight?: number | null
+      tunSpecificHeat?: number | null
+      mashThickness?: number | null
+      estimatedEfficiency?: number | null
+      steps?: Array<{
+        id?: string
+        stepOrder: number
+        name: string
+        stepType: MashStepForm['stepType']
+        temperature: number
+        duration: number
+        infusionAmount?: number | null
+        infusionTemp?: number | null
+        decoctionAmount?: number | null
+        rampTime?: number | null
+        description?: string | null
+      }>
+    }
+  }
+  fermentables?: Array<{ amount?: number; fermentable?: { yield?: number } }>
+}
+
 const PPG_TO_METRIC_CONVERSION = 8.345404
 const GRAVITY_POINTS_DIVISOR = 1000
 const SPECIFIC_GRAVITY_BASE = 1.0
@@ -112,15 +142,17 @@ export const SaveBrewing = () => {
   >('basic')
   const [mashSteps, setMashSteps] = useState<MashStepForm[]>([])
   const [showCalculations, setShowCalculations] = useState(false)
+  const lastLoadedRecipeIdRef = useRef<string | null>(null)
+  const skipEquipmentDefaultsRef = useRef(false)
 
   const { mutate: saveBatch, isPending: isSaving } = useSaveBatch()
   const { recipes, isLoading: isLoadingRecipes } = useRecipesList()
   const { data: equipmentsData, isLoading: isLoadingEquipments } =
     useEquipments()
 
-  const [fullRecipe, setFullRecipe] = useState<{
-    fermentables?: Array<{ amount?: number; fermentable?: { yield?: number } }>
-  } | null>(null)
+  const [fullRecipe, setFullRecipe] = useState<FullRecipeForBrewing | null>(
+    null,
+  )
   const [isLoadingBatch, setIsLoadingBatch] = useState(false)
 
   const {
@@ -159,17 +191,110 @@ export const SaveBrewing = () => {
   }, [recipeIdFromQuery, isEditMode, recipeId, setValue])
 
   useEffect(() => {
-    if (recipeId && !fullRecipe) {
-      recipesApi
-        .findById(recipeId)
-        .then(recipe => {
-          setFullRecipe(recipe as unknown as typeof fullRecipe)
-        })
-        .catch(() => {
-          setFullRecipe(null)
-        })
+    if (!recipeId) {
+      setFullRecipe(null)
+      lastLoadedRecipeIdRef.current = null
+      if (!isEditMode) {
+        setMashSteps([])
+      }
+      return
     }
-  }, [recipeId, fullRecipe])
+
+    if (lastLoadedRecipeIdRef.current === recipeId) {
+      return
+    }
+
+    let cancelled = false
+    lastLoadedRecipeIdRef.current = recipeId
+
+    recipesApi
+      .findById(recipeId)
+      .then(recipe => {
+        if (cancelled) return
+
+        const typedRecipe = recipe as unknown as FullRecipeForBrewing
+        setFullRecipe(typedRecipe)
+
+        // Automatiza apenas no modo "criação" (não sobrescreve edição)
+        if (isEditMode) return
+
+        if (typedRecipe.finalVolume != null) {
+          setValue('plannedVolume', Number(typedRecipe.finalVolume))
+        }
+
+        const profile = typedRecipe.mash?.mashProfile
+        if (profile) {
+          const rawType = profile.type
+          const normalizedType =
+            rawType === MashProfileType.INFUSION ||
+            rawType === MashProfileType.STEP_MASH ||
+            rawType === MashProfileType.DECOCTION ||
+            rawType === MashProfileType.BIAB
+              ? (rawType as MashProfileType)
+              : null
+
+          if (normalizedType) {
+            setValue('mashProfileType', normalizedType)
+          }
+          if (profile.grainTemperature != null) {
+            setValue('grainTemperature', Number(profile.grainTemperature))
+          }
+          if (profile.tunTemperature != null) {
+            setValue('tunTemperature', Number(profile.tunTemperature))
+          }
+          if (profile.spargeTemperature != null) {
+            setValue('spargeTemperature', Number(profile.spargeTemperature))
+          }
+          if (profile.tunWeight != null) {
+            setValue('tunWeight', Number(profile.tunWeight))
+          }
+          if (profile.tunSpecificHeat != null) {
+            setValue('tunSpecificHeat', Number(profile.tunSpecificHeat))
+          }
+          if (profile.mashThickness != null) {
+            setValue('mashThickness', Number(profile.mashThickness))
+          }
+          if (profile.estimatedEfficiency != null) {
+            setValue('estimatedEfficiency', Number(profile.estimatedEfficiency))
+          }
+
+          if (Array.isArray(profile.steps)) {
+            const steps: MashStepForm[] = profile.steps.map(step => ({
+              id: step.id,
+              stepOrder: step.stepOrder,
+              name: step.name,
+              stepType: step.stepType,
+              temperature: step.temperature,
+              duration: step.duration,
+              infusionAmount: step.infusionAmount ?? undefined,
+              infusionTemp: step.infusionTemp ?? undefined,
+              decoctionAmount: step.decoctionAmount ?? undefined,
+              rampTime: step.rampTime ?? undefined,
+              description: step.description ?? undefined,
+            }))
+            setMashSteps(steps)
+          } else {
+            setMashSteps([])
+          }
+        }
+
+        const equipmentId = typedRecipe.equipment?.id
+        if (equipmentId) {
+          // Evita que o useEffect do equipamento sobrescreva valores vindos da receita
+          skipEquipmentDefaultsRef.current = true
+          setValue('equipment', equipmentId)
+        }
+      })
+      .catch(() => {
+        if (cancelled) return
+        setFullRecipe(null)
+        lastLoadedRecipeIdRef.current = null
+      })
+
+    return () => {
+      cancelled = true
+    }
+  }, [recipeId, isEditMode, setValue])
 
   useEffect(() => {
     if (isEditMode && id) {
@@ -267,6 +392,10 @@ export const SaveBrewing = () => {
 
   useEffect(() => {
     if (equipment && equipmentsData?.pages) {
+      if (skipEquipmentDefaultsRef.current) {
+        skipEquipmentDefaultsRef.current = false
+        return
+      }
       const allEquipments = equipmentsData.pages.flatMap(page => page.data)
       const selectedEquipment = allEquipments.find(eq => eq.id === equipment)
       if (selectedEquipment) {

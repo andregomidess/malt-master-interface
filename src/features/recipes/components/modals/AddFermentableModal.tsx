@@ -51,8 +51,11 @@ export const AddFermentableModal: React.FC<AddFermentableModalProps> = ({
       fermentable: selectedFermentable
         ? {
             name: selectedFermentable.name,
+            type: selectedFermentable.type,
             color: selectedFermentable.color || undefined,
             yield: selectedFermentable.yield || undefined,
+            ppg: selectedFermentable.ppg || undefined,
+            form: selectedFermentable.form,
           }
         : undefined,
     })

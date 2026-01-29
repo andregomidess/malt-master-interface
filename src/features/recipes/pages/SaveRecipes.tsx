@@ -21,6 +21,10 @@ import { FermentationTab } from '../components/tabs/FermentationTab'
 import { CarbonationTab } from '../components/tabs/CarbonationTab'
 import { recipesApi } from '../api/recipesApi'
 import { RecipeType } from '../interfaces/Recipe'
+import {
+  FermentableType,
+  FermentableForm,
+} from '../../fermentable/interfaces/Fermentable'
 import { COLORS } from '../../../shared/styles/colors'
 import toast from 'react-hot-toast'
 import { generateRecipePdf } from '../utils/generateRecipePdf'
@@ -62,7 +66,17 @@ const recipeBasicSchema = z.object({
     .min(0, 'Tempo de fervura deve ser positivo')
     .optional()
     .nullable(),
-  plannedEfficiency: z.number().min(0).max(100).optional().nullable(),
+  preBoilVolume: z
+    .number()
+    .positive('Volume pré-fervura deve ser positivo')
+    .optional()
+    .nullable(),
+  postBoilVolume: z
+    .number()
+    .positive('Volume pós-fervura deve ser positivo')
+    .optional()
+    .nullable(),
+  mashEfficiency: z.number().min(0).max(100).optional().nullable(),
   brewDate: z.string().optional().nullable(),
   imageUrl: z
     .string()
@@ -104,10 +118,21 @@ interface LoadedRecipe {
   estimatedIbu: number | string | null
   estimatedColor: number | string | null
   estimatedAbv: number | string | null
-  plannedEfficiency: number | string | null
+  mashEfficiency?: number | string | null
+  brewhouseEfficiency?: number | string | null
+  preBoilVolume?: number | string | null
+  postBoilVolume?: number | string | null
   fermentables?: Array<{
     id: string
-    fermentable?: { id: string; name: string; color?: number; yield?: number }
+    fermentable?: {
+      id: string
+      name: string
+      type?: string
+      color?: number
+      yield?: number
+      ppg?: number
+      form?: string
+    }
     amount: number | null
   }>
   hops?: Array<{
@@ -204,8 +229,10 @@ const SaveRecipesContent: React.FC = () => {
       equipmentId: null,
       finalVolume: undefined,
       mashVolume: undefined,
+      preBoilVolume: undefined,
       boilTime: undefined,
-      plannedEfficiency: undefined,
+      postBoilVolume: undefined,
+      mashEfficiency: undefined,
       brewDate: new Date().toISOString().split('T')[0],
       imageUrl: null,
       about: null,
@@ -246,8 +273,10 @@ const SaveRecipesContent: React.FC = () => {
           equipmentId: equipmentId || null,
           finalVolume: toNumber(loadedRecipe.finalVolume),
           mashVolume: toNumber(loadedRecipe.mashVolume),
+          preBoilVolume: toNumber(loadedRecipe.preBoilVolume),
           boilTime: toNumber(loadedRecipe.boilTime),
-          plannedEfficiency: toNumber(loadedRecipe.plannedEfficiency),
+          postBoilVolume: toNumber(loadedRecipe.postBoilVolume),
+          mashEfficiency: toNumber(loadedRecipe.mashEfficiency),
           brewDate: loadedRecipe.brewDate || null,
           imageUrl: loadedRecipe.imageUrl || null,
           about: loadedRecipe.about || null,
@@ -271,7 +300,11 @@ const SaveRecipesContent: React.FC = () => {
           estimatedIbu: toNumber(loadedRecipe.estimatedIbu) || null,
           estimatedColor: toNumber(loadedRecipe.estimatedColor) || null,
           estimatedAbv: toNumber(loadedRecipe.estimatedAbv) || null,
-          plannedEfficiency: toNumber(loadedRecipe.plannedEfficiency) || null,
+          mashEfficiency: toNumber(loadedRecipe.mashEfficiency) || null,
+          brewhouseEfficiency:
+            toNumber(loadedRecipe.brewhouseEfficiency) || null,
+          preBoilVolume: toNumber(loadedRecipe.preBoilVolume) || null,
+          postBoilVolume: toNumber(loadedRecipe.postBoilVolume) || null,
           fermentables:
             loadedRecipe.fermentables?.map(f => ({
               id: f.id,
@@ -280,8 +313,11 @@ const SaveRecipesContent: React.FC = () => {
               fermentable: f.fermentable
                 ? {
                     name: f.fermentable.name || '',
+                    type: f.fermentable.type as FermentableType | undefined,
                     color: f.fermentable.color || undefined,
                     yield: f.fermentable.yield || undefined,
+                    ppg: f.fermentable.ppg || undefined,
+                    form: f.fermentable.form as FermentableForm | undefined,
                   }
                 : undefined,
             })) || [],

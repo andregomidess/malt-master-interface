@@ -41,8 +41,11 @@ export interface Recipe {
   estimatedIbu?: number | null
   estimatedColor?: number | null
   estimatedAbv?: number | null
-  plannedEfficiency?: number | null
   actualEfficiency?: number | null
+  mashEfficiency?: number | null
+  brewhouseEfficiency?: number | null
+  preBoilVolume?: number | null
+  postBoilVolume?: number | null
   brewDate?: string | null
   createdAt: string
   updatedAt: string
@@ -66,8 +69,11 @@ export interface RecipeInput {
   estimatedIbu?: number
   estimatedColor?: number
   estimatedAbv?: number
-  plannedEfficiency?: number
   actualEfficiency?: number
+  mashEfficiency?: number
+  brewhouseEfficiency?: number
+  preBoilVolume?: number
+  postBoilVolume?: number
   brewDate?: string | null
 }
 

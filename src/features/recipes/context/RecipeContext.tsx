@@ -6,7 +6,10 @@ import {
   BeerStyle,
   Equipment,
 } from '../interfaces/Recipe'
-import { FermentableForm } from '../../fermentable/interfaces/Fermentable'
+import {
+  FermentableForm,
+  FermentableType,
+} from '../../fermentable/interfaces/Fermentable'
 
 export interface RecipeFermentable {
   id?: string
@@ -14,6 +17,7 @@ export interface RecipeFermentable {
   amount: number
   fermentable?: {
     name: string
+    type?: FermentableType
     color?: number
     yield?: number
     ppg?: number
@@ -114,7 +118,10 @@ export interface RecipeFormState {
   estimatedIbu: number | null
   estimatedColor: number | null
   estimatedAbv: number | null
-  plannedEfficiency: number | null
+  mashEfficiency: number | null
+  brewhouseEfficiency: number | null
+  preBoilVolume: number | null
+  postBoilVolume: number | null
 }
 
 interface RecipeContextType {
@@ -157,7 +164,10 @@ const initialState: RecipeFormState = {
   estimatedIbu: null,
   estimatedColor: null,
   estimatedAbv: null,
-  plannedEfficiency: null,
+  mashEfficiency: null,
+  brewhouseEfficiency: null,
+  preBoilVolume: null,
+  postBoilVolume: null,
 }
 
 const RecipeContext = createContext<RecipeContextType | undefined>(undefined)
@@ -251,7 +261,10 @@ export const RecipeProvider: React.FC<{ children: React.ReactNode }> = ({
       estimatedIbu: recipe.estimatedIbu ?? undefined,
       estimatedColor: recipe.estimatedColor ?? undefined,
       estimatedAbv: recipe.estimatedAbv ?? undefined,
-      plannedEfficiency: recipe.plannedEfficiency ?? undefined,
+      mashEfficiency: recipe.mashEfficiency ?? undefined,
+      brewhouseEfficiency: recipe.brewhouseEfficiency ?? undefined,
+      preBoilVolume: recipe.preBoilVolume ?? undefined,
+      postBoilVolume: recipe.postBoilVolume ?? undefined,
       brewDate: recipe.brewDate || null,
     }
   }, [recipe])

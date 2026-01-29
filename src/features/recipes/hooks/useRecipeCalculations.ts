@@ -1,31 +1,91 @@
 import { useMemo } from 'react'
 import { useRecipe } from '../context/RecipeContext'
 import { RecipeType } from '../interfaces/Recipe'
+import {
+  EquipmentType,
+  type KettleEquipment,
+  type FermenterEquipment,
+} from '../../equipment/interfaces/equipment'
+import {
+  FermentableForm,
+  FermentableType,
+} from '../../fermentable/interfaces/Fermentable'
 
 const DEFAULT_EFFICIENCY = 70
 const DEFAULT_PPG = 37
+const DEFAULT_THERMAL_SHRINKAGE_PERCENT = 4
 
-const getEffectiveEfficiency = (
-  plannedEfficiency: number | null | undefined,
+const getEffectiveMashEfficiency = (
+  mashEfficiency: number | null | undefined,
   recipeType: RecipeType | '',
   mashProfileEstimatedEfficiency?: number | null,
 ): number => {
-  if (plannedEfficiency && plannedEfficiency > 0) {
-    return plannedEfficiency
+  if (mashEfficiency != null && mashEfficiency > 0) {
+    const mashEfficiencyClamped = Math.min(Math.max(mashEfficiency, 55), 85)
+    return mashEfficiencyClamped
   }
-
-  if (mashProfileEstimatedEfficiency && mashProfileEstimatedEfficiency > 0) {
-    return mashProfileEstimatedEfficiency
+  if (
+    mashProfileEstimatedEfficiency != null &&
+    mashProfileEstimatedEfficiency > 0
+  ) {
+    const clamped = Math.min(Math.max(mashProfileEstimatedEfficiency, 55), 85)
+    return clamped
   }
-
   if (recipeType === RecipeType.EXTRACT) {
     return 100
   }
-
   return DEFAULT_EFFICIENCY
 }
-// const PPG_TO_METRIC_CONVERSION = 8.345404
-const GRAVITY_POINTS_DIVISOR = 1000
+
+const getPostBoilColdVolume = (
+  recipe: {
+    preBoilVolume?: number | null
+    postBoilVolume?: number | null
+    finalVolume?: number | null
+    boilTime?: number | null
+  },
+  kettle: KettleEquipment | null,
+): number => {
+  const boilTimeMin = recipe.boilTime ?? 60
+  const thermalShrinkage =
+    (kettle?.thermalShrinkagePercent ?? DEFAULT_THERMAL_SHRINKAGE_PERCENT) / 100
+  const boilOffRatePerHour = kettle?.boilOffRate ?? 0
+
+  if (
+    recipe.preBoilVolume != null &&
+    recipe.preBoilVolume > 0 &&
+    boilOffRatePerHour > 0
+  ) {
+    const boilOff = boilOffRatePerHour * (boilTimeMin / 60)
+    const postBoilHot = Math.max(0, recipe.preBoilVolume - boilOff)
+    return postBoilHot * (1 - thermalShrinkage)
+  }
+
+  if (recipe.postBoilVolume != null && recipe.postBoilVolume > 0) {
+    return recipe.postBoilVolume * (1 - thermalShrinkage)
+  }
+
+  return recipe.finalVolume ?? 20
+}
+
+const getVolumeIntoFermenter = (
+  postBoilColdVolume: number,
+  equipment: { type: string } | null | undefined,
+): number => {
+  const kettle =
+    equipment?.type === EquipmentType.KETTLE
+      ? (equipment as KettleEquipment)
+      : null
+  const fermenter =
+    equipment?.type === EquipmentType.FERMENTER
+      ? (equipment as FermenterEquipment)
+      : null
+
+  const kettleLoss = kettle?.kettleLoss ?? 0
+  const fermenterLoss = fermenter?.fermenterLoss ?? 0
+
+  return Math.max(0, postBoilColdVolume - kettleLoss - fermenterLoss)
+}
 const SPECIFIC_GRAVITY_BASE = 1.0
 const ABV_CONVERSION_FACTOR = 131.25
 const TYPICAL_ATTENUATION_PERCENTAGE = 0.75
@@ -52,17 +112,53 @@ export const useRecipeCalculations = () => {
     const mashProfileEstimatedEfficiency =
       recipe.mash?.mashProfile?.estimatedEfficiency ?? null
 
-    const efficiency = getEffectiveEfficiency(
-      recipe.plannedEfficiency,
+    const mashEfficiency = getEffectiveMashEfficiency(
+      recipe.mashEfficiency,
       recipe.type,
       mashProfileEstimatedEfficiency,
     )
 
-    const finalVolume = recipe.finalVolume || 20
+    const equipmentWithType = recipe.equipment as
+      | (KettleEquipment | FermenterEquipment)
+      | null
+      | undefined
+    const kettle =
+      equipmentWithType?.type === EquipmentType.KETTLE
+        ? (equipmentWithType as KettleEquipment)
+        : null
+
+    const recipeVolumes = {
+      preBoilVolume: recipe.preBoilVolume,
+      postBoilVolume: recipe.postBoilVolume,
+      finalVolume: recipe.finalVolume,
+      boilTime: recipe.boilTime,
+    }
+
+    if (
+      recipe.preBoilVolume != null &&
+      recipe.preBoilVolume > 0 &&
+      recipe.finalVolume != null &&
+      recipe.finalVolume > 0 &&
+      recipe.preBoilVolume < recipe.finalVolume
+    ) {
+      console.warn('preBoilVolume menor que finalVolume — dados inválidos', {
+        preBoilVolume: recipe.preBoilVolume,
+        finalVolume: recipe.finalVolume,
+      })
+    }
+
+    const postBoilColdVolume = getPostBoilColdVolume(recipeVolumes, kettle)
+
+    const volumeIntoFermenter = getVolumeIntoFermenter(
+      postBoilColdVolume,
+      equipmentWithType,
+    )
+
+    const volumeForOg = postBoilColdVolume
 
     let og: number | null = null
-    if (recipe.fermentables.length > 0 && finalVolume > 0) {
-      const volumeGallons = finalVolume * LITERS_TO_GALLONS
+    if (recipe.fermentables.length > 0 && volumeForOg > 0) {
+      const volumeGallons = volumeForOg * LITERS_TO_GALLONS
 
       const totalGravityPoints = recipe.fermentables.reduce((total, f) => {
         const amountKg = f.amount || 0
@@ -70,17 +166,32 @@ export const useRecipeCalculations = () => {
 
         const fermentable = f.fermentable
 
-        const ppg =
-          fermentable?.ppg ??
-          (fermentable?.yield != null
-            ? (46 * fermentable.yield) / 100
-            : DEFAULT_PPG)
+        let ppg: number
+        if (fermentable?.ppg != null) {
+          ppg = fermentable.ppg
+        } else if (fermentable?.yield != null) {
+          ppg = (46 * fermentable.yield) / 100
+        } else {
+          ppg = DEFAULT_PPG
+        }
 
         const points = amountLbs * ppg
 
-        const affectedByEfficiency = fermentable?.form === 'grain'
+        const isExtractForm =
+          fermentable?.form === FermentableForm.DRY_EXTRACT ||
+          fermentable?.form === FermentableForm.LIQUID_EXTRACT ||
+          fermentable?.form === FermentableForm.SYRUP
+        const affectedByEfficiency =
+          !isExtractForm &&
+          fermentable?.type !== FermentableType.SUGAR &&
+          (fermentable?.type === FermentableType.BASE ||
+            fermentable?.type === FermentableType.SPECIALTY ||
+            (fermentable?.type === FermentableType.ADJUNCT &&
+              fermentable?.form === FermentableForm.GRAIN))
 
-        return total + points * (affectedByEfficiency ? efficiency / 100 : 1)
+        return (
+          total + points * (affectedByEfficiency ? mashEfficiency / 100 : 1)
+        )
       }, 0)
 
       const pointsPerGallon = totalGravityPoints / volumeGallons
@@ -131,7 +242,7 @@ export const useRecipeCalculations = () => {
     }
 
     let ibu: number | null = null
-    if (recipe.hops.length > 0 && finalVolume > 0) {
+    if (recipe.hops.length > 0 && volumeForOg > 0) {
       const ogForIbuCalc = og !== null ? og : 1.05
 
       const totalIbuContribution = recipe.hops.reduce((total, hop) => {
@@ -174,7 +285,7 @@ export const useRecipeCalculations = () => {
 
       if (totalIbuContribution > 0) {
         ibu =
-          (totalIbuContribution / Math.max(finalVolume, 1)) *
+          (totalIbuContribution / Math.max(volumeForOg, 1)) *
           IBU_METRIC_CONVERSION_FACTOR
         ibu = Math.round(ibu * 10) / 10
       }
@@ -182,8 +293,8 @@ export const useRecipeCalculations = () => {
 
     let srm: number | null = null
     let ebc: number | null = null
-    if (recipe.fermentables.length > 0 && finalVolume > 0) {
-      const volumeGallons = finalVolume * LITERS_TO_GALLONS
+    if (recipe.fermentables.length > 0 && volumeForOg > 0) {
+      const volumeGallons = volumeForOg * LITERS_TO_GALLONS
 
       const mcu = recipe.fermentables.reduce((total, f) => {
         const amountKg = f.amount || 0
@@ -206,16 +317,21 @@ export const useRecipeCalculations = () => {
       estimatedIbu: ibu,
       estimatedColor: srm,
       estimatedEbc: ebc,
-      efficiency: efficiency,
+      efficiency: mashEfficiency,
+      postBoilColdVolume,
+      volumeIntoFermenter,
     }
   }, [
     recipe.fermentables,
     recipe.hops,
     recipe.yeasts,
     recipe.finalVolume,
-    recipe.plannedEfficiency,
+    recipe.preBoilVolume,
+    recipe.postBoilVolume,
+    recipe.mashEfficiency,
     recipe.boilTime,
     recipe.type,
+    recipe.equipment,
     recipe.mash?.mashProfile?.estimatedEfficiency,
   ])
 

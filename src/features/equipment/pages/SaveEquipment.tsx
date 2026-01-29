@@ -38,6 +38,7 @@ const equipmentSchema = z
     boilOffRate: z.number().optional(),
     heatingPower: z.number().optional(),
     heatingSource: z.nativeEnum(HeatingSource).optional(),
+    thermalShrinkagePercent: z.number().min(0).max(100).optional(),
     fermenterLoss: z.number().optional(),
     coneBottomVolume: z.number().optional(),
     hasTemperatureControl: z.boolean().optional(),
@@ -290,6 +291,7 @@ export const SaveEquipment = () => {
           boilOffRate: number
           heatingPower: number
           heatingSource: HeatingSource
+          thermalShrinkagePercent?: number
         }
         reset({
           ...baseData,
@@ -299,6 +301,7 @@ export const SaveEquipment = () => {
           boilOffRate: equipment.boilOffRate,
           heatingPower: equipment.heatingPower,
           heatingSource: equipment.heatingSource,
+          thermalShrinkagePercent: equipment.thermalShrinkagePercent ?? 4,
         } as FormData)
       } else if (existingEquipment.type === EquipmentType.FERMENTER) {
         const equipment = existingEquipment as unknown as {
@@ -405,6 +408,7 @@ export const SaveEquipment = () => {
         boilOffRate: data.boilOffRate!,
         heatingPower: data.heatingPower!,
         heatingSource: data.heatingSource!,
+        thermalShrinkagePercent: data.thermalShrinkagePercent ?? 4,
       })
     } else if (data.type === EquipmentType.FERMENTER) {
       Object.assign(cleanData, {
@@ -678,6 +682,26 @@ export const SaveEquipment = () => {
                       onSelect={onChange}
                       error={!!errors.heatingSource}
                       errorMessage={errors.heatingSource?.message}
+                    />
+                  )}
+                />
+              </View>
+
+              <View style={styles.section}>
+                <Controller
+                  control={control}
+                  name="thermalShrinkagePercent"
+                  render={({ field: { value, onChange } }) => (
+                    <InputText
+                      label="Contração Térmica (%)"
+                      placeholder="Ex: 4 (mosto quente→frio)"
+                      value={value?.toString() ?? ''}
+                      onChangeText={val =>
+                        onChange(val ? parseFloat(val) : undefined)
+                      }
+                      keyboardType="numeric"
+                      error={!!errors.thermalShrinkagePercent}
+                      errorMessage={errors.thermalShrinkagePercent?.message}
                     />
                   )}
                 />

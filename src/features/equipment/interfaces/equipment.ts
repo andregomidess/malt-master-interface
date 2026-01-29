@@ -99,6 +99,8 @@ export interface KettleEquipment extends BaseEquipment {
   boilOffRate: number
   heatingPower: number
   heatingSource: HeatingSource
+  /** Contração térmica mosto quente→frio (%). Default 4%. */
+  thermalShrinkagePercent?: number
 }
 
 export interface FermenterEquipment extends BaseEquipment {
@@ -182,6 +184,7 @@ export interface KettleEquipmentInput extends BaseEquipmentInput {
   boilOffRate: number
   heatingPower: number
   heatingSource: HeatingSource
+  thermalShrinkagePercent?: number
 }
 
 export interface FermenterEquipmentInput extends BaseEquipmentInput {

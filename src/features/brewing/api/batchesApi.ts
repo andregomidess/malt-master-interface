@@ -49,10 +49,9 @@ export async function findBatchById(id: string): Promise<BatchDetail | null> {
       `${BATCHES_BASE_URL}/${id}`,
     )
     const data = response.data
+    console.log('data', data)
 
-    if ('batch' in data && 'mashSteps' in data) {
-      return data as BatchDetail
-    }
+    if ('batch' in data && 'mashSteps' in data) return data as BatchDetail
 
     const batch = data as Batch
     const recipeWithMash = batch.recipe as typeof batch.recipe & {
@@ -84,11 +83,13 @@ export async function findBatchById(id: string): Promise<BatchDetail | null> {
         }
       }
       hops?: Array<{
-        time: number
-        name: string
+        boilTime: number
+        hop: {
+          name: string
+          alphaAcids: number
+        }
         amount: number
         unit: 'g' | 'oz'
-        alphaAcid?: number
       }>
     }
 
@@ -117,11 +118,11 @@ export async function findBatchById(id: string): Promise<BatchDetail | null> {
 
     const hopSchedule =
       recipeWithMash?.hops?.map(hop => ({
-        time: hop.time,
-        name: hop.name,
+        time: hop.boilTime,
+        name: hop.hop.name,
         amount: hop.amount,
         unit: hop.unit,
-        alphaAcid: hop.alphaAcid,
+        alphaAcid: hop.hop.alphaAcids,
       })) || []
 
     return {

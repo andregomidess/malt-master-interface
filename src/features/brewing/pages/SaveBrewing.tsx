@@ -12,6 +12,7 @@ import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod/v3'
 import { Layout } from '../../../shared/components/Layout'
 import { Heading, Text } from '../../../shared/components/Typography'
+import { Card } from '../../../shared/components/Card'
 import { InputText } from '../../../shared/components/InputText'
 import { DateInput } from '../../../shared/components/DateInput'
 import { Button } from '../../../shared/components/Button'
@@ -21,20 +22,12 @@ import {
   BatchStatus,
   BatchStatusLabels,
   BatchDetail,
-  MashStep,
 } from '../interfaces/Brewing'
 import { useSaveBatch, type BatchInput } from '../hooks/useSaveBatch'
 import { useRecipesList } from '../../recipes/hooks/useRecipes'
 import { useEquipments } from '../../equipment/hooks/useEquipments'
 import { MashProfileType } from '../../profiles/interfaces/MashProfile'
-import {
-  BiPlus,
-  BiTrash,
-  BiChevronDown,
-  BiChevronUp,
-  BiChevronUp as BiArrowUp,
-  BiChevronDown as BiArrowDown,
-} from 'react-icons/bi'
+import { BiChevronDown, BiChevronUp } from 'react-icons/bi'
 import { recipesApi } from '../../recipes/api/recipesApi'
 import { batchesApi } from '../api/batchesApi'
 
@@ -60,16 +53,9 @@ const brewingSchema = z.object({
     'completed',
   ]),
   plannedVolume: z.number().positive().optional(),
-  mashProfileType: z.nativeEnum(MashProfileType),
-  grainTemperature: z.number().min(10).max(30).optional(),
-  tunTemperature: z.number().min(10).max(30).optional(),
-  spargeTemperature: z.number().min(75).max(80).optional(),
-  tunWeight: z.number().min(0).optional(),
-  tunSpecificHeat: z.number().min(0.1).max(0.5).optional(),
-  mashThickness: z.number().min(2.0).max(5.0).optional(),
-  estimatedEfficiency: z.number().min(50).max(95).optional(),
   spargeMethod: z.enum(['fly', 'batch', 'no_sparge']).optional(),
   spargeVolume: z.number().min(0).optional(),
+  spargeTemperature: z.number().min(75).max(80).optional(),
   actualStrikeTemp: z.number().optional(),
   actualPreBoilVolume: z.number().min(0).optional(),
   actualPreBoilGravity: z.number().min(1.0).optional(),
@@ -80,18 +66,18 @@ const brewingSchema = z.object({
 
 export type FormData = z.infer<typeof brewingSchema>
 
-interface MashStepForm {
+interface MashStepFromRecipe {
   id?: string
   stepOrder: number
   name: string
   stepType: 'infusion' | 'temperature' | 'decoction'
   temperature: number
   duration: number
-  infusionAmount?: number
-  infusionTemp?: number
-  decoctionAmount?: number
-  rampTime?: number
-  description?: string
+  infusionAmount?: number | null
+  infusionTemp?: number | null
+  decoctionAmount?: number | null
+  rampTime?: number | null
+  description?: string | null
 }
 
 interface FullRecipeForBrewing {
@@ -99,7 +85,9 @@ interface FullRecipeForBrewing {
   equipment?: { id?: string } | null
   mash?: {
     mashProfile?: {
-      type?: string | null
+      id?: string
+      name?: string | null
+      type?: MashProfileType | string | null
       grainTemperature?: number | null
       tunTemperature?: number | null
       spargeTemperature?: number | null
@@ -107,19 +95,7 @@ interface FullRecipeForBrewing {
       tunSpecificHeat?: number | null
       mashThickness?: number | null
       estimatedEfficiency?: number | null
-      steps?: Array<{
-        id?: string
-        stepOrder: number
-        name: string
-        stepType: MashStepForm['stepType']
-        temperature: number
-        duration: number
-        infusionAmount?: number | null
-        infusionTemp?: number | null
-        decoctionAmount?: number | null
-        rampTime?: number | null
-        description?: string | null
-      }>
+      steps?: MashStepFromRecipe[]
     }
   }
   fermentables?: Array<{ amount?: number; fermentable?: { yield?: number } }>
@@ -140,10 +116,8 @@ export const SaveBrewing = () => {
   const [activeSection, setActiveSection] = useState<
     'basic' | 'mash' | 'sparge' | 'brewday'
   >('basic')
-  const [mashSteps, setMashSteps] = useState<MashStepForm[]>([])
   const [showCalculations, setShowCalculations] = useState(false)
   const lastLoadedRecipeIdRef = useRef<string | null>(null)
-  const skipEquipmentDefaultsRef = useRef(false)
 
   const { mutate: saveBatch, isPending: isSaving } = useSaveBatch()
   const { recipes, isLoading: isLoadingRecipes } = useRecipesList()
@@ -166,19 +140,13 @@ export const SaveBrewing = () => {
     mode: 'onChange',
     defaultValues: {
       status: 'planned' as BatchStatus,
-      mashProfileType: MashProfileType.INFUSION,
-      grainTemperature: 20,
-      tunTemperature: 20,
       spargeTemperature: 78,
-      tunSpecificHeat: 0.3,
-      mashThickness: 3.0,
       spargeMethod: 'fly',
     },
   })
 
   const watchedValues = watch()
   const recipeId = watch('recipeId')
-  const equipment = watch('equipment')
   const selectedRecipe = useMemo(
     () => recipes.find(r => r.id === recipeId),
     [recipes, recipeId],
@@ -194,9 +162,6 @@ export const SaveBrewing = () => {
     if (!recipeId) {
       setFullRecipe(null)
       lastLoadedRecipeIdRef.current = null
-      if (!isEditMode) {
-        setMashSteps([])
-      }
       return
     }
 
@@ -215,7 +180,6 @@ export const SaveBrewing = () => {
         const typedRecipe = recipe as unknown as FullRecipeForBrewing
         setFullRecipe(typedRecipe)
 
-        // Automatiza apenas no modo "criação" (não sobrescreve edição)
         if (isEditMode) return
 
         if (typedRecipe.finalVolume != null) {
@@ -223,65 +187,12 @@ export const SaveBrewing = () => {
         }
 
         const profile = typedRecipe.mash?.mashProfile
-        if (profile) {
-          const rawType = profile.type
-          const normalizedType =
-            rawType === MashProfileType.INFUSION ||
-            rawType === MashProfileType.STEP_MASH ||
-            rawType === MashProfileType.DECOCTION ||
-            rawType === MashProfileType.BIAB
-              ? (rawType as MashProfileType)
-              : null
-
-          if (normalizedType) {
-            setValue('mashProfileType', normalizedType)
-          }
-          if (profile.grainTemperature != null) {
-            setValue('grainTemperature', Number(profile.grainTemperature))
-          }
-          if (profile.tunTemperature != null) {
-            setValue('tunTemperature', Number(profile.tunTemperature))
-          }
-          if (profile.spargeTemperature != null) {
-            setValue('spargeTemperature', Number(profile.spargeTemperature))
-          }
-          if (profile.tunWeight != null) {
-            setValue('tunWeight', Number(profile.tunWeight))
-          }
-          if (profile.tunSpecificHeat != null) {
-            setValue('tunSpecificHeat', Number(profile.tunSpecificHeat))
-          }
-          if (profile.mashThickness != null) {
-            setValue('mashThickness', Number(profile.mashThickness))
-          }
-          if (profile.estimatedEfficiency != null) {
-            setValue('estimatedEfficiency', Number(profile.estimatedEfficiency))
-          }
-
-          if (Array.isArray(profile.steps)) {
-            const steps: MashStepForm[] = profile.steps.map(step => ({
-              id: step.id,
-              stepOrder: step.stepOrder,
-              name: step.name,
-              stepType: step.stepType,
-              temperature: step.temperature,
-              duration: step.duration,
-              infusionAmount: step.infusionAmount ?? undefined,
-              infusionTemp: step.infusionTemp ?? undefined,
-              decoctionAmount: step.decoctionAmount ?? undefined,
-              rampTime: step.rampTime ?? undefined,
-              description: step.description ?? undefined,
-            }))
-            setMashSteps(steps)
-          } else {
-            setMashSteps([])
-          }
+        if (profile?.spargeTemperature != null) {
+          setValue('spargeTemperature', Number(profile.spargeTemperature))
         }
 
         const equipmentId = typedRecipe.equipment?.id
         if (equipmentId) {
-          // Evita que o useEffect do equipamento sobrescreva valores vindos da receita
-          skipEquipmentDefaultsRef.current = true
           setValue('equipment', equipmentId)
         }
       })
@@ -307,6 +218,10 @@ export const SaveBrewing = () => {
 
           if (batch.recipe?.id) {
             setValue('recipeId', batch.recipe.id)
+            lastLoadedRecipeIdRef.current = batch.recipe.id
+            const recipeWithMash =
+              batch.recipe as unknown as FullRecipeForBrewing
+            setFullRecipe(recipeWithMash)
           }
           if (batch.equipment?.id) {
             setValue('equipment', batch.equipment.id)
@@ -340,45 +255,11 @@ export const SaveBrewing = () => {
           if (batch.observations) {
             setValue('observations', batch.observations)
           }
-
-          let mashStepsToLoad: MashStep[] = []
-
-          if (
-            'mashSteps' in response &&
-            response.mashSteps &&
-            Array.isArray(response.mashSteps)
-          ) {
-            mashStepsToLoad = response.mashSteps
-          } else {
-            const recipeWithMash = batch.recipe as unknown as {
-              mash?: {
-                mashProfile?: {
-                  steps?: MashStep[]
-                }
-              }
-            }
-            if (
-              recipeWithMash?.mash?.mashProfile?.steps &&
-              Array.isArray(recipeWithMash.mash.mashProfile.steps)
-            ) {
-              mashStepsToLoad = recipeWithMash.mash.mashProfile.steps
-            }
+          if (batch.preBoilVolume != null) {
+            setValue('actualPreBoilVolume', Number(batch.preBoilVolume))
           }
-
-          if (mashStepsToLoad.length > 0) {
-            const steps: MashStepForm[] = mashStepsToLoad.map(step => ({
-              id: step.id,
-              stepOrder: step.stepOrder,
-              name: step.name,
-              stepType: step.stepType,
-              temperature: step.temperature,
-              duration: step.duration,
-              infusionAmount: step.infusionAmount || undefined,
-              infusionTemp: step.infusionTemp || undefined,
-              rampTime: step.rampTime || undefined,
-              description: step.description || undefined,
-            }))
-            setMashSteps(steps)
+          if (batch.preBoilGravity != null) {
+            setValue('actualPreBoilGravity', Number(batch.preBoilGravity))
           }
         })
         .catch(error => {
@@ -389,31 +270,6 @@ export const SaveBrewing = () => {
         })
     }
   }, [isEditMode, id, setValue])
-
-  useEffect(() => {
-    if (equipment && equipmentsData?.pages) {
-      if (skipEquipmentDefaultsRef.current) {
-        skipEquipmentDefaultsRef.current = false
-        return
-      }
-      const allEquipments = equipmentsData.pages.flatMap(page => page.data)
-      const selectedEquipment = allEquipments.find(eq => eq.id === equipment)
-      if (selectedEquipment) {
-        const materialSpecificHeat: Record<string, number> = {
-          stainless_steel: 0.5,
-          aluminum: 0.9,
-          copper: 0.385,
-          plastic: 0.5,
-          glass: 0.84,
-        }
-        const specificHeat =
-          materialSpecificHeat[selectedEquipment.material] || 0.3
-        setValue('tunSpecificHeat', specificHeat)
-        const estimatedWeight = selectedEquipment.totalCapacity * 0.1
-        setValue('tunWeight', estimatedWeight)
-      }
-    }
-  }, [equipment, equipmentsData, setValue])
 
   const equipmentOptions = useMemo(() => {
     if (!equipmentsData?.pages) return []
@@ -433,12 +289,12 @@ export const SaveBrewing = () => {
     [recipes],
   )
 
-  const mashProfileTypeOptions = [
-    { value: MashProfileType.INFUSION, label: 'Infusão Simples' },
-    { value: MashProfileType.STEP_MASH, label: 'Mostura por Rampa' },
-    { value: MashProfileType.DECOCTION, label: 'Mostura por Decocção' },
-    { value: MashProfileType.BIAB, label: 'Brew In A Bag (BIAB)' },
-  ]
+  const mashProfileTypeLabels: Record<string, string> = {
+    [MashProfileType.INFUSION]: 'Infusão Simples',
+    [MashProfileType.STEP_MASH]: 'Mostura por Rampa',
+    [MashProfileType.DECOCTION]: 'Mostura por Decocção',
+    [MashProfileType.BIAB]: 'Brew In A Bag (BIAB)',
+  }
 
   const spargeMethodOptions = [
     { value: 'fly', label: 'Fly Sparge (Contínuo)' },
@@ -450,6 +306,12 @@ export const SaveBrewing = () => {
     value: status,
     label: BatchStatusLabels[status],
   }))
+
+  const recipeMashSteps = useMemo((): MashStepFromRecipe[] => {
+    const steps = fullRecipe?.mash?.mashProfile?.steps
+    if (!Array.isArray(steps)) return []
+    return steps.slice().sort((a, b) => (a.stepOrder ?? 0) - (b.stepOrder ?? 0))
+  }, [fullRecipe?.mash?.mashProfile?.steps])
 
   const calculations = useMemo(() => {
     let grainWeight = 0
@@ -463,7 +325,8 @@ export const SaveBrewing = () => {
       grainWeight = 5.0
     }
 
-    const mashThickness = watchedValues.mashThickness || 3.0
+    const profile = fullRecipe?.mash?.mashProfile
+    const mashThickness = profile?.mashThickness ?? 3.0
     const strikeWaterVolume = grainWeight * mashThickness
     const grainAbsorption = grainWeight * 0.1 // ~0.1 L/kg
     const preBoilVolume =
@@ -472,22 +335,22 @@ export const SaveBrewing = () => {
     const spargeVolume = Math.max(0, preBoilVolume - strikeWaterVolume)
     const totalWaterVolume = strikeWaterVolume + spargeVolume
 
-    const targetTemp = mashSteps[0]?.temperature || 65
-    const grainTemp = watchedValues.grainTemperature || 20
-    const tunTemp = watchedValues.tunTemperature || 20
-    const tunWeight = watchedValues.tunWeight || 0
-    const tunSpecificHeat = watchedValues.tunSpecificHeat || 0.3
+    const targetTemp = recipeMashSteps[0]?.temperature ?? 65
+    const grainTemp = profile?.grainTemperature ?? 20
+    const tunTemp = profile?.tunTemperature ?? 20
+    const tunWeight = profile?.tunWeight ?? 0
+    const tunSpecificHeat = profile?.tunSpecificHeat ?? 0.3
 
-    // Cálculo melhorado da temperatura de infusão
     const strikeTemp =
-      targetTemp +
-      ((targetTemp - grainTemp) * grainWeight * 0.4 +
-        (targetTemp - tunTemp) * tunWeight * tunSpecificHeat) /
-        (strikeWaterVolume * 4.18)
+      strikeWaterVolume > 0
+        ? targetTemp +
+          ((targetTemp - grainTemp) * grainWeight * 0.4 +
+            (targetTemp - tunTemp) * tunWeight * tunSpecificHeat) /
+            (strikeWaterVolume * 4.18)
+        : targetTemp
 
-    // Calcular densidade pré-fervura
     let preBoilGravity: number | null = null
-    const efficiency = watchedValues.estimatedEfficiency || 75
+    const efficiency = profile?.estimatedEfficiency ?? 75
     if (fullRecipe?.fermentables && grainWeight > 0 && preBoilVolume > 0) {
       const totalPointsPerLiterExtracted = fullRecipe.fermentables.reduce(
         (total: number, f) => {
@@ -516,58 +379,7 @@ export const SaveBrewing = () => {
       estimatedEfficiency: efficiency,
       preBoilGravity: preBoilGravity ? preBoilGravity.toFixed(3) : '—',
     }
-  }, [selectedRecipe, watchedValues, mashSteps, fullRecipe])
-
-  const addMashStep = () => {
-    const newStep: MashStepForm = {
-      stepOrder: mashSteps.length + 1,
-      name: `Descanso ${mashSteps.length + 1}`,
-      stepType: 'temperature',
-      temperature: 65,
-      duration: 60,
-    }
-    setMashSteps([...mashSteps, newStep])
-  }
-
-  const removeMashStep = (index: number) => {
-    const newSteps = mashSteps
-      .filter((_, i) => i !== index)
-      .map((step, i) => ({ ...step, stepOrder: i + 1 }))
-    setMashSteps(newSteps)
-  }
-
-  const updateMashStep = (index: number, updates: Partial<MashStepForm>) => {
-    const newSteps = [...mashSteps]
-    newSteps[index] = { ...newSteps[index], ...updates }
-    setMashSteps(newSteps)
-  }
-
-  const moveMashStep = (index: number, direction: 'up' | 'down') => {
-    if (
-      (direction === 'up' && index === 0) ||
-      (direction === 'down' && index === mashSteps.length - 1)
-    ) {
-      return
-    }
-
-    const newSteps = [...mashSteps]
-    const targetIndex = direction === 'up' ? index - 1 : index + 1
-    ;[newSteps[index], newSteps[targetIndex]] = [
-      newSteps[targetIndex],
-      newSteps[index],
-    ]
-    // Atualizar stepOrder
-    newSteps.forEach((step, i) => {
-      step.stepOrder = i + 1
-    })
-    setMashSteps(newSteps)
-  }
-
-  const stepTypeOptions = [
-    { value: 'infusion', label: 'Infusão' },
-    { value: 'temperature', label: 'Aumento de Temperatura' },
-    { value: 'decoction', label: 'Decocção' },
-  ]
+  }, [selectedRecipe, watchedValues, fullRecipe, recipeMashSteps])
 
   const onSubmit = (data: FormData) => {
     const user = JSON.parse(localStorage.getItem('user') || '{}')
@@ -588,23 +400,9 @@ export const SaveBrewing = () => {
       plannedVolume: data.plannedVolume || null,
       actualOriginalGravity: data.actualOriginalGravity || null,
       actualEfficiency: data.actualEfficiency || null,
+      preBoilVolume: data.actualPreBoilVolume ?? null,
+      preBoilGravity: data.actualPreBoilGravity ?? null,
       observations: data.observations || null,
-      mashSteps:
-        mashSteps.length > 0
-          ? mashSteps.map(step => ({
-              ...(step.id && { id: step.id }),
-              stepOrder: step.stepOrder,
-              name: step.name,
-              stepType: step.stepType,
-              temperature: step.temperature,
-              duration: step.duration,
-              infusionAmount: step.infusionAmount || null,
-              infusionTemp: step.infusionTemp || null,
-              decoctionAmount: step.decoctionAmount || null,
-              rampTime: step.rampTime || null,
-              description: step.description || null,
-            }))
-          : undefined,
     }
 
     saveBatch(batchData)
@@ -786,397 +584,244 @@ export const SaveBrewing = () => {
           {activeSection === 'mash' && (
             <View style={styles.section}>
               <Text style={styles.sectionTitle}>Perfil de Mostura</Text>
-              <View style={styles.field}>
-                <Controller
-                  control={control}
-                  name="mashProfileType"
-                  render={({ field: { value, onChange } }) => (
-                    <Select
-                      label="Tipo de Mostura *"
-                      value={value}
-                      options={mashProfileTypeOptions}
-                      onSelect={onChange}
-                    />
-                  )}
-                />
-              </View>
-              <View style={styles.row}>
-                <View style={[styles.field, styles.halfWidth]}>
-                  <Controller
-                    control={control}
-                    name="grainTemperature"
-                    render={({ field: { value, onChange } }) => (
-                      <InputText
-                        label="Temp. dos Grãos (°C)"
-                        placeholder="20"
-                        value={value?.toString() || ''}
-                        onChangeText={val => {
-                          const num = parseFloat(val)
-                          onChange(isNaN(num) ? 20 : num)
-                        }}
-                        keyboardType="numeric"
-                      />
-                    )}
-                  />
-                </View>
-                <View style={[styles.field, styles.halfWidth]}>
-                  <Controller
-                    control={control}
-                    name="tunTemperature"
-                    render={({ field: { value, onChange } }) => (
-                      <InputText
-                        label="Temp. da Tina (°C)"
-                        placeholder="20"
-                        value={value?.toString() || ''}
-                        onChangeText={val => {
-                          const num = parseFloat(val)
-                          onChange(isNaN(num) ? 20 : num)
-                        }}
-                        keyboardType="numeric"
-                      />
-                    )}
-                  />
-                </View>
-              </View>
-              <View style={styles.row}>
-                <View style={[styles.field, styles.halfWidth]}>
-                  <Controller
-                    control={control}
-                    name="mashThickness"
-                    render={({ field: { value, onChange } }) => (
-                      <InputText
-                        label="Relação Água/Grão (L/kg)"
-                        placeholder="3.0"
-                        value={value?.toString() || ''}
-                        onChangeText={val => {
-                          const num = parseFloat(val)
-                          onChange(isNaN(num) ? 3.0 : num)
-                        }}
-                        keyboardType="numeric"
-                      />
-                    )}
-                  />
-                </View>
-                <View style={[styles.field, styles.halfWidth]}>
-                  <Controller
-                    control={control}
-                    name="estimatedEfficiency"
-                    render={({ field: { value, onChange } }) => (
-                      <InputText
-                        label="Eficiência Estimada (%)"
-                        placeholder="75"
-                        value={value?.toString() || ''}
-                        onChangeText={val => {
-                          const num = parseFloat(val)
-                          onChange(isNaN(num) ? undefined : num)
-                        }}
-                        keyboardType="numeric"
-                      />
-                    )}
-                  />
-                </View>
-              </View>
+              <Text variant="bodySmall" style={styles.readOnlyHint}>
+                O perfil de mostura é definido na receita e não pode ser editado
+                aqui.
+              </Text>
 
-              <View style={styles.mashStepsSection}>
-                <View style={styles.mashStepsHeader}>
-                  <Text style={styles.sectionTitle}>Rampas/Descansos</Text>
-                  <Button variant="outline" size="small" onPress={addMashStep}>
-                    <View
-                      style={{
-                        flexDirection: 'row',
-                        alignItems: 'center',
-                        gap: 4,
-                      }}
-                    >
-                      <BiPlus size={16} />
-                      <Text>Adicionar</Text>
-                    </View>
-                  </Button>
+              {!recipeId ? (
+                <View style={styles.emptyState}>
+                  <Text style={styles.emptyStateText}>
+                    Selecione uma receita na aba Básico para ver o perfil de
+                    mostura.
+                  </Text>
                 </View>
-
-                {mashSteps.length === 0 && (
-                  <View style={styles.emptyState}>
-                    <Text style={styles.emptyStateText}>
-                      Nenhum descanso adicionado.
-                    </Text>
-                  </View>
-                )}
-
-                {mashSteps.map((step, index) => (
-                  <View key={index} style={styles.mashStepCard}>
-                    <View style={styles.mashStepHeader}>
-                      <View style={styles.mashStepHeaderLeft}>
-                        <Text style={styles.mashStepOrder}>
-                          {step.stepOrder}
-                        </Text>
-                        <Text style={styles.mashStepTitle}>{step.name}</Text>
-                      </View>
-                      <View style={styles.mashStepActions}>
-                        <TouchableOpacity
-                          onPress={() => moveMashStep(index, 'up')}
-                          style={[
-                            styles.moveButton,
-                            index === 0 && styles.moveButtonDisabled,
-                          ]}
-                          disabled={index === 0}
-                        >
-                          <BiArrowUp
-                            size={16}
-                            color={
-                              index === 0
-                                ? COLORS.text.tertiary
-                                : COLORS.brand.primary
-                            }
-                          />
-                        </TouchableOpacity>
-                        <TouchableOpacity
-                          onPress={() => moveMashStep(index, 'down')}
-                          style={[
-                            styles.moveButton,
-                            index === mashSteps.length - 1 &&
-                              styles.moveButtonDisabled,
-                          ]}
-                          disabled={index === mashSteps.length - 1}
-                        >
-                          <BiArrowDown
-                            size={16}
-                            color={
-                              index === mashSteps.length - 1
-                                ? COLORS.text.tertiary
-                                : COLORS.brand.primary
-                            }
-                          />
-                        </TouchableOpacity>
-                        <TouchableOpacity
-                          onPress={() => removeMashStep(index)}
-                          style={styles.deleteButton}
-                        >
-                          <BiTrash size={18} color={COLORS.status.error} />
-                        </TouchableOpacity>
-                      </View>
-                    </View>
-                    <View style={styles.row}>
-                      <View style={[styles.field, styles.halfWidth]}>
-                        <InputText
-                          label="Nome"
-                          placeholder="Ex: Beta-Amilase"
-                          value={step.name}
-                          onChangeText={name => updateMashStep(index, { name })}
-                        />
-                      </View>
-                      <View style={[styles.field, styles.halfWidth]}>
-                        <Select
-                          label="Tipo de Passo"
-                          value={step.stepType}
-                          options={stepTypeOptions}
-                          onSelect={stepType =>
-                            updateMashStep(index, {
-                              stepType: stepType as
-                                | 'infusion'
-                                | 'temperature'
-                                | 'decoction',
-                            })
+              ) : !fullRecipe?.mash?.mashProfile ? (
+                <View style={styles.emptyState}>
+                  <Text style={styles.emptyStateText}>
+                    A receita selecionada não possui perfil de mostura
+                    configurado.
+                  </Text>
+                </View>
+              ) : (
+                <>
+                  <Card style={styles.mashProfileCard}>
+                    <View style={styles.mashProfileHeader}>
+                      <Heading variant="h5" style={styles.mashProfileName}>
+                        {fullRecipe.mash.mashProfile.name || 'Perfil sem nome'}
+                      </Heading>
+                      <Button
+                        variant="outline"
+                        size="small"
+                        onPress={() => {
+                          if (recipeId) {
+                            navigate(`/recipes/${recipeId}/edit`)
                           }
-                        />
-                      </View>
-                    </View>
-                    <View style={styles.row}>
-                      <View style={[styles.field, styles.halfWidth]}>
-                        <InputText
-                          label="Temperatura (°C)"
-                          placeholder="65"
-                          value={step.temperature.toString()}
-                          onChangeText={val => {
-                            const num = parseFloat(val)
-                            if (!isNaN(num))
-                              updateMashStep(index, { temperature: num })
-                          }}
-                          keyboardType="numeric"
-                        />
-                      </View>
-                      <View style={[styles.field, styles.halfWidth]}>
-                        <InputText
-                          label="Duração (min)"
-                          placeholder="60"
-                          value={step.duration.toString()}
-                          onChangeText={val => {
-                            const num = parseInt(val)
-                            if (!isNaN(num))
-                              updateMashStep(index, { duration: num })
-                          }}
-                          keyboardType="numeric"
-                        />
-                      </View>
+                        }}
+                      >
+                        Editar receita
+                      </Button>
                     </View>
 
-                    {/* Campos condicionais baseados no tipo de passo */}
-                    {step.stepType === 'infusion' && (
-                      <View style={styles.row}>
-                        <View style={[styles.field, styles.halfWidth]}>
-                          <InputText
-                            label="Volume de Infusão (L)"
-                            placeholder="0"
-                            value={step.infusionAmount?.toString() || ''}
-                            onChangeText={val => {
-                              const num = parseFloat(val)
-                              if (!isNaN(num))
-                                updateMashStep(index, {
-                                  infusionAmount: num,
-                                })
-                            }}
-                            keyboardType="numeric"
-                          />
+                    <View style={styles.mashProfileMeta}>
+                      <View style={styles.mashProfileMetaRow}>
+                        <Text style={styles.mashProfileMetaLabel}>Tipo:</Text>
+                        <Text style={styles.mashProfileMetaValue}>
+                          {mashProfileTypeLabels[
+                            fullRecipe.mash.mashProfile.type || ''
+                          ] ||
+                            fullRecipe.mash.mashProfile.type ||
+                            '—'}
+                        </Text>
+                      </View>
+                      {fullRecipe.mash.mashProfile.grainTemperature != null && (
+                        <View style={styles.mashProfileMetaRow}>
+                          <Text style={styles.mashProfileMetaLabel}>
+                            Temp. grãos:
+                          </Text>
+                          <Text style={styles.mashProfileMetaValue}>
+                            {fullRecipe.mash.mashProfile.grainTemperature} °C
+                          </Text>
                         </View>
-                        <View style={[styles.field, styles.halfWidth]}>
-                          <InputText
-                            label="Temp. de Infusão (°C)"
-                            placeholder="100"
-                            value={step.infusionTemp?.toString() || ''}
-                            onChangeText={val => {
-                              const num = parseFloat(val)
-                              if (!isNaN(num))
-                                updateMashStep(index, { infusionTemp: num })
-                            }}
-                            keyboardType="numeric"
-                          />
+                      )}
+                      {fullRecipe.mash.mashProfile.tunTemperature != null && (
+                        <View style={styles.mashProfileMetaRow}>
+                          <Text style={styles.mashProfileMetaLabel}>
+                            Temp. tina:
+                          </Text>
+                          <Text style={styles.mashProfileMetaValue}>
+                            {fullRecipe.mash.mashProfile.tunTemperature} °C
+                          </Text>
+                        </View>
+                      )}
+                      {fullRecipe.mash.mashProfile.spargeTemperature !=
+                        null && (
+                        <View style={styles.mashProfileMetaRow}>
+                          <Text style={styles.mashProfileMetaLabel}>
+                            Temp. sparge:
+                          </Text>
+                          <Text style={styles.mashProfileMetaValue}>
+                            {fullRecipe.mash.mashProfile.spargeTemperature} °C
+                          </Text>
+                        </View>
+                      )}
+                      {fullRecipe.mash.mashProfile.mashThickness != null && (
+                        <View style={styles.mashProfileMetaRow}>
+                          <Text style={styles.mashProfileMetaLabel}>
+                            Relação água/grão:
+                          </Text>
+                          <Text style={styles.mashProfileMetaValue}>
+                            {fullRecipe.mash.mashProfile.mashThickness} L/kg
+                          </Text>
+                        </View>
+                      )}
+                      {fullRecipe.mash.mashProfile.estimatedEfficiency !=
+                        null && (
+                        <View style={styles.mashProfileMetaRow}>
+                          <Text style={styles.mashProfileMetaLabel}>
+                            Eficiência estimada:
+                          </Text>
+                          <Text style={styles.mashProfileMetaValue}>
+                            {fullRecipe.mash.mashProfile.estimatedEfficiency}%
+                          </Text>
+                        </View>
+                      )}
+                    </View>
+
+                    {recipeMashSteps.length > 0 && (
+                      <View style={styles.mashStepsReadOnly}>
+                        <Text style={styles.mashStepsReadOnlyTitle}>
+                          Passos
+                        </Text>
+                        {recipeMashSteps.map((step, index) => (
+                          <View
+                            key={step.id || index}
+                            style={styles.mashStepReadOnlyRow}
+                          >
+                            <Text style={styles.mashStepReadOnlyOrder}>
+                              {step.stepOrder}
+                            </Text>
+                            <View style={styles.mashStepReadOnlyContent}>
+                              <Text style={styles.mashStepReadOnlyName}>
+                                {step.name}
+                              </Text>
+                              <Text style={styles.mashStepReadOnlyDetail}>
+                                {step.stepType} • {step.temperature} °C •{' '}
+                                {step.duration} min
+                              </Text>
+                              {step.infusionAmount != null &&
+                                step.stepType === 'infusion' && (
+                                  <Text style={styles.mashStepReadOnlyExtra}>
+                                    Infusão: {step.infusionAmount} L
+                                    {step.infusionTemp != null &&
+                                      ` @ ${step.infusionTemp} °C`}
+                                  </Text>
+                                )}
+                              {step.rampTime != null &&
+                                step.stepType === 'temperature' && (
+                                  <Text style={styles.mashStepReadOnlyExtra}>
+                                    Rampa: {step.rampTime} min
+                                  </Text>
+                                )}
+                              {step.decoctionAmount != null &&
+                                step.stepType === 'decoction' && (
+                                  <Text style={styles.mashStepReadOnlyExtra}>
+                                    Decocção: {step.decoctionAmount} L
+                                  </Text>
+                                )}
+                            </View>
+                          </View>
+                        ))}
+                      </View>
+                    )}
+                  </Card>
+
+                  <TouchableOpacity
+                    style={styles.calculationsToggle}
+                    onPress={() => setShowCalculations(!showCalculations)}
+                  >
+                    <Text style={styles.calculationsToggleText}>
+                      {showCalculations ? 'Ocultar' : 'Mostrar'} Cálculos
+                    </Text>
+                    {showCalculations ? (
+                      <BiChevronUp size={20} color={COLORS.brand.primary} />
+                    ) : (
+                      <BiChevronDown size={20} color={COLORS.brand.primary} />
+                    )}
+                  </TouchableOpacity>
+
+                  {showCalculations && (
+                    <View style={styles.calculationsCard}>
+                      <Text style={styles.calculationsTitle}>Cálculos</Text>
+                      <View style={styles.calculationsGrid}>
+                        <View style={styles.calculationItem}>
+                          <Text style={styles.calculationLabel}>
+                            Volume de Água de Mostura
+                          </Text>
+                          <Text style={styles.calculationValue}>
+                            {calculations.strikeWaterVolume} L
+                          </Text>
+                        </View>
+                        <View style={styles.calculationItem}>
+                          <Text style={styles.calculationLabel}>
+                            Temperatura de Infusão
+                          </Text>
+                          <Text style={styles.calculationValue}>
+                            {calculations.strikeTemp} °C
+                          </Text>
+                        </View>
+                        <View style={styles.calculationItem}>
+                          <Text style={styles.calculationLabel}>
+                            Volume Pré-Fervura
+                          </Text>
+                          <Text style={styles.calculationValue}>
+                            {calculations.preBoilVolume} L
+                          </Text>
+                        </View>
+                        <View style={styles.calculationItem}>
+                          <Text style={styles.calculationLabel}>
+                            Densidade Pré-Fervura Estimada
+                          </Text>
+                          <Text style={styles.calculationValue}>
+                            {calculations.preBoilGravity}
+                          </Text>
+                        </View>
+                        <View style={styles.calculationItem}>
+                          <Text style={styles.calculationLabel}>
+                            Peso Total dos Grãos
+                          </Text>
+                          <Text style={styles.calculationValue}>
+                            {calculations.grainWeight} kg
+                          </Text>
+                        </View>
+                        <View style={styles.calculationItem}>
+                          <Text style={styles.calculationLabel}>
+                            Volume Total de Água
+                          </Text>
+                          <Text style={styles.calculationValue}>
+                            {calculations.totalWaterVolume} L
+                          </Text>
+                        </View>
+                        <View style={styles.calculationItem}>
+                          <Text style={styles.calculationLabel}>
+                            Absorção de Água
+                          </Text>
+                          <Text style={styles.calculationValue}>
+                            {calculations.grainAbsorption} L
+                          </Text>
+                        </View>
+                        <View style={styles.calculationItem}>
+                          <Text style={styles.calculationLabel}>
+                            Eficiência Estimada
+                          </Text>
+                          <Text style={styles.calculationValue}>
+                            {calculations.estimatedEfficiency}%
+                          </Text>
                         </View>
                       </View>
-                    )}
-
-                    {step.stepType === 'temperature' && (
-                      <View style={styles.field}>
-                        <InputText
-                          label="Tempo de Rampa (min)"
-                          placeholder="15"
-                          value={step.rampTime?.toString() || ''}
-                          onChangeText={val => {
-                            const num = parseInt(val)
-                            if (!isNaN(num))
-                              updateMashStep(index, { rampTime: num })
-                          }}
-                          keyboardType="numeric"
-                        />
-                      </View>
-                    )}
-
-                    {step.stepType === 'decoction' && (
-                      <View style={styles.field}>
-                        <InputText
-                          label="Volume de Decocção (L)"
-                          placeholder="0"
-                          value={step.decoctionAmount?.toString() || ''}
-                          onChangeText={val => {
-                            const num = parseFloat(val)
-                            if (!isNaN(num))
-                              updateMashStep(index, {
-                                decoctionAmount: num,
-                              })
-                          }}
-                          keyboardType="numeric"
-                        />
-                      </View>
-                    )}
-
-                    <View style={styles.field}>
-                      <InputText
-                        label="Descrição (opcional)"
-                        placeholder="Observações sobre este passo..."
-                        value={step.description || ''}
-                        onChangeText={description =>
-                          updateMashStep(index, { description })
-                        }
-                        multiline
-                        numberOfLines={2}
-                      />
                     </View>
-                  </View>
-                ))}
-              </View>
-
-              <TouchableOpacity
-                style={styles.calculationsToggle}
-                onPress={() => setShowCalculations(!showCalculations)}
-              >
-                <Text style={styles.calculationsToggleText}>
-                  {showCalculations ? 'Ocultar' : 'Mostrar'} Cálculos
-                </Text>
-                {showCalculations ? (
-                  <BiChevronUp size={20} color={COLORS.brand.primary} />
-                ) : (
-                  <BiChevronDown size={20} color={COLORS.brand.primary} />
-                )}
-              </TouchableOpacity>
-
-              {showCalculations && (
-                <View style={styles.calculationsCard}>
-                  <Text style={styles.calculationsTitle}>Cálculos</Text>
-                  <View style={styles.calculationsGrid}>
-                    <View style={styles.calculationItem}>
-                      <Text style={styles.calculationLabel}>
-                        Volume de Água de Mostura
-                      </Text>
-                      <Text style={styles.calculationValue}>
-                        {calculations.strikeWaterVolume} L
-                      </Text>
-                    </View>
-                    <View style={styles.calculationItem}>
-                      <Text style={styles.calculationLabel}>
-                        Temperatura de Infusão
-                      </Text>
-                      <Text style={styles.calculationValue}>
-                        {calculations.strikeTemp} °C
-                      </Text>
-                    </View>
-                    <View style={styles.calculationItem}>
-                      <Text style={styles.calculationLabel}>
-                        Volume Pré-Fervura
-                      </Text>
-                      <Text style={styles.calculationValue}>
-                        {calculations.preBoilVolume} L
-                      </Text>
-                    </View>
-                    <View style={styles.calculationItem}>
-                      <Text style={styles.calculationLabel}>
-                        Densidade Pré-Fervura Estimada
-                      </Text>
-                      <Text style={styles.calculationValue}>
-                        {calculations.preBoilGravity}
-                      </Text>
-                    </View>
-                    <View style={styles.calculationItem}>
-                      <Text style={styles.calculationLabel}>
-                        Peso Total dos Grãos
-                      </Text>
-                      <Text style={styles.calculationValue}>
-                        {calculations.grainWeight} kg
-                      </Text>
-                    </View>
-                    <View style={styles.calculationItem}>
-                      <Text style={styles.calculationLabel}>
-                        Volume Total de Água
-                      </Text>
-                      <Text style={styles.calculationValue}>
-                        {calculations.totalWaterVolume} L
-                      </Text>
-                    </View>
-                    <View style={styles.calculationItem}>
-                      <Text style={styles.calculationLabel}>
-                        Absorção de Água
-                      </Text>
-                      <Text style={styles.calculationValue}>
-                        {calculations.grainAbsorption} L
-                      </Text>
-                    </View>
-                    <View style={styles.calculationItem}>
-                      <Text style={styles.calculationLabel}>
-                        Eficiência Estimada
-                      </Text>
-                      <Text style={styles.calculationValue}>
-                        {calculations.estimatedEfficiency}%
-                      </Text>
-                    </View>
-                  </View>
-                </View>
+                  )}
+                </>
               )}
             </View>
           )}
@@ -1440,6 +1085,93 @@ const styles = StyleSheet.create({
     color: COLORS.text.primary,
     marginBottom: 8,
   },
+  readOnlyHint: {
+    color: COLORS.text.secondary,
+    marginBottom: 16,
+    fontStyle: 'italic',
+  },
+  mashProfileCard: {
+    padding: 16,
+    marginBottom: 16,
+  },
+  mashProfileHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 16,
+    flexWrap: 'wrap',
+    gap: 12,
+  },
+  mashProfileName: {
+    color: COLORS.text.primary,
+    flex: 1,
+  },
+  mashProfileMeta: {
+    gap: 8,
+    marginBottom: 16,
+  },
+  mashProfileMetaRow: {
+    flexDirection: 'row',
+    gap: 8,
+  },
+  mashProfileMetaLabel: {
+    fontSize: 14,
+    color: COLORS.text.secondary,
+    minWidth: 140,
+  },
+  mashProfileMetaValue: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: COLORS.text.primary,
+  },
+  mashStepsReadOnly: {
+    marginTop: 8,
+    paddingTop: 16,
+    borderTopWidth: 1,
+    borderTopColor: COLORS.border.light,
+  },
+  mashStepsReadOnlyTitle: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: COLORS.text.primary,
+    marginBottom: 12,
+  },
+  mashStepReadOnlyRow: {
+    flexDirection: 'row',
+    gap: 12,
+    paddingVertical: 8,
+    borderBottomWidth: 1,
+    borderBottomColor: COLORS.border.light,
+  },
+  mashStepReadOnlyOrder: {
+    fontSize: 14,
+    fontWeight: '700',
+    color: COLORS.brand.primary,
+    backgroundColor: COLORS.neutral.gray[100],
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 4,
+    minWidth: 28,
+    textAlign: 'center',
+  },
+  mashStepReadOnlyContent: {
+    flex: 1,
+  },
+  mashStepReadOnlyName: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: COLORS.text.primary,
+  },
+  mashStepReadOnlyDetail: {
+    fontSize: 12,
+    color: COLORS.text.secondary,
+    marginTop: 2,
+  },
+  mashStepReadOnlyExtra: {
+    fontSize: 11,
+    color: COLORS.text.tertiary,
+    marginTop: 2,
+  },
   field: {
     marginBottom: 16,
   },
@@ -1449,16 +1181,6 @@ const styles = StyleSheet.create({
   },
   halfWidth: {
     flex: 1,
-  },
-  mashStepsSection: {
-    marginTop: 24,
-    gap: 16,
-  },
-  mashStepsHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 16,
   },
   emptyState: {
     padding: 24,
@@ -1470,58 +1192,6 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: COLORS.text.secondary,
     textAlign: 'center',
-  },
-  mashStepCard: {
-    backgroundColor: COLORS.neutral.gray[50],
-    padding: 16,
-    borderRadius: 8,
-    borderWidth: 1,
-    borderColor: COLORS.border.light,
-    gap: 12,
-  },
-  mashStepHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 8,
-  },
-  mashStepHeaderLeft: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-    flex: 1,
-  },
-  mashStepOrder: {
-    fontSize: 14,
-    fontWeight: '700',
-    color: COLORS.brand.primary,
-    backgroundColor: COLORS.neutral.gray[100],
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-    borderRadius: 4,
-    minWidth: 28,
-    textAlign: 'center',
-  },
-  mashStepTitle: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: COLORS.text.primary,
-    flex: 1,
-  },
-  mashStepActions: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 4,
-  },
-  moveButton: {
-    padding: 4,
-  },
-  moveButtonDisabled: {
-    opacity: 0.3,
-  },
-  deleteButton: {
-    padding: 4,
-    marginLeft: 4,
   },
   calculationsToggle: {
     flexDirection: 'row',

@@ -1,6 +1,11 @@
-import React from 'react'
+import React, { useState, useMemo } from 'react'
 import { View, StyleSheet, ScrollView } from 'react-native'
-import { Controller, Control, FieldErrors } from 'react-hook-form'
+import {
+  Controller,
+  Control,
+  FieldErrors,
+  UseFormSetValue,
+} from 'react-hook-form'
 import { useRecipe } from '../../context/RecipeContext'
 import { InputText } from '../../../../shared/components/InputText'
 import { DateInput } from '../../../../shared/components/DateInput'
@@ -9,31 +14,111 @@ import { Textarea } from '../Textarea'
 import { ImageUploader } from '../ImageUploader'
 import { useBeerStylesAll } from '../../../beer-style/hooks/useBeerStyles'
 import { useEquipments } from '../../../equipment/hooks/useEquipments'
-import { useMemo } from 'react'
 import { RecipeType, recipeTypeLabels } from '../../interfaces/Recipe'
 import { COLORS } from '../../../../shared/styles/colors'
 import { Text } from '../../../../shared/components/Typography'
 import { DecimalInput } from '../../../../shared/components/DecimalInput'
+import { ScaleRecipeModal } from '../modals/ScaleRecipeModal'
+import {
+  scaleRecipeForNewEquipment,
+  type EquipmentUnion,
+} from '../../utils/scaleRecipeForNewEquipment'
+import { EquipmentType } from '../../../equipment/interfaces/equipment'
 import type { RecipeBasicFormData } from '../../pages/SaveRecipes'
 
 interface BasicTabProps {
   control: Control<RecipeBasicFormData>
+  setValue: UseFormSetValue<RecipeBasicFormData>
   errors: FieldErrors<RecipeBasicFormData>
 }
 
-export const BasicTab: React.FC<BasicTabProps> = ({ control, errors }) => {
-  const { updateRecipe } = useRecipe()
+export const BasicTab: React.FC<BasicTabProps> = ({
+  control,
+  setValue,
+  errors,
+}) => {
+  const { recipe, updateRecipe } = useRecipe()
+  const [scaleModalVisible, setScaleModalVisible] = useState(false)
+  const [pendingEquipment, setPendingEquipment] = useState<{
+    id: string
+    equipment: EquipmentUnion
+  } | null>(null)
   const { beerStyles } = useBeerStylesAll()
   const { data: equipmentsData } = useEquipments()
 
-  const equipmentOptions = useMemo(() => {
+  const allEquipments = useMemo(() => {
     if (!equipmentsData?.pages) return []
-    const allEquipments = equipmentsData.pages.flatMap(page => page.data)
-    return allEquipments.map(eq => ({
-      value: eq.id,
-      label: eq.name,
-    }))
+    return equipmentsData.pages.flatMap(page => page.data)
   }, [equipmentsData])
+
+  const equipmentOptions = useMemo(
+    () =>
+      allEquipments.map(eq => ({
+        value: eq.id,
+        label: eq.name,
+      })),
+    [allEquipments],
+  )
+
+  const applyEquipmentChange = (
+    equipmentId: string,
+    equipment: EquipmentUnion,
+  ) => {
+    setValue('equipmentId', equipmentId)
+    updateRecipe({ equipment })
+  }
+
+  const handleScaleConfirm = () => {
+    if (!pendingEquipment) return
+    const oldEquipment = recipe.equipment
+      ? ((allEquipments.find(eq => eq.id === recipe.equipment?.id) as
+          | EquipmentUnion
+          | undefined) ?? null)
+      : null
+
+    const canScale =
+      (oldEquipment?.type === EquipmentType.KETTLE ||
+        oldEquipment?.type === EquipmentType.FERMENTER ||
+        pendingEquipment.equipment.type === EquipmentType.KETTLE ||
+        pendingEquipment.equipment.type === EquipmentType.FERMENTER) &&
+      (pendingEquipment.equipment.type === EquipmentType.KETTLE ||
+        pendingEquipment.equipment.type === EquipmentType.FERMENTER)
+
+    if (canScale) {
+      const scaled = scaleRecipeForNewEquipment(
+        recipe,
+        oldEquipment ?? null,
+        pendingEquipment.equipment,
+      )
+      applyEquipmentChange(pendingEquipment.id, scaled.equipment)
+      setValue('finalVolume', scaled.finalVolume)
+      if (scaled.preBoilVolume != null) {
+        setValue('preBoilVolume', scaled.preBoilVolume)
+      }
+      if (scaled.postBoilVolume != null) {
+        setValue('postBoilVolume', scaled.postBoilVolume)
+      }
+      updateRecipe({
+        equipment: scaled.equipment,
+        finalVolume: scaled.finalVolume,
+        preBoilVolume: scaled.preBoilVolume ?? null,
+        postBoilVolume: scaled.postBoilVolume ?? null,
+        fermentables: scaled.fermentables,
+        hops: scaled.hops,
+        yeasts: scaled.yeasts,
+        waters: scaled.waters,
+      })
+    } else {
+      applyEquipmentChange(pendingEquipment.id, pendingEquipment.equipment)
+    }
+    setPendingEquipment(null)
+  }
+
+  const handleScaleCancel = () => {
+    if (!pendingEquipment) return
+    applyEquipmentChange(pendingEquipment.id, pendingEquipment.equipment)
+    setPendingEquipment(null)
+  }
 
   const beerStyleOptions = useMemo(() => {
     return beerStyles.map(style => ({
@@ -170,11 +255,31 @@ export const BasicTab: React.FC<BasicTabProps> = ({ control, errors }) => {
               value={value || ''}
               options={equipmentOptions}
               onSelect={selectedValue => {
-                onChange(selectedValue)
-                const selectedEquipment = equipmentsData?.pages
-                  .flatMap(page => page.data)
-                  .find(eq => eq.id === selectedValue)
-                if (selectedEquipment) {
+                const selectedEquipment = allEquipments.find(
+                  eq => eq.id === selectedValue,
+                )
+                if (!selectedEquipment) return
+
+                const isKettleOrFermenter =
+                  selectedEquipment.type === EquipmentType.KETTLE ||
+                  selectedEquipment.type === EquipmentType.FERMENTER
+                const isDifferentEquipment = selectedValue !== (value || '')
+
+                if (
+                  isDifferentEquipment &&
+                  isKettleOrFermenter &&
+                  (recipe.fermentables.length > 0 ||
+                    recipe.hops.length > 0 ||
+                    recipe.yeasts.length > 0 ||
+                    recipe.waters.length > 0)
+                ) {
+                  setPendingEquipment({
+                    id: selectedValue,
+                    equipment: selectedEquipment as EquipmentUnion,
+                  })
+                  setScaleModalVisible(true)
+                } else {
+                  onChange(selectedValue)
                   updateRecipe({ equipment: selectedEquipment })
                 }
               }}
@@ -184,6 +289,16 @@ export const BasicTab: React.FC<BasicTabProps> = ({ control, errors }) => {
           )}
         />
       </View>
+
+      <ScaleRecipeModal
+        visible={scaleModalVisible}
+        onClose={() => {
+          setScaleModalVisible(false)
+          setPendingEquipment(null)
+        }}
+        onConfirm={handleScaleConfirm}
+        onCancel={handleScaleCancel}
+      />
 
       <View style={styles.section}>
         <Controller

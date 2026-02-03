@@ -4,12 +4,13 @@ import { Text } from '../../../shared/components/Typography'
 import { InputText } from '../../../shared/components/InputText'
 import { Button } from '../../../shared/components/Button'
 import { COLORS } from '../../../shared/styles/colors'
-import { BiPlus, BiX } from 'react-icons/bi'
+import { BiX } from 'react-icons/bi'
 
-interface MeasuredValue {
+export interface MeasuredValue {
   id: string
   label: string
   value: number | null | undefined
+  target?: number | null
   unit?: string
 }
 
@@ -17,6 +18,11 @@ interface MeasuredValuesPanelProps {
   values: MeasuredValue[]
   onUpdate: (id: string, value: number | null) => void
   onSave?: () => void
+}
+
+function formatValue(val: number | null | undefined, unit?: string): string {
+  if (val === null || val === undefined) return '—'
+  return unit === 'SG' ? val.toFixed(3) : val.toString()
 }
 
 export function MeasuredValuesPanel({
@@ -55,41 +61,48 @@ export function MeasuredValuesPanel({
     onSave?.()
   }
 
+  const getDisplayText = (item: MeasuredValue): string => {
+    const hasValue = item.value !== null && item.value !== undefined
+    const hasTarget = item.target !== null && item.target !== undefined
+
+    if (hasValue && hasTarget) {
+      return `${formatValue(item.value, item.unit)} (alvo ${formatValue(item.target, item.unit)})`
+    }
+    if (hasValue) {
+      return formatValue(item.value, item.unit)
+    }
+    if (hasTarget) {
+      return `— (alvo ${formatValue(item.target, item.unit)})`
+    }
+    return '—'
+  }
+
   return (
     <View style={styles.container}>
       <View style={styles.header}>
-        <Text style={styles.title}>Valores Mensurados</Text>
-        <TouchableOpacity
-          style={styles.addButton}
-          onPress={() => {
-            // Adicionar novo valor
-          }}
-        >
-          <BiPlus size={20} color={COLORS.brand.primary} />
-          <Text style={styles.addButtonText}>Adicionar</Text>
-        </TouchableOpacity>
+        <View style={styles.headerText}>
+          <Text style={styles.title}>Medições do Lote</Text>
+          <Text style={styles.subtitle}>
+            Alvos vêm da receita. Preencha apenas os valores medidos no brew
+            day.
+          </Text>
+        </View>
       </View>
 
       <View style={styles.valuesList}>
-        {values.map(value => (
+        {values.map(item => (
           <TouchableOpacity
-            key={value.id}
+            key={item.id}
             style={styles.valueRow}
-            onPress={() => handleEdit(value.id, value.value)}
+            onPress={() => handleEdit(item.id, item.value)}
           >
             <View style={styles.valueInfo}>
-              <Text style={styles.valueLabel}>{value.label}</Text>
+              <Text style={styles.valueLabel}>{item.label}</Text>
               <Text style={styles.valueUnit}>
-                {value.unit ? `(${value.unit})` : ''}
+                {item.unit ? `(${item.unit})` : ''}
               </Text>
             </View>
-            <Text style={styles.valueDisplay}>
-              {value.value !== null && value.value !== undefined
-                ? value.unit === 'SG'
-                  ? value.value.toFixed(3)
-                  : value.value.toString()
-                : '—'}
-            </Text>
+            <Text style={styles.valueDisplay}>{getDisplayText(item)}</Text>
           </TouchableOpacity>
         ))}
       </View>
@@ -103,7 +116,7 @@ export function MeasuredValuesPanel({
         <View style={styles.modalOverlay}>
           <View style={styles.modalContent}>
             <View style={styles.modalHeader}>
-              <Text style={styles.modalTitle}>Editar Valor</Text>
+              <Text style={styles.modalTitle}>Editar Valor Medido</Text>
               <TouchableOpacity
                 onPress={() => setIsModalOpen(false)}
                 style={styles.closeButton}
@@ -115,8 +128,8 @@ export function MeasuredValuesPanel({
             {editingValue && (
               <View style={styles.modalBody}>
                 <InputText
-                  label="Valor"
-                  placeholder="Digite o valor medido"
+                  label="Valor medido"
+                  placeholder="Digite o valor medido no brew day"
                   value={editingValue.value}
                   onChangeText={val =>
                     setEditingValue({ ...editingValue, value: val })
@@ -159,22 +172,19 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     alignItems: 'center',
   },
+  headerText: {
+    flex: 1,
+    gap: 4,
+  },
   title: {
     fontSize: 16,
     fontWeight: '700',
     color: COLORS.text.primary,
   },
-  addButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 4,
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-  },
-  addButtonText: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: COLORS.brand.primary,
+  subtitle: {
+    fontSize: 12,
+    color: COLORS.text.secondary,
+    lineHeight: 16,
   },
   valuesList: {
     gap: 12,

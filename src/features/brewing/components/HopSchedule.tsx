@@ -28,11 +28,11 @@ export function HopSchedule({ hops }: HopScheduleProps) {
       {sortedHops.map((hop, index) => (
         <View key={index} style={styles.row}>
           <Text style={styles.timeCell}>
-            {hop.time === 0 ? 'Whirlpool' : `${hop.time} min`}
+            {hop.time === 0 || !hop.time ? 'Whirlpool' : `${hop.time} min`}
           </Text>
           <Text style={styles.nameCell}>{hop.name}</Text>
           <Text style={styles.amountCell}>
-            {hop.amount} {hop.unit}
+            {hop.amount} {'g'}
           </Text>
           <Text style={styles.aaCell}>
             {hop.alphaAcid ? `${hop.alphaAcid}%` : '—'}
@@ -49,59 +49,58 @@ const styles = StyleSheet.create({
     borderColor: COLORS.border.light,
     borderRadius: 10,
     overflow: 'hidden',
-    backgroundColor: COLORS.neutral.white
+    backgroundColor: COLORS.neutral.white,
   },
   header: {
     flexDirection: 'row',
     backgroundColor: '#F9FAFB',
     padding: 12,
     borderBottomWidth: 1,
-    borderBottomColor: COLORS.border.light
+    borderBottomColor: COLORS.border.light,
   },
   headerText: {
     flex: 1,
     fontSize: 12,
     fontWeight: '700',
     color: COLORS.text.primary,
-    textAlign: 'center'
+    textAlign: 'center',
   },
   row: {
     flexDirection: 'row',
     padding: 12,
     borderBottomWidth: 1,
-    borderBottomColor: COLORS.border.light
+    borderBottomColor: COLORS.border.light,
   },
   timeCell: {
     flex: 1,
     fontSize: 13,
     fontWeight: '700',
     color: COLORS.brand.primary,
-    textAlign: 'center'
+    textAlign: 'center',
   },
   nameCell: {
     flex: 1,
     fontSize: 13,
     color: COLORS.text.primary,
     fontWeight: '600',
-    textAlign: 'center'
+    textAlign: 'center',
   },
   amountCell: {
     flex: 1,
     fontSize: 13,
     color: COLORS.text.primary,
-    textAlign: 'center'
+    textAlign: 'center',
   },
   aaCell: {
     flex: 1,
     fontSize: 13,
     color: COLORS.text.secondary,
-    textAlign: 'center'
+    textAlign: 'center',
   },
   emptyText: {
     fontSize: 14,
     color: COLORS.text.secondary,
     textAlign: 'center',
-    paddingVertical: 20
-  }
+    paddingVertical: 20,
+  },
 })
-

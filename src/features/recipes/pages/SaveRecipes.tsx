@@ -30,7 +30,6 @@ import toast from 'react-hot-toast'
 import { generateRecipePdf } from '../utils/generateRecipePdf'
 import { BiDownload } from 'react-icons/bi'
 
-// Helper para converter valores numéricos que podem vir como string do backend
 const toNumber = (
   value: number | string | null | undefined,
 ): number | undefined => {
@@ -217,6 +216,7 @@ const SaveRecipesContent: React.FC = () => {
 
   const {
     control,
+    setValue,
     reset: resetForm,
     formState: { errors, isValid },
   } = useForm<RecipeBasicFormData>({
@@ -524,7 +524,9 @@ const SaveRecipesContent: React.FC = () => {
   const renderTabContent = () => {
     switch (activeTab) {
       case 'basic':
-        return <BasicTab control={control} errors={errors} />
+        return (
+          <BasicTab control={control} setValue={setValue} errors={errors} />
+        )
       case 'fermentables':
         return <FermentablesTab />
       case 'hops':
@@ -540,7 +542,9 @@ const SaveRecipesContent: React.FC = () => {
       case 'carbonation':
         return <CarbonationTab />
       default:
-        return <BasicTab control={control} errors={errors} />
+        return (
+          <BasicTab control={control} setValue={setValue} errors={errors} />
+        )
     }
   }
 

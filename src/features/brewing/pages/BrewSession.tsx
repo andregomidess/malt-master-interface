@@ -43,20 +43,18 @@ export function BrewSession({ batchId }: BrewSessionProps) {
   const [activeStepIndex, setActiveStepIndex] = useState<number>(0)
   const [completedSteps, setCompletedSteps] = useState<Set<string>>(new Set())
   const [measuredValues, setMeasuredValues] = useState({
-    // Mostura
     mashPh: null as number | null,
-    // Fervura
     preBoilGravity: null as number | null,
     preBoilVolume: null as number | null,
     postBoilGravity: null as number | null,
     postBoilVolume: null as number | null,
-    // Fermentação
     waterInFermenter: null as number | null,
     fermenterVolume: null as number | null,
     actualFinalGravity: null as number | null,
     peakFermentationTemp: null as number | null,
     bottlingVolume: null as number | null,
   })
+  console.log(detail)
 
   const [finalValues, setFinalValues] = useState({
     finalVolume: null as number | null,
@@ -92,19 +90,30 @@ export function BrewSession({ batchId }: BrewSessionProps) {
   useEffect(() => {
     if (detail?.batch) {
       const batch = detail.batch
-      setMeasuredValues(prev => ({
-        ...prev,
-        mashPh: batch.mashPh ?? prev.mashPh,
-        preBoilGravity: batch.preBoilGravity ?? prev.preBoilGravity,
-        preBoilVolume: batch.preBoilVolume ?? prev.preBoilVolume,
-        postBoilVolume: batch.postBoilVolume ?? prev.postBoilVolume,
-        waterInFermenter: batch.waterInFermenter ?? prev.waterInFermenter,
-        fermenterVolume: batch.fermenterVolume ?? prev.fermenterVolume,
-        actualFinalGravity: batch.actualFinalGravity ?? prev.actualFinalGravity,
-        peakFermentationTemp:
-          batch.peakFermentationTemp ?? prev.peakFermentationTemp,
-        bottlingVolume: batch.bottlingVolume ?? prev.bottlingVolume,
-      }))
+      setMeasuredValues(prev => {
+        const toNum = (v: number | string | null | undefined) => {
+          if (v == null) return null
+          const n = typeof v === 'string' ? parseFloat(v) : v
+          return isNaN(n) ? null : n
+        }
+        return {
+          ...prev,
+          mashPh: toNum(batch.mashPh) ?? prev.mashPh,
+          preBoilGravity: toNum(batch.preBoilGravity) ?? prev.preBoilGravity,
+          preBoilVolume: toNum(batch.preBoilVolume) ?? prev.preBoilVolume,
+          postBoilGravity:
+            toNum(batch.actualOriginalGravity) ?? prev.postBoilGravity,
+          postBoilVolume: toNum(batch.postBoilVolume) ?? prev.postBoilVolume,
+          waterInFermenter:
+            toNum(batch.waterInFermenter) ?? prev.waterInFermenter,
+          fermenterVolume: toNum(batch.fermenterVolume) ?? prev.fermenterVolume,
+          actualFinalGravity:
+            toNum(batch.actualFinalGravity) ?? prev.actualFinalGravity,
+          peakFermentationTemp:
+            toNum(batch.peakFermentationTemp) ?? prev.peakFermentationTemp,
+          bottlingVolume: toNum(batch.bottlingVolume) ?? prev.bottlingVolume,
+        }
+      })
       setFinalValues({
         finalVolume: batch.finalVolume || null,
         actualAbv: batch.actualAbv || null,
@@ -708,7 +717,6 @@ export function BrewSession({ batchId }: BrewSessionProps) {
             )}
 
             <View style={styles.measuredValuesSection}>
-              <Text style={styles.sectionTitle}>Valores Mensurados</Text>
               <MeasuredValuesPanel
                 values={[
                   {
@@ -720,6 +728,9 @@ export function BrewSession({ batchId }: BrewSessionProps) {
                     id: 'preBoilVolume',
                     label: 'Volume da Fervura',
                     value: measuredValues.preBoilVolume,
+                    target: batch.plannedVolume
+                      ? Number(batch.plannedVolume)
+                      : undefined,
                     unit: 'L',
                   },
                   {
@@ -732,12 +743,18 @@ export function BrewSession({ batchId }: BrewSessionProps) {
                     id: 'postBoilGravity',
                     label: 'Densidade Pós Fervura (OG)',
                     value: measuredValues.postBoilGravity,
+                    target: batch.recipe?.og
+                      ? Number(batch.recipe.og)
+                      : undefined,
                     unit: 'SG',
                   },
                   {
                     id: 'postBoilVolume',
                     label: 'Volume Pós Fervura',
                     value: measuredValues.postBoilVolume,
+                    target: batch.plannedVolume
+                      ? Number(batch.plannedVolume)
+                      : undefined,
                     unit: 'L',
                   },
                 ]}

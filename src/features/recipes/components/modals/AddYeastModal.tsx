@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react'
+import React, { useState } from 'react'
 import { View, StyleSheet } from 'react-native'
 import { RecipeModal } from '../Modal'
 import { Select } from '../Select'
@@ -6,7 +6,9 @@ import { InputText } from '../../../../shared/components/InputText'
 import { Button } from '../../../../shared/components/Button'
 import { Text } from '../../../../shared/components/Typography'
 import { COLORS } from '../../../../shared/styles/colors'
-import { useYeastsList } from '../../../yeast/hooks/useYeasts'
+import { useYeastsLoadOptions } from '../../../yeast/hooks/useYeasts'
+import { yeastsApi } from '../../../yeast/api/yeastsApi'
+import type { Yeast } from '../../../yeast/interfaces/Yeast'
 import { RecipeYeast } from '../../context/RecipeContext'
 
 interface AddYeastModalProps {
@@ -20,27 +22,23 @@ export const AddYeastModal: React.FC<AddYeastModalProps> = ({
   onClose,
   onAdd,
 }) => {
-  const { yeasts } = useYeastsList()
+  const loadYeastOptions = useYeastsLoadOptions()
   const [selectedYeastId, setSelectedYeastId] = useState<string>('')
+  const [selectedYeast, setSelectedYeast] = useState<Yeast | null>(null)
   const [amount, setAmount] = useState<string>('')
   const [stage, setStage] = useState<string>('primary')
 
-  const yeastOptions = useMemo(() => {
-    return yeasts.map(y => ({
-      value: y.id,
-      label: y.name,
-    }))
-  }, [yeasts])
+  const handleSelectYeast = async (id: string) => {
+    setSelectedYeastId(id)
+    const yeast = await yeastsApi.findById(id)
+    setSelectedYeast(yeast)
+  }
 
   const stageOptions = [
     { value: 'primary', label: 'Primária' },
     { value: 'secondary', label: 'Secundária' },
     { value: 'starter', label: 'Starter' },
   ]
-
-  const selectedYeast = useMemo(() => {
-    return yeasts.find(y => y.id === selectedYeastId)
-  }, [yeasts, selectedYeastId])
 
   const handleAdd = () => {
     if (!selectedYeastId) {
@@ -78,6 +76,7 @@ export const AddYeastModal: React.FC<AddYeastModalProps> = ({
 
     // Reset form
     setSelectedYeastId('')
+    setSelectedYeast(null)
     setAmount('')
     setStage('primary')
     onClose()
@@ -93,8 +92,10 @@ export const AddYeastModal: React.FC<AddYeastModalProps> = ({
             label="Levedura *"
             placeholder="Selecione uma levedura"
             value={selectedYeastId}
-            options={yeastOptions}
-            onSelect={setSelectedYeastId}
+            options={[]}
+            loadOptions={loadYeastOptions}
+            selectedLabel={selectedYeast?.name}
+            onSelect={handleSelectYeast}
             error={!selectedYeastId}
             errorMessage={
               !selectedYeastId ? 'Selecione uma levedura' : undefined
@@ -106,7 +107,7 @@ export const AddYeastModal: React.FC<AddYeastModalProps> = ({
           <View style={styles.info}>
             <Text variant="bodySmall" style={styles.infoText}>
               Tipo: {selectedYeast.type} | Atenuação:{' '}
-              {selectedYeast.attenuation || '—'}%
+              {selectedYeast.attenuation ?? '—'}%
             </Text>
           </View>
         )}

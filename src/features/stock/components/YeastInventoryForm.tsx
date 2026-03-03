@@ -1,24 +1,27 @@
 import React, { useMemo } from 'react'
 import { View, StyleSheet } from 'react-native'
-import { Controller, Control, FieldErrors } from 'react-hook-form'
+import { Controller, Control, FieldErrors, useWatch } from 'react-hook-form'
 import { InputText } from '../../../shared/components/InputText'
 import { DateInput } from '../../../shared/components/DateInput'
 import { Select } from '../../recipes/components/Select'
 import { YeastInventoryUnit } from '../interfaces/inventory'
 import { FormData } from '../pages/SaveStock'
 import { getFieldError } from '../utils/formUtils'
+import { useYeastsLoadOptions } from '../../yeast/hooks/useYeasts'
+import { useYeastById } from '../../yeast/hooks/useYeastById'
 
 interface YeastInventoryFormProps {
   control: Control<FormData>
   errors: FieldErrors<FormData>
-  yeastOptions: Array<{ value: string; label: string }>
 }
 
 export const YeastInventoryForm: React.FC<YeastInventoryFormProps> = ({
   control,
   errors,
-  yeastOptions,
 }) => {
+  const yeastId = useWatch({ control, name: 'yeastId' })
+  const loadYeastOptions = useYeastsLoadOptions()
+  const { data: selectedYeast } = useYeastById(yeastId || undefined)
   const unitOptions = useMemo(
     () =>
       Object.values(YeastInventoryUnit).map(unit => ({
@@ -39,7 +42,9 @@ export const YeastInventoryForm: React.FC<YeastInventoryFormProps> = ({
               label="Levedura *"
               placeholder="Selecione uma levedura"
               value={value || ''}
-              options={yeastOptions}
+              options={[]}
+              loadOptions={loadYeastOptions}
+              selectedLabel={selectedYeast?.name}
               onSelect={onChange}
               error={getFieldError(errors, 'yeastId').error}
               errorMessage={getFieldError(errors, 'yeastId').message}

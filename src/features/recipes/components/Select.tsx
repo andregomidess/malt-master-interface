@@ -1,21 +1,37 @@
-import React, { useState } from 'react'
+import React, { useState, useMemo, useCallback, useRef } from 'react'
 import {
   View,
   Text,
   TouchableOpacity,
   StyleSheet,
   Modal,
-  ScrollView,
+  FlatList,
+  TextInput,
   ViewStyle,
-  TextStyle,
+  ListRenderItem,
+  ActivityIndicator,
 } from 'react-native'
 import { COLORS } from '../../../shared/styles/colors'
-import { FONT_FAMILY, FONT_SIZE, FONT_WEIGHT } from '../../../shared/styles/typography'
-import { BiChevronDown, BiCheck } from 'react-icons/bi'
+import {
+  FONT_FAMILY,
+  FONT_SIZE,
+  FONT_WEIGHT,
+} from '../../../shared/styles/typography'
+import { BiChevronDown, BiCheck, BiSearch } from 'react-icons/bi'
 
 interface SelectOption {
   value: string
   label: string
+}
+
+export interface LoadOptionsParams {
+  search: string
+  page: number
+}
+
+export interface LoadOptionsResult {
+  options: SelectOption[]
+  hasMore: boolean
 }
 
 interface SelectProps {
@@ -28,7 +44,13 @@ interface SelectProps {
   errorMessage?: string
   containerStyle?: ViewStyle
   disabled?: boolean
+  searchPlaceholder?: string
+  loadOptions?: (params: LoadOptionsParams) => Promise<LoadOptionsResult>
+  selectedLabel?: string
 }
+
+const INITIAL_NUM_TO_RENDER = 20
+const PAGE_SIZE = 20
 
 export const Select: React.FC<SelectProps> = ({
   label,
@@ -40,15 +62,137 @@ export const Select: React.FC<SelectProps> = ({
   errorMessage,
   containerStyle,
   disabled = false,
+  searchPlaceholder = 'Buscar...',
+  loadOptions,
+  selectedLabel,
 }) => {
   const [isOpen, setIsOpen] = useState(false)
+  const [searchQuery, setSearchQuery] = useState('')
+  const [asyncOptions, setAsyncOptions] = useState<SelectOption[]>([])
+  const [asyncPage, setAsyncPage] = useState(1)
+  const [hasMore, setHasMore] = useState(true)
+  const [isLoading, setIsLoading] = useState(false)
+  const [isLoadingMore, setIsLoadingMore] = useState(false)
+  const searchDebounceRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
-  const selectedOption = options.find(opt => opt.value === value)
+  const isAsync = !!loadOptions
+  const displayOptions = isAsync ? asyncOptions : options
+
+  const selectedOption = useMemo(() => {
+    const found =
+      options.find(opt => opt.value === value) ??
+      displayOptions.find(opt => opt.value === value)
+    if (found) return found
+    if (value && selectedLabel) return { value, label: selectedLabel }
+    return undefined
+  }, [value, options, displayOptions, selectedLabel])
+
+  const filteredOptions = useMemo(() => {
+    if (isAsync) return displayOptions
+    if (!searchQuery.trim()) return options
+    const query = searchQuery.toLowerCase().trim()
+    return options.filter(opt => opt.label.toLowerCase().includes(query))
+  }, [isAsync, displayOptions, options, searchQuery])
+
+  const fetchOptions = useCallback(
+    async (search: string, page: number, append: boolean) => {
+      if (!loadOptions) return
+      const setLoading = page === 1 ? setIsLoading : setIsLoadingMore
+      setLoading(true)
+      try {
+        const result = await loadOptions({ search, page })
+        setAsyncOptions(prev =>
+          append ? [...prev, ...result.options] : result.options,
+        )
+        setHasMore(result.hasMore)
+        setAsyncPage(page)
+      } finally {
+        setLoading(false)
+      }
+    },
+    [loadOptions],
+  )
 
   const handleSelect = (optionValue: string) => {
     onSelect(optionValue)
     setIsOpen(false)
+    setSearchQuery('')
   }
+
+  const handleClose = () => {
+    if (searchDebounceRef.current) {
+      clearTimeout(searchDebounceRef.current)
+      searchDebounceRef.current = null
+    }
+    setIsOpen(false)
+    setSearchQuery('')
+    if (isAsync) {
+      setAsyncOptions([])
+      setAsyncPage(1)
+      setHasMore(true)
+    }
+  }
+
+  const handleOpen = () => {
+    if (!disabled) {
+      setSearchQuery('')
+      if (isAsync) {
+        setAsyncOptions([])
+        setAsyncPage(1)
+        setHasMore(true)
+        fetchOptions('', 1, false)
+      }
+      setIsOpen(true)
+    }
+  }
+
+  const handleSearchChange = (text: string) => {
+    setSearchQuery(text)
+    if (isAsync) {
+      if (searchDebounceRef.current) clearTimeout(searchDebounceRef.current)
+      searchDebounceRef.current = setTimeout(() => {
+        setAsyncOptions([])
+        setAsyncPage(1)
+        setHasMore(true)
+        fetchOptions(text, 1, false)
+        searchDebounceRef.current = null
+      }, 300)
+    }
+  }
+
+  const handleLoadMore = useCallback(() => {
+    if (isAsync && hasMore && !isLoading && !isLoadingMore) {
+      fetchOptions(searchQuery, asyncPage + 1, true)
+    }
+  }, [
+    isAsync,
+    hasMore,
+    isLoading,
+    isLoadingMore,
+    searchQuery,
+    asyncPage,
+    fetchOptions,
+  ])
+
+  const renderOption: ListRenderItem<SelectOption> = ({ item }) => (
+    <TouchableOpacity
+      style={[styles.option, value === item.value && styles.optionSelected]}
+      onPress={() => handleSelect(item.value)}
+      activeOpacity={0.7}
+    >
+      <Text
+        style={[
+          styles.optionText,
+          value === item.value && styles.optionTextSelected,
+        ]}
+      >
+        {item.label}
+      </Text>
+      {value === item.value && (
+        <BiCheck size={20} color={COLORS.brand.primary} />
+      )}
+    </TouchableOpacity>
+  )
 
   return (
     <View style={[styles.wrapper, containerStyle]}>
@@ -59,7 +203,7 @@ export const Select: React.FC<SelectProps> = ({
           error && styles.containerError,
           disabled && styles.containerDisabled,
         ]}
-        onPress={() => !disabled && setIsOpen(true)}
+        onPress={handleOpen}
         disabled={disabled}
         activeOpacity={0.7}
       >
@@ -84,41 +228,75 @@ export const Select: React.FC<SelectProps> = ({
         visible={isOpen}
         transparent
         animationType="fade"
-        onRequestClose={() => setIsOpen(false)}
+        onRequestClose={handleClose}
       >
-        <TouchableOpacity
-          style={styles.modalOverlay}
-          activeOpacity={1}
-          onPress={() => setIsOpen(false)}
-        >
-          <View style={styles.modalContent}>
-            <ScrollView style={styles.optionsList}>
-              {options.map(option => (
-                <TouchableOpacity
-                  key={option.value}
-                  style={[
-                    styles.option,
-                    value === option.value && styles.optionSelected,
-                  ]}
-                  onPress={() => handleSelect(option.value)}
-                  activeOpacity={0.7}
-                >
-                  <Text
-                    style={[
-                      styles.optionText,
-                      value === option.value && styles.optionTextSelected,
-                    ]}
-                  >
-                    {option.label}
-                  </Text>
-                  {value === option.value && (
-                    <BiCheck size={20} color={COLORS.brand.primary} />
-                  )}
-                </TouchableOpacity>
-              ))}
-            </ScrollView>
+        <View style={styles.modalOverlay}>
+          <TouchableOpacity
+            style={styles.modalBackdrop}
+            activeOpacity={1}
+            onPress={handleClose}
+          />
+          <View
+            style={styles.modalContent}
+            onStartShouldSetResponder={() => true}
+          >
+            <View style={styles.searchContainer}>
+              <BiSearch
+                size={18}
+                color={COLORS.text.tertiary}
+                style={styles.searchIcon}
+              />
+              <TextInput
+                style={styles.searchInput}
+                placeholder={searchPlaceholder}
+                placeholderTextColor={COLORS.text.tertiary}
+                value={searchQuery}
+                onChangeText={handleSearchChange}
+              />
+            </View>
+            {isLoading ? (
+              <View style={styles.loadingContainer}>
+                <ActivityIndicator size="large" color={COLORS.brand.primary} />
+                <Text style={styles.loadingText}>Carregando...</Text>
+              </View>
+            ) : (
+              <FlatList
+                data={filteredOptions}
+                renderItem={renderOption}
+                keyExtractor={item => item.value}
+                style={styles.optionsList}
+                contentContainerStyle={styles.optionsListContent}
+                initialNumToRender={INITIAL_NUM_TO_RENDER}
+                maxToRenderPerBatch={PAGE_SIZE}
+                windowSize={10}
+                onEndReached={handleLoadMore}
+                onEndReachedThreshold={0.5}
+                ListFooterComponent={
+                  isLoadingMore ? (
+                    <View style={styles.loadingMoreContainer}>
+                      <ActivityIndicator
+                        size="small"
+                        color={COLORS.brand.primary}
+                      />
+                      <Text style={styles.loadingMoreText}>
+                        Carregando mais...
+                      </Text>
+                    </View>
+                  ) : null
+                }
+                ListEmptyComponent={
+                  <View style={styles.emptyContainer}>
+                    <Text style={styles.emptyText}>
+                      {searchQuery
+                        ? 'Nenhum resultado encontrado'
+                        : 'Nenhuma opção disponível'}
+                    </Text>
+                  </View>
+                }
+              />
+            )}
           </View>
-        </TouchableOpacity>
+        </View>
       </Modal>
     </View>
   )
@@ -181,6 +359,9 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
   },
+  modalBackdrop: {
+    ...StyleSheet.absoluteFillObject,
+  },
   modalContent: {
     backgroundColor: COLORS.neutral.white,
     borderRadius: 12,
@@ -191,9 +372,66 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.3,
     shadowRadius: 8,
     elevation: 8,
+    overflow: 'hidden',
+  },
+  searchContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    borderBottomWidth: 1,
+    borderBottomColor: COLORS.border.light,
+    backgroundColor: COLORS.neutral.gray[50],
+  },
+  searchIcon: {
+    marginRight: 8,
+  },
+  searchInput: {
+    flex: 1,
+    fontFamily: FONT_FAMILY.primary,
+    fontSize: FONT_SIZE.sm,
+    color: COLORS.text.primary,
+    paddingVertical: 8,
+    paddingHorizontal: 0,
   },
   optionsList: {
-    maxHeight: 400,
+    height: 320,
+  },
+  optionsListContent: {
+    paddingBottom: 16,
+  },
+  loadingContainer: {
+    height: 320,
+    justifyContent: 'center',
+    alignItems: 'center',
+    gap: 12,
+  },
+  loadingText: {
+    fontFamily: FONT_FAMILY.primary,
+    fontSize: FONT_SIZE.sm,
+    color: COLORS.text.tertiary,
+  },
+  loadingMoreContainer: {
+    padding: 16,
+    flexDirection: 'row',
+    justifyContent: 'center',
+    alignItems: 'center',
+    gap: 8,
+  },
+  loadingMoreText: {
+    fontFamily: FONT_FAMILY.primary,
+    fontSize: FONT_SIZE.xs,
+    color: COLORS.text.tertiary,
+  },
+  emptyContainer: {
+    padding: 24,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  emptyText: {
+    fontFamily: FONT_FAMILY.primary,
+    fontSize: FONT_SIZE.sm,
+    color: COLORS.text.tertiary,
   },
   option: {
     flexDirection: 'row',
@@ -219,4 +457,3 @@ const styles = StyleSheet.create({
     color: COLORS.brand.primary,
   },
 })
-

@@ -1,21 +1,27 @@
 import React, { useMemo } from 'react'
 import { View, StyleSheet } from 'react-native'
-import { Controller, Control, FieldErrors } from 'react-hook-form'
+import { Controller, Control, FieldErrors, useWatch } from 'react-hook-form'
 import { InputText } from '../../../shared/components/InputText'
 import { Select } from '../../recipes/components/Select'
 import { FermentableInventoryUnit } from '../interfaces/inventory'
 import { FormData } from '../pages/SaveStock'
 import { getFieldError } from '../utils/formUtils'
+import { useFermentablesLoadOptions } from '../../fermentable/hooks/useFermentables'
+import { useFermentableById } from '../../fermentable/hooks/useFermentableById'
 
 interface FermentableInventoryFormProps {
   control: Control<FormData>
   errors: FieldErrors<FormData>
-  fermentableOptions: Array<{ value: string; label: string }>
 }
 
 export const FermentableInventoryForm: React.FC<
   FermentableInventoryFormProps
-> = ({ control, errors, fermentableOptions }) => {
+> = ({ control, errors }) => {
+  const fermentableId = useWatch({ control, name: 'fermentableId' })
+  const loadFermentableOptions = useFermentablesLoadOptions()
+  const { data: selectedFermentable } = useFermentableById(
+    fermentableId || undefined,
+  )
   const unitOptions = useMemo(
     () =>
       Object.values(FermentableInventoryUnit).map(unit => ({
@@ -36,7 +42,9 @@ export const FermentableInventoryForm: React.FC<
               label="Fermentável *"
               placeholder="Selecione um fermentável"
               value={value || ''}
-              options={fermentableOptions}
+              options={[]}
+              loadOptions={loadFermentableOptions}
+              selectedLabel={selectedFermentable?.name}
               onSelect={onChange}
               error={getFieldError(errors, 'fermentableId').error}
               errorMessage={getFieldError(errors, 'fermentableId').message}

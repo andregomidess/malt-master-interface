@@ -63,6 +63,7 @@ export interface RecipeMash {
     id: string
     name: string
     estimatedEfficiency?: number | null
+    mashThickness?: number | null
   }
   actualEfficiency?: number | null
 }

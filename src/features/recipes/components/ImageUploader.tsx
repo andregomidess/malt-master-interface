@@ -22,14 +22,10 @@ interface ImageUploaderProps {
   containerStyle?: ViewStyle
 }
 
-// Limite máximo de tamanho do base64 (80KB para deixar margem de segurança)
 const MAX_BASE64_SIZE = 80 * 1024
-// Largura máxima da imagem (mantém proporção)
 const MAX_IMAGE_WIDTH = 1200
-// Qualidade de compressão (0.0 a 1.0)
 const COMPRESSION_QUALITY = 0.7
 
-// Função para comprimir imagem
 const compressImage = (
   file: File,
   maxWidth: number,
@@ -107,14 +103,12 @@ export const ImageUploader: React.FC<ImageUploaderProps> = ({
     const file = event.target.files?.[0]
     if (!file) return
 
-    // Validação de tipo de arquivo
     if (!file.type.startsWith('image/')) {
       toast.error('Por favor, selecione um arquivo de imagem')
       return
     }
 
     try {
-      // Comprime a imagem antes de converter para base64
       const compressedBase64 = await compressImage(
         file,
         MAX_IMAGE_WIDTH,
@@ -185,25 +179,31 @@ export const ImageUploader: React.FC<ImageUploaderProps> = ({
           </TouchableOpacity>
         </View>
       ) : (
-        <div
-          style={styles.uploadArea as React.CSSProperties}
-          onDrop={handleDrop}
-          onDragOver={handleDragOver}
+        <View
+          style={styles.uploadArea}
+          {...({
+            onDrop: handleDrop,
+            onDragOver: handleDragOver,
+          } as React.ComponentProps<typeof View>)}
         >
-          <BiImage size={48} color={COLORS.text.tertiary} />
-          <Text style={styles.uploadText}>
-            Arraste e solte sua imagem aqui, ou
-          </Text>
-          <TouchableOpacity
-            style={styles.uploadButton}
-            onPress={handleClick}
-            activeOpacity={0.7}
-          >
-            <BiUpload size={20} color={COLORS.brand.primary} />
-            <Text style={styles.uploadButtonText}>Procure por uma imagem</Text>
-          </TouchableOpacity>
-          <Text style={styles.uploadHint}>Formato 16:9 recomendado</Text>
-        </div>
+          <View style={styles.uploadAreaContent}>
+            <BiImage size={48} color={COLORS.text.tertiary} />
+            <Text style={styles.uploadText}>
+              Arraste e solte sua imagem aqui, ou
+            </Text>
+            <TouchableOpacity
+              style={styles.uploadButton}
+              onPress={handleClick}
+              activeOpacity={0.7}
+            >
+              <BiUpload size={20} color={COLORS.brand.primary} />
+              <Text style={styles.uploadButtonText}>
+                Procure por uma imagem
+              </Text>
+            </TouchableOpacity>
+            <Text style={styles.uploadHint}>Formato 16:9 recomendado</Text>
+          </View>
+        </View>
       )}
 
       <input
@@ -265,6 +265,13 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     gap: 12,
     padding: 24,
+    overflow: 'visible' as const,
+  },
+  uploadAreaContent: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    maxWidth: '100%',
+    gap: 12,
   },
   uploadText: {
     fontFamily: FONT_FAMILY.primary,

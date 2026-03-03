@@ -1,4 +1,4 @@
-import React, { useState, useMemo, useEffect } from 'react'
+import React, { useState, useEffect } from 'react'
 import { View, StyleSheet } from 'react-native'
 import { RecipeModal } from '../Modal'
 import { Select } from '../Select'
@@ -6,10 +6,9 @@ import { Button } from '../../../../shared/components/Button'
 import { Text } from '../../../../shared/components/Typography'
 import { COLORS } from '../../../../shared/styles/colors'
 import {
-  useCarbonationProfiles,
+  useCarbonationProfilesLoadOptions,
   useCarbonationProfileById,
 } from '../../../profiles/hooks/useCarbonationProfiles'
-import { CarbonationProfile } from '../../../profiles/interfaces/CarbonationProfile'
 import { RecipeCarbonation } from '../../context/RecipeContext'
 
 interface SelectCarbonationProfileModalProps {
@@ -22,7 +21,7 @@ interface SelectCarbonationProfileModalProps {
 export const SelectCarbonationProfileModal: React.FC<
   SelectCarbonationProfileModalProps
 > = ({ visible, onClose, onSelect, currentCarbonationProfileId }) => {
-  const { data: carbonationProfiles } = useCarbonationProfiles()
+  const loadCarbonationOptions = useCarbonationProfilesLoadOptions()
   const [selectedProfileId, setSelectedProfileId] = useState<string>(
     currentCarbonationProfileId || '',
   )
@@ -35,14 +34,6 @@ export const SelectCarbonationProfileModal: React.FC<
   }, [visible, currentCarbonationProfileId])
 
   const { data: selectedProfile } = useCarbonationProfileById(selectedProfileId)
-
-  const carbonationProfileOptions = useMemo(() => {
-    if (!carbonationProfiles) return []
-    return carbonationProfiles.map((profile: CarbonationProfile) => ({
-      value: profile.id,
-      label: profile.name,
-    }))
-  }, [carbonationProfiles])
 
   const handleSelect = () => {
     if (!selectedProfileId || !selectedProfile) {
@@ -83,7 +74,9 @@ export const SelectCarbonationProfileModal: React.FC<
             label="Perfil de Carbonatação *"
             placeholder="Selecione um perfil"
             value={selectedProfileId}
-            options={carbonationProfileOptions}
+            options={[]}
+            loadOptions={loadCarbonationOptions}
+            selectedLabel={selectedProfile?.name}
             onSelect={setSelectedProfileId}
             error={!selectedProfileId}
             errorMessage={

@@ -1,7 +1,9 @@
 import { useQuery } from '@tanstack/react-query'
+import { useCallback } from 'react'
 import { beerStylesApi } from '../api/beerStylesApi'
 import type { BeerStyleQueryParams } from '../interfaces/BeerStyle'
 import { BeerStyleSortBy, SortOrder } from '../interfaces/BeerStyle'
+import type { LoadOptionsResult } from '../../recipes/components/Select'
 import { useMemo } from 'react'
 
 export const useBeerStylesPaginated = (
@@ -63,4 +65,32 @@ export const useBeerStylesAll = () => {
     error: query.error,
     refetch: query.refetch,
   }
+}
+
+export const useBeerStylesLoadOptions = () => {
+  return useCallback(
+    async ({
+      search,
+      page,
+    }: {
+      search: string
+      page: number
+    }): Promise<LoadOptionsResult> => {
+      const result = await beerStylesApi.findAllPaginated({
+        search: search || undefined,
+        page,
+        take: 20,
+        sortBy: BeerStyleSortBy.NAME,
+        order: SortOrder.ASC,
+      })
+      return {
+        options: result.data.map(style => ({
+          value: style.id,
+          label: style.name,
+        })),
+        hasMore: result.page < result.totalPages,
+      }
+    },
+    [],
+  )
 }

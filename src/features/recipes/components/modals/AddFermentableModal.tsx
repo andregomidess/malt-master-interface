@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react'
+import React, { useState } from 'react'
 import { View, StyleSheet } from 'react-native'
 import { RecipeModal } from '../Modal'
 import { InputText } from '../../../../shared/components/InputText'
@@ -6,7 +6,9 @@ import { Select } from '../Select'
 import { Button } from '../../../../shared/components/Button'
 import { Text } from '../../../../shared/components/Typography'
 import { COLORS } from '../../../../shared/styles/colors'
-import { useFermentablesList } from '../../../fermentable/hooks/useFermentables'
+import { useFermentablesLoadOptions } from '../../../fermentable/hooks/useFermentables'
+import { fermentablesApi } from '../../../fermentable/api/fermentablesApi'
+import type { Fermentable } from '../../../fermentable/interfaces/Fermentable'
 import { RecipeFermentable } from '../../context/RecipeContext'
 
 interface AddFermentableModalProps {
@@ -20,20 +22,17 @@ export const AddFermentableModal: React.FC<AddFermentableModalProps> = ({
   onClose,
   onAdd,
 }) => {
-  const { fermentables } = useFermentablesList()
+  const loadFermentableOptions = useFermentablesLoadOptions()
   const [selectedFermentableId, setSelectedFermentableId] = useState<string>('')
+  const [selectedFermentable, setSelectedFermentable] =
+    useState<Fermentable | null>(null)
   const [amount, setAmount] = useState<string>('')
 
-  const fermentableOptions = useMemo(() => {
-    return fermentables.map(f => ({
-      value: f.id,
-      label: f.name,
-    }))
-  }, [fermentables])
-
-  const selectedFermentable = useMemo(() => {
-    return fermentables.find(f => f.id === selectedFermentableId)
-  }, [fermentables, selectedFermentableId])
+  const handleSelectFermentable = async (id: string) => {
+    setSelectedFermentableId(id)
+    const fermentable = await fermentablesApi.findById(id)
+    setSelectedFermentable(fermentable)
+  }
 
   const handleAdd = () => {
     if (!selectedFermentableId || !amount) {
@@ -62,6 +61,7 @@ export const AddFermentableModal: React.FC<AddFermentableModalProps> = ({
 
     // Reset form
     setSelectedFermentableId('')
+    setSelectedFermentable(null)
     setAmount('')
     onClose()
   }
@@ -80,8 +80,10 @@ export const AddFermentableModal: React.FC<AddFermentableModalProps> = ({
             label="Fermentável *"
             placeholder="Selecione um fermentável"
             value={selectedFermentableId}
-            options={fermentableOptions}
-            onSelect={setSelectedFermentableId}
+            options={[]}
+            loadOptions={loadFermentableOptions}
+            selectedLabel={selectedFermentable?.name}
+            onSelect={handleSelectFermentable}
             error={!selectedFermentableId}
             errorMessage={
               !selectedFermentableId ? 'Selecione um fermentável' : undefined
@@ -92,8 +94,8 @@ export const AddFermentableModal: React.FC<AddFermentableModalProps> = ({
         {selectedFermentable && (
           <View style={styles.info}>
             <Text variant="bodySmall" style={styles.infoText}>
-              Cor: {selectedFermentable.color || '—'} °L | Rendimento:{' '}
-              {selectedFermentable.yield || '—'}%
+              Cor: {selectedFermentable.color ?? '—'} °L | Rendimento:{' '}
+              {selectedFermentable.yield ?? '—'}%
             </Text>
           </View>
         )}

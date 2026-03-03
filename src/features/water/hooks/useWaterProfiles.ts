@@ -1,7 +1,9 @@
 import { useInfiniteQuery } from '@tanstack/react-query'
+import { useCallback } from 'react'
 import { waterProfilesApi } from '../api/waterProfilesApi'
 import type { WaterProfileQueryParams } from '../interfaces/WaterProfile'
 import { WaterProfileSortBy, SortOrder } from '../interfaces/WaterProfile'
+import type { LoadOptionsResult } from '../../recipes/components/Select'
 import { useMemo } from 'react'
 
 export const useWaterProfiles = (
@@ -49,4 +51,29 @@ export const useWaterProfilesList = (
     ...query,
     waterProfiles,
   }
+}
+
+export const useWaterProfilesLoadOptions = () => {
+  return useCallback(
+    async ({
+      search,
+      page,
+    }: {
+      search: string
+      page: number
+    }): Promise<LoadOptionsResult> => {
+      const result = await waterProfilesApi.findAllPaginated({
+        search: search || undefined,
+        page,
+        take: 20,
+        sortBy: WaterProfileSortBy.NAME,
+        order: SortOrder.ASC,
+      })
+      return {
+        options: result.data.map(w => ({ value: w.id, label: w.name })),
+        hasMore: result.page < result.totalPages,
+      }
+    },
+    [],
+  )
 }

@@ -105,6 +105,49 @@ const computeVolumesFromTargetCold = (
   }
 }
 
+/**
+ * Calcula volumes padrão a partir do equipamento (estilo Brewfather).
+ * - Kettle: finalVolume (batch), preBoil e postBoil calculados a partir de
+ *   boilOffRate, kettleLoss e thermalShrinkage.
+ * - Fermenter: apenas finalVolume (usableVolume), sem parâmetros de fervura.
+ */
+export function getDefaultVolumesFromEquipment(
+  equipment: EquipmentUnion,
+  boilTimeMin: number = 60,
+): {
+  finalVolume: number
+  preBoilVolume?: number
+  postBoilVolume?: number
+} {
+  const usableVolume = Math.max(0, safeNum(equipment.usableVolume, 20))
+
+  if (equipment.type === EquipmentType.KETTLE) {
+    const kettle = equipment as KettleEquipment
+    const kettleLoss = safeNum(kettle.kettleLoss, 0)
+    const targetPostBoilCold = usableVolume + kettleLoss
+    const computed = computeVolumesFromTargetCold(
+      targetPostBoilCold,
+      boilTimeMin,
+      kettle,
+    )
+    return {
+      finalVolume: round(usableVolume, 2),
+      preBoilVolume: computed.preBoilVolume,
+      postBoilVolume: computed.postBoilVolume,
+    }
+  }
+
+  if (equipment.type === EquipmentType.FERMENTER) {
+    return {
+      finalVolume: round(usableVolume, 2),
+    }
+  }
+
+  return {
+    finalVolume: round(usableVolume, 2),
+  }
+}
+
 export type EquipmentUnion = (KettleEquipment | FermenterEquipment) & {
   type: EquipmentType
 }

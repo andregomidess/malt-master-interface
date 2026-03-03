@@ -16,6 +16,9 @@ interface RecipeCalculations {
   estimatedColor: number | null
   estimatedEbc: number | null
   efficiency: number
+  strikeWaterVolume?: number | null
+  spargeWaterVolume?: number | null
+  totalWaterVolume?: number | null
 }
 
 interface RecipePdfData {
@@ -53,12 +56,22 @@ async function getImageAsBase64(
   })
 }
 
+// Constantes de espaçamento para layout organizado
+const SPACING = {
+  margin: 16,
+  sectionGap: 10, // Entre seções principais
+  afterHeader: 4, // Após título da seção
+  betweenItems: 4, // Entre itens na mesma seção
+  subsectionGap: 6, // Entre subseções
+  lineHeight: 0.42, // Altura da linha (múltiplo do fontSize)
+}
+
 export async function generateRecipePdf(data: RecipePdfData) {
   const { recipe, calculations, batchCode, brewDate } = data
   const doc = new jsPDF()
   const pageWidth = doc.internal.pageSize.getWidth()
   const pageHeight = doc.internal.pageSize.getHeight()
-  const margin = 15
+  const margin = SPACING.margin
   const leftColWidth = 95
   const rightColWidth = 95
   const rightColStart = pageWidth - margin - rightColWidth
@@ -86,16 +99,35 @@ export async function generateRecipePdf(data: RecipePdfData) {
     const width = maxWidth || pageWidth - 2 * margin
     const lines = doc.splitTextToSize(text, width)
     doc.text(lines, x, y)
-    return y + lines.length * (fontSize * 0.4)
+    return y + lines.length * (fontSize * SPACING.lineHeight)
   }
 
-  const addSpace = (y: number, space: number = 5) => {
-    return y + space
+  const addSpace = (y: number, space?: number) => {
+    return y + (space ?? SPACING.betweenItems)
   }
 
-  const addColorSwatch = (x: number, y: number, ebc: number | null) => {
+  const addSectionHeader = (
+    title: string,
+    x: number,
+    y: number,
+    maxWidth: number,
+  ) => {
+    let newY = addText(title, x, y, 12, true, colors.primary, maxWidth)
+    doc.setDrawColor(colors.border[0], colors.border[1], colors.border[2])
+    doc.setLineWidth(0.3)
+    doc.line(x, newY + 2, x + maxWidth, newY + 2)
+    newY += SPACING.afterHeader + 2
+    return newY
+  }
+
+  const addColorSwatch = (
+    x: number,
+    y: number,
+    ebc: number | null,
+    showLabel: boolean = true,
+  ) => {
     if (!ebc) return
-    const size = 20
+    const size = 18
     const r = Math.min(255, 200 + ebc * 2)
     const g = Math.min(255, 150 + ebc * 1.5)
     const b = Math.max(0, 100 - ebc * 3)
@@ -103,10 +135,13 @@ export async function generateRecipePdf(data: RecipePdfData) {
     doc.rect(x, y, size, size, 'F')
     doc.setDrawColor(colors.border[0], colors.border[1], colors.border[2])
     doc.rect(x, y, size, size, 'S')
-    addText(`${ebc} EBC`, x, y + size + 5, 8, false, colors.textLight, size)
+    if (showLabel) {
+      addText(`${ebc} EBC`, x, y + size + 4, 8, false, colors.textLight, size)
+    }
     return y + size + 8
   }
 
+  let headerRightBottom = margin + 12
   try {
     const logoData = await getImageAsBase64(logoImage)
     const maxWidth = 40
@@ -137,6 +172,7 @@ export async function generateRecipePdf(data: RecipePdfData) {
       colors.textLight,
       rightColWidth,
     )
+    headerRightBottom = margin + logoHeight + 10
   } catch (error) {
     console.warn('Erro ao carregar logo:', error)
     addText(
@@ -147,6 +183,16 @@ export async function generateRecipePdf(data: RecipePdfData) {
       true,
       colors.primary,
       rightColWidth,
+    )
+    headerRightBottom = margin + 18
+  }
+
+  if (calculations.estimatedEbc) {
+    addColorSwatch(
+      pageWidth - margin - 90,
+      headerRightBottom,
+      calculations.estimatedEbc,
+      true,
     )
   }
 
@@ -169,11 +215,11 @@ export async function generateRecipePdf(data: RecipePdfData) {
       colors.textLight,
     )
   }
-  yPos += 8
+  yPos += SPACING.sectionGap
 
   const recipeName = recipe.name || 'Receita sem nome'
   yPos = addText(recipeName, margin, yPos, 20, true, colors.primary)
-  yPos += 2
+  yPos += SPACING.afterHeader
 
   const ebcText = `${calculations.estimatedEbc || '—'} EBC`
   const abvText = `${calculations.estimatedAbv || '—'}%`
@@ -198,22 +244,12 @@ export async function generateRecipePdf(data: RecipePdfData) {
     false,
     colors.textLight,
   )
-  yPos += 10
+  yPos += SPACING.sectionGap
 
   let leftY = yPos
   let rightY = yPos
 
-  leftY = addSpace(leftY, 3)
-  leftY = addText(
-    'Estatísticas',
-    margin,
-    leftY,
-    12,
-    true,
-    colors.primary,
-    leftColWidth,
-  )
-  leftY += 2
+  leftY = addSectionHeader('Estatísticas', margin, leftY, leftColWidth)
 
   const stats = [
     {
@@ -273,27 +309,24 @@ export async function generateRecipePdf(data: RecipePdfData) {
     )
   })
 
-  leftY += 5
+  leftY += SPACING.subsectionGap
 
-  rightY = addSpace(rightY, 3)
-  rightY = addText(
+  rightY = addSectionHeader(
     'Volumes e Eficiências',
     rightColStart,
     rightY,
-    12,
-    true,
-    colors.primary,
     rightColWidth,
   )
-  rightY += 2
 
-  if (calculations.estimatedEbc) {
-    addColorSwatch(
-      rightColStart + rightColWidth - 25,
-      rightY - 15,
-      calculations.estimatedEbc,
-    )
-  }
+  const preBoilDisplay = recipe.preBoilVolume ?? null
+  const strikeWater =
+    calculations.strikeWaterVolume ?? recipe.mashVolume ?? null
+  const spargeWater =
+    calculations.spargeWaterVolume ??
+    (recipe.mashVolume ? recipe.mashVolume * 0.5 : null)
+  const totalWater =
+    calculations.totalWaterVolume ??
+    (recipe.mashVolume ? recipe.mashVolume * 1.5 : null)
 
   const volumes = [
     {
@@ -302,7 +335,7 @@ export async function generateRecipePdf(data: RecipePdfData) {
     },
     {
       label: 'Volume da Fervura',
-      value: recipe.mashVolume ? `${recipe.mashVolume} L` : '—',
+      value: preBoilDisplay ? `${preBoilDisplay} L` : '—',
     },
     {
       label: 'Volume Pós Fervura',
@@ -310,11 +343,11 @@ export async function generateRecipePdf(data: RecipePdfData) {
     },
     {
       label: 'Água de Mostura',
-      value: recipe.mashVolume ? `${recipe.mashVolume} L` : '—',
+      value: strikeWater != null ? `${strikeWater} L` : '—',
     },
     {
       label: 'Água de Lavagem',
-      value: recipe.mashVolume ? `${recipe.mashVolume * 0.5} L` : '—',
+      value: spargeWater != null ? `${spargeWater} L` : '—',
     },
     {
       label: 'Tempo de Fervura',
@@ -324,7 +357,7 @@ export async function generateRecipePdf(data: RecipePdfData) {
     },
     {
       label: 'Água Total',
-      value: recipe.mashVolume ? `${recipe.mashVolume * 1.5} L` : '—',
+      value: totalWater != null ? `${totalWater} L` : '—',
     },
     {
       label: 'Eficiência do Equipamento',
@@ -350,20 +383,15 @@ export async function generateRecipePdf(data: RecipePdfData) {
     )
   })
 
-  rightY += 5
+  rightY += SPACING.subsectionGap
+
+  // Sincroniza as colunas para a próxima linha ficarem alinhadas
+  const syncY = Math.max(leftY, rightY)
+  leftY = syncY
+  rightY = syncY
 
   if (recipe.mash?.mashProfile) {
-    leftY = addSpace(leftY, 3)
-    leftY = addText(
-      'Perfil de Mostura',
-      margin,
-      leftY,
-      12,
-      true,
-      colors.primary,
-      leftColWidth,
-    )
-    leftY += 2
+    leftY = addSectionHeader('Perfil de Mostura', margin, leftY, leftColWidth)
     leftY = addText(
       recipe.mash.mashProfile.name || 'Perfil de Mostura',
       margin,
@@ -373,21 +401,16 @@ export async function generateRecipePdf(data: RecipePdfData) {
       colors.text,
       leftColWidth,
     )
-    leftY += 5
+    leftY += SPACING.subsectionGap
   }
 
   if (recipe.fermentation?.fermentationProfile) {
-    rightY = addSpace(rightY, 3)
-    rightY = addText(
+    rightY = addSectionHeader(
       'Perfil de Fermentação',
       rightColStart,
       rightY,
-      12,
-      true,
-      colors.primary,
       rightColWidth,
     )
-    rightY += 2
     rightY = addText(
       recipe.fermentation.fermentationProfile.name || 'Perfil de Fermentação',
       rightColStart,
@@ -406,22 +429,12 @@ export async function generateRecipePdf(data: RecipePdfData) {
       colors.textLight,
       rightColWidth,
     )
-    rightY += 5
+    rightY += SPACING.subsectionGap
   }
 
-  yPos = Math.max(leftY, rightY) + 10
+  yPos = Math.max(leftY, rightY) + SPACING.sectionGap
 
-  yPos = addSpace(yPos, 3)
-  yPos = addText(
-    'Medidas',
-    rightColStart,
-    yPos,
-    12,
-    true,
-    colors.primary,
-    rightColWidth,
-  )
-  yPos += 2
+  yPos = addSectionHeader('Medidas', margin, yPos, pageWidth - 2 * margin)
 
   const measures = [
     'pH da Mostura:',
@@ -438,16 +451,16 @@ export async function generateRecipePdf(data: RecipePdfData) {
   measures.forEach(measure => {
     yPos = addText(
       measure,
-      rightColStart,
+      margin,
       yPos,
       9,
       false,
       colors.textLight,
-      rightColWidth,
+      pageWidth - 2 * margin,
     )
   })
 
-  yPos += 10
+  yPos += SPACING.sectionGap
 
   if (yPos > pageHeight - 60) {
     doc.addPage()
@@ -455,17 +468,12 @@ export async function generateRecipePdf(data: RecipePdfData) {
   }
 
   if (recipe.fermentables.length > 0) {
-    yPos = addSpace(yPos, 3)
-    yPos = addText(
+    yPos = addSectionHeader(
       'Fermentáveis',
       margin,
       yPos,
-      12,
-      true,
-      colors.primary,
       pageWidth - 2 * margin,
     )
-    yPos += 2
 
     const totalFermentables = recipe.fermentables.reduce(
       (sum: number, f: RecipeFermentable) => {
@@ -487,7 +495,7 @@ export async function generateRecipePdf(data: RecipePdfData) {
       colors.textLight,
       pageWidth - 2 * margin,
     )
-    yPos += 3
+    yPos += SPACING.betweenItems
 
     recipe.fermentables.forEach((f: RecipeFermentable) => {
       const amount =
@@ -514,7 +522,7 @@ export async function generateRecipePdf(data: RecipePdfData) {
         pageWidth - 2 * margin,
       )
     })
-    yPos += 5
+    yPos += SPACING.sectionGap
   }
 
   if (yPos > pageHeight - 60) {
@@ -523,17 +531,7 @@ export async function generateRecipePdf(data: RecipePdfData) {
   }
 
   if (recipe.hops.length > 0) {
-    yPos = addSpace(yPos, 3)
-    yPos = addText(
-      'Lúpulos',
-      margin,
-      yPos,
-      12,
-      true,
-      colors.primary,
-      pageWidth - 2 * margin,
-    )
-    yPos += 2
+    yPos = addSectionHeader('Lúpulos', margin, yPos, pageWidth - 2 * margin)
 
     const totalHops = recipe.hops.reduce((sum: number, h: RecipeHop) => {
       const amount =
@@ -552,7 +550,7 @@ export async function generateRecipePdf(data: RecipePdfData) {
       colors.textLight,
       pageWidth - 2 * margin,
     )
-    yPos += 3
+    yPos += SPACING.betweenItems
 
     const boilHops = recipe.hops.filter((h: RecipeHop) => h.stage === 'boil')
     const whirlpoolHops = recipe.hops.filter(
@@ -589,7 +587,7 @@ export async function generateRecipePdf(data: RecipePdfData) {
     })
 
     if (whirlpoolHops.length > 0) {
-      yPos += 3
+      yPos += SPACING.subsectionGap
       yPos = addText(
         'Hop Stand',
         margin,
@@ -632,7 +630,7 @@ export async function generateRecipePdf(data: RecipePdfData) {
     }
 
     if (dryHops.length > 0) {
-      yPos += 3
+      yPos += SPACING.subsectionGap
       yPos = addText(
         'Dry Hops',
         margin,
@@ -660,7 +658,7 @@ export async function generateRecipePdf(data: RecipePdfData) {
       })
     }
 
-    yPos += 5
+    yPos += SPACING.sectionGap
   }
 
   if (yPos > pageHeight - 60) {
@@ -668,30 +666,20 @@ export async function generateRecipePdf(data: RecipePdfData) {
     yPos = margin
   }
 
-  yPos = addSpace(yPos, 3)
-  yPos = addText(
-    'Diversos',
-    margin,
-    yPos,
-    12,
-    true,
-    colors.primary,
-    pageWidth - 2 * margin,
-  )
-  yPos += 5
+  yPos = addSectionHeader('Diversos', margin, yPos, pageWidth - 2 * margin)
 
   if (recipe.yeasts.length > 0) {
-    yPos = addSpace(yPos, 3)
+    yPos = addSpace(yPos, SPACING.betweenItems)
     yPos = addText(
       'Levedura',
       margin,
       yPos,
-      12,
+      11,
       true,
       colors.primary,
       pageWidth - 2 * margin,
     )
-    yPos += 2
+    yPos += SPACING.afterHeader
 
     recipe.yeasts.forEach((y: RecipeYeast) => {
       const name = y.yeast?.name || 'Levedura'
@@ -712,20 +700,20 @@ export async function generateRecipePdf(data: RecipePdfData) {
         pageWidth - 2 * margin,
       )
     })
-    yPos += 5
+    yPos += SPACING.subsectionGap
   }
 
-  yPos = addSpace(yPos, 3)
+  yPos = addSpace(yPos, SPACING.betweenItems)
   yPos = addText(
     'Células',
     margin,
     yPos,
-    12,
+    11,
     true,
     colors.primary,
     pageWidth - 2 * margin,
   )
-  yPos += 2
+  yPos += SPACING.afterHeader
   yPos = addText(
     '7 milhões células / ml',
     margin,
@@ -735,10 +723,10 @@ export async function generateRecipePdf(data: RecipePdfData) {
     colors.text,
     pageWidth - 2 * margin,
   )
-  yPos += 5
+  yPos += SPACING.subsectionGap
 
   if (recipe.notes) {
-    yPos = addSpace(yPos, 3)
+    yPos = addSpace(yPos, SPACING.betweenItems)
     yPos = addText(
       'Anotações da Receita',
       margin,
@@ -748,7 +736,7 @@ export async function generateRecipePdf(data: RecipePdfData) {
       colors.primary,
       pageWidth - 2 * margin,
     )
-    yPos += 2
+    yPos += SPACING.afterHeader
     yPos = addText(
       recipe.notes,
       margin,
@@ -758,7 +746,7 @@ export async function generateRecipePdf(data: RecipePdfData) {
       colors.text,
       pageWidth - 2 * margin,
     )
-    yPos += 5
+    yPos += SPACING.subsectionGap
   }
 
   const footerY = pageHeight - 10

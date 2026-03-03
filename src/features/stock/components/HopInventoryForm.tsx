@@ -1,23 +1,26 @@
 import React, { useMemo } from 'react'
 import { View, StyleSheet } from 'react-native'
-import { Controller, Control, FieldErrors } from 'react-hook-form'
+import { Controller, Control, FieldErrors, useWatch } from 'react-hook-form'
 import { InputText } from '../../../shared/components/InputText'
 import { Select } from '../../recipes/components/Select'
 import { HopInventoryUnit } from '../interfaces/inventory'
 import { FormData } from '../pages/SaveStock'
 import { getFieldError } from '../utils/formUtils'
+import { useHopsLoadOptions } from '../../hops/hooks/useHops'
+import { useHopById } from '../../hops/hooks/useHopById'
 
 interface HopInventoryFormProps {
   control: Control<FormData>
   errors: FieldErrors<FormData>
-  hopOptions: Array<{ value: string; label: string }>
 }
 
 export const HopInventoryForm: React.FC<HopInventoryFormProps> = ({
   control,
   errors,
-  hopOptions,
 }) => {
+  const hopId = useWatch({ control, name: 'hopId' })
+  const loadHopOptions = useHopsLoadOptions()
+  const { data: selectedHop } = useHopById(hopId || undefined)
   const unitOptions = useMemo(
     () =>
       Object.values(HopInventoryUnit).map(unit => ({
@@ -38,7 +41,9 @@ export const HopInventoryForm: React.FC<HopInventoryFormProps> = ({
               label="Lúpulo *"
               placeholder="Selecione um lúpulo"
               value={value || ''}
-              options={hopOptions}
+              options={[]}
+              loadOptions={loadHopOptions}
+              selectedLabel={selectedHop?.name}
               onSelect={onChange}
               error={getFieldError(errors, 'hopId').error}
               errorMessage={getFieldError(errors, 'hopId').message}

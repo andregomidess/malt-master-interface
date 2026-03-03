@@ -169,6 +169,11 @@ export const RecipeSidebar: React.FC = () => {
   const { recipe } = useRecipe()
   const calculations = useRecipeCalculations()
 
+  const hasWaterVolumes =
+    (calculations.strikeWaterVolume != null &&
+      calculations.strikeWaterVolume > 0) ||
+    !!recipe.mashVolume
+
   const validations = {
     basic:
       !!recipe.name &&
@@ -176,7 +181,7 @@ export const RecipeSidebar: React.FC = () => {
       !!recipe.type &&
       !!recipe.equipment &&
       !!recipe.finalVolume &&
-      !!recipe.mashVolume &&
+      (recipe.type === 'extract' || hasWaterVolumes) &&
       !!recipe.boilTime,
     fermentables: recipe.fermentables.length > 0,
     hops: recipe.hops.length > 0,
@@ -545,8 +550,8 @@ const styles = StyleSheet.create({
     backgroundColor: '#FFCCCC',
   },
   statCardYellow: {
-    flex: 1,
-    minWidth: '43%',
+    // flex: 1,
+    minWidth: '49%',
     padding: 12,
     minHeight: 80,
     backgroundColor: '#FFF4CC',

@@ -370,6 +370,12 @@ const SaveRecipesContent: React.FC = () => {
                       estimatedEfficiency:
                         loadedRecipe.mash.mashProfile.estimatedEfficiency ||
                         null,
+                      mashThickness:
+                        (
+                          loadedRecipe.mash.mashProfile as {
+                            mashThickness?: number
+                          }
+                        )?.mashThickness ?? null,
                     }
                   : undefined,
                 actualEfficiency: loadedRecipe.mash.actualEfficiency || null,

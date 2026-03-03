@@ -1,4 +1,4 @@
-import React, { useState, useMemo, useEffect } from 'react'
+import React, { useState, useEffect } from 'react'
 import { View, StyleSheet } from 'react-native'
 import { RecipeModal } from '../Modal'
 import { Select } from '../Select'
@@ -6,7 +6,7 @@ import { Button } from '../../../../shared/components/Button'
 import { Text } from '../../../../shared/components/Typography'
 import { COLORS } from '../../../../shared/styles/colors'
 import {
-  useFermentationProfiles,
+  useFermentationProfilesLoadOptions,
   useFermentationProfileById,
 } from '../../../profiles/hooks/useFermentationProfiles'
 import { RecipeFermentation } from '../../context/RecipeContext'
@@ -21,7 +21,7 @@ interface SelectFermentationProfileModalProps {
 export const SelectFermentationProfileModal: React.FC<
   SelectFermentationProfileModalProps
 > = ({ visible, onClose, onSelect, currentFermentationProfileId }) => {
-  const { data: fermentationProfiles } = useFermentationProfiles()
+  const loadFermentationOptions = useFermentationProfilesLoadOptions()
   const [selectedProfileId, setSelectedProfileId] = useState<string>(
     currentFermentationProfileId || '',
   )
@@ -35,14 +35,6 @@ export const SelectFermentationProfileModal: React.FC<
 
   const { data: selectedProfile } =
     useFermentationProfileById(selectedProfileId)
-
-  const fermentationProfileOptions = useMemo(() => {
-    if (!fermentationProfiles) return []
-    return fermentationProfiles.map(profile => ({
-      value: profile.id,
-      label: profile.name,
-    }))
-  }, [fermentationProfiles])
 
   const handleSelect = () => {
     if (!selectedProfileId || !selectedProfile) {
@@ -83,7 +75,9 @@ export const SelectFermentationProfileModal: React.FC<
             label="Perfil de Fermentação *"
             placeholder="Selecione um perfil"
             value={selectedProfileId}
-            options={fermentationProfileOptions}
+            options={[]}
+            loadOptions={loadFermentationOptions}
+            selectedLabel={selectedProfile?.name}
             onSelect={setSelectedProfileId}
             error={!selectedProfileId}
             errorMessage={

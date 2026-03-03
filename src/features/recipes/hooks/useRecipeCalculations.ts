@@ -310,6 +310,43 @@ export const useRecipeCalculations = () => {
       ebc = Math.round(ebc * 10) / 10
     }
 
+    // Cálculo de volumes de água (mostura + lavagem) para receitas all-grain
+    const DEFAULT_MASH_THICKNESS = 3.0 // L/kg - relação água/grão típica
+    const GRAIN_ABSORPTION_L_PER_KG = 0.96 // absorção típica dos grãos
+    let strikeWaterVolume: number | null = null
+    let spargeWaterVolume: number | null = null
+    let totalWaterVolume: number | null = null
+
+    if (
+      recipe.type !== RecipeType.EXTRACT &&
+      recipe.fermentables.length > 0 &&
+      volumeForOg > 0
+    ) {
+      const grainWeight = recipe.fermentables.reduce((sum, f) => {
+        const fermentable = f.fermentable
+        const isGrain =
+          fermentable?.type === FermentableType.BASE ||
+          fermentable?.type === FermentableType.SPECIALTY ||
+          (fermentable?.type === FermentableType.ADJUNCT &&
+            fermentable?.form === FermentableForm.GRAIN)
+        if (!isGrain) return sum
+        return sum + (f.amount || 0)
+      }, 0)
+
+      if (grainWeight > 0) {
+        const mashThickness =
+          recipe.mash?.mashProfile?.mashThickness ?? DEFAULT_MASH_THICKNESS
+        strikeWaterVolume = Math.round(grainWeight * mashThickness * 100) / 100
+        const grainAbsorption = grainWeight * GRAIN_ABSORPTION_L_PER_KG
+        const preBoil = recipe.preBoilVolume ?? volumeForOg * 1.2
+        const firstRunnings = Math.max(0, strikeWaterVolume - grainAbsorption)
+        spargeWaterVolume =
+          Math.round(Math.max(0, preBoil - firstRunnings) * 100) / 100
+        totalWaterVolume =
+          Math.round((strikeWaterVolume + spargeWaterVolume) * 100) / 100
+      }
+    }
+
     return {
       originalGravity: og,
       finalGravity: fg,
@@ -320,6 +357,9 @@ export const useRecipeCalculations = () => {
       efficiency: mashEfficiency,
       postBoilColdVolume,
       volumeIntoFermenter,
+      strikeWaterVolume,
+      spargeWaterVolume,
+      totalWaterVolume,
     }
   }, [
     recipe.fermentables,
@@ -333,6 +373,7 @@ export const useRecipeCalculations = () => {
     recipe.type,
     recipe.equipment,
     recipe.mash?.mashProfile?.estimatedEfficiency,
+    recipe.mash?.mashProfile?.mashThickness,
   ])
 
   return calculations

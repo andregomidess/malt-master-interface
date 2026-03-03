@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react'
+import React, { useState, useMemo, useEffect } from 'react'
 import { View, StyleSheet, ScrollView } from 'react-native'
 import {
   Controller,
@@ -12,7 +12,8 @@ import { DateInput } from '../../../../shared/components/DateInput'
 import { Select } from '../Select'
 import { Textarea } from '../Textarea'
 import { ImageUploader } from '../ImageUploader'
-import { useBeerStylesAll } from '../../../beer-style/hooks/useBeerStyles'
+import { useBeerStylesLoadOptions } from '../../../beer-style/hooks/useBeerStyles'
+import { beerStylesApi } from '../../../beer-style/api/beerStylesApi'
 import { useEquipments } from '../../../equipment/hooks/useEquipments'
 import { RecipeType, recipeTypeLabels } from '../../interfaces/Recipe'
 import { COLORS } from '../../../../shared/styles/colors'
@@ -21,10 +22,12 @@ import { DecimalInput } from '../../../../shared/components/DecimalInput'
 import { ScaleRecipeModal } from '../modals/ScaleRecipeModal'
 import {
   scaleRecipeForNewEquipment,
+  getDefaultVolumesFromEquipment,
   type EquipmentUnion,
 } from '../../utils/scaleRecipeForNewEquipment'
 import { EquipmentType } from '../../../equipment/interfaces/equipment'
 import type { RecipeBasicFormData } from '../../pages/SaveRecipes'
+import { useRecipeCalculations } from '../../hooks/useRecipeCalculations'
 
 interface BasicTabProps {
   control: Control<RecipeBasicFormData>
@@ -38,12 +41,13 @@ export const BasicTab: React.FC<BasicTabProps> = ({
   errors,
 }) => {
   const { recipe, updateRecipe } = useRecipe()
+  const calculations = useRecipeCalculations()
   const [scaleModalVisible, setScaleModalVisible] = useState(false)
   const [pendingEquipment, setPendingEquipment] = useState<{
     id: string
     equipment: EquipmentUnion
   } | null>(null)
-  const { beerStyles } = useBeerStylesAll()
+  const loadBeerStyleOptions = useBeerStylesLoadOptions()
   const { data: equipmentsData } = useEquipments()
 
   const allEquipments = useMemo(() => {
@@ -63,9 +67,28 @@ export const BasicTab: React.FC<BasicTabProps> = ({
   const applyEquipmentChange = (
     equipmentId: string,
     equipment: EquipmentUnion,
+    applyDefaultVolumes = true,
   ) => {
     setValue('equipmentId', equipmentId)
     updateRecipe({ equipment })
+
+    if (applyDefaultVolumes) {
+      const boilTime = recipe.boilTime ?? 60
+      const defaults = getDefaultVolumesFromEquipment(
+        equipment as EquipmentUnion,
+        boilTime,
+      )
+      setValue('finalVolume', defaults.finalVolume)
+      updateRecipe({ finalVolume: defaults.finalVolume })
+      if (defaults.preBoilVolume != null) {
+        setValue('preBoilVolume', defaults.preBoilVolume)
+        updateRecipe({ preBoilVolume: defaults.preBoilVolume })
+      }
+      if (defaults.postBoilVolume != null) {
+        setValue('postBoilVolume', defaults.postBoilVolume)
+        updateRecipe({ postBoilVolume: defaults.postBoilVolume })
+      }
+    }
   }
 
   const handleScaleConfirm = () => {
@@ -90,7 +113,7 @@ export const BasicTab: React.FC<BasicTabProps> = ({
         oldEquipment ?? null,
         pendingEquipment.equipment,
       )
-      applyEquipmentChange(pendingEquipment.id, scaled.equipment)
+      applyEquipmentChange(pendingEquipment.id, scaled.equipment, false)
       setValue('finalVolume', scaled.finalVolume)
       if (scaled.preBoilVolume != null) {
         setValue('preBoilVolume', scaled.preBoilVolume)
@@ -120,17 +143,25 @@ export const BasicTab: React.FC<BasicTabProps> = ({
     setPendingEquipment(null)
   }
 
-  const beerStyleOptions = useMemo(() => {
-    return beerStyles.map(style => ({
-      value: style.id,
-      label: style.name,
-    }))
-  }, [beerStyles])
-
   const recipeTypeOptions = Object.values(RecipeType).map(type => ({
     value: type,
     label: recipeTypeLabels[type],
   }))
+
+  // Preenche eficiência da mostura a partir do perfil quando ainda não definida (estilo Brewfather)
+  useEffect(() => {
+    const profileEff = recipe.mash?.mashProfile?.estimatedEfficiency
+    const hasEff = recipe.mashEfficiency != null && recipe.mashEfficiency > 0
+    if (profileEff != null && profileEff > 0 && !hasEff) {
+      setValue('mashEfficiency', profileEff)
+      updateRecipe({ mashEfficiency: profileEff })
+    }
+  }, [
+    recipe.mash?.mashProfile?.estimatedEfficiency,
+    recipe.mashEfficiency,
+    setValue,
+    updateRecipe,
+  ])
 
   return (
     <ScrollView style={styles.container} showsVerticalScrollIndicator={false}>
@@ -182,15 +213,14 @@ export const BasicTab: React.FC<BasicTabProps> = ({
               label="Estilo de Cerveja *"
               placeholder="Selecione o estilo"
               value={value || ''}
-              options={beerStyleOptions}
-              onSelect={selectedValue => {
+              options={[]}
+              loadOptions={loadBeerStyleOptions}
+              selectedLabel={recipe.beerStyle?.name}
+              onSelect={async selectedValue => {
                 onChange(selectedValue)
-                const selectedStyle = beerStyles.find(
-                  s => s.id === selectedValue,
-                )
-                if (selectedStyle) {
-                  updateRecipe({ beerStyle: selectedStyle })
-                }
+                const selectedStyle =
+                  await beerStylesApi.findById(selectedValue)
+                updateRecipe({ beerStyle: selectedStyle })
               }}
               error={!!errors.beerStyle}
               errorMessage={errors.beerStyle?.message}
@@ -280,7 +310,11 @@ export const BasicTab: React.FC<BasicTabProps> = ({
                   setScaleModalVisible(true)
                 } else {
                   onChange(selectedValue)
-                  updateRecipe({ equipment: selectedEquipment })
+                  applyEquipmentChange(
+                    selectedValue,
+                    selectedEquipment as EquipmentUnion,
+                    true,
+                  )
                 }
               }}
               error={!!errors.equipmentId}
@@ -320,25 +354,31 @@ export const BasicTab: React.FC<BasicTabProps> = ({
         />
       </View>
 
-      <View style={styles.section}>
-        <Controller
-          control={control}
-          name="mashVolume"
-          render={({ field: { value, onChange } }) => (
-            <DecimalInput
-              label="Volume de Mostura (Litros)"
-              placeholder="18"
-              value={value}
-              onChange={numValue => {
-                onChange(numValue)
-                updateRecipe({ mashVolume: numValue || null })
-              }}
-              error={!!errors.mashVolume}
-              errorMessage={errors.mashVolume?.message}
-            />
-          )}
-        />
-      </View>
+      {recipe.type === RecipeType.ALL_GRAIN && (
+        <View style={styles.section}>
+          <Text variant="caption" style={styles.calculatedHint}>
+            Volumes de água calculados automaticamente com base nos
+            fermentáveis, perfil de mostura e equipamento:
+          </Text>
+          <View style={styles.calculatedVolumes}>
+            {calculations.strikeWaterVolume != null && (
+              <Text variant="bodySmall" style={styles.calculatedVolume}>
+                Água de mostura: ~{calculations.strikeWaterVolume} L
+              </Text>
+            )}
+            {calculations.spargeWaterVolume != null && (
+              <Text variant="bodySmall" style={styles.calculatedVolume}>
+                Água de lavagem: ~{calculations.spargeWaterVolume} L
+              </Text>
+            )}
+            {calculations.totalWaterVolume != null && (
+              <Text variant="bodySmall" style={styles.calculatedVolume}>
+                Água total: ~{calculations.totalWaterVolume} L
+              </Text>
+            )}
+          </View>
+        </View>
+      )}
 
       <View style={styles.section}>
         <Controller
@@ -535,5 +575,15 @@ const styles = StyleSheet.create({
     marginTop: 4,
     color: COLORS.status.error,
     fontSize: 12,
+  },
+  calculatedHint: {
+    color: COLORS.text.secondary,
+    marginBottom: 8,
+  },
+  calculatedVolumes: {
+    gap: 4,
+  },
+  calculatedVolume: {
+    color: COLORS.text.primary,
   },
 })

@@ -1,7 +1,9 @@
 import { useInfiniteQuery } from '@tanstack/react-query'
+import { useCallback } from 'react'
 import { fermentablesApi } from '../api/fermentablesApi'
 import type { FermentableQueryParams } from '../interfaces/Fermentable'
 import { FermentableSortBy, SortOrder } from '../interfaces/Fermentable'
+import type { LoadOptionsResult } from '../../recipes/components/Select'
 import { useMemo } from 'react'
 import {
   addPublicFlag,
@@ -63,4 +65,32 @@ export const useFermentablesList = (
     ...query,
     fermentables,
   }
+}
+
+export const useFermentablesLoadOptions = () => {
+  return useCallback(
+    async ({
+      search,
+      page,
+    }: {
+      search: string
+      page: number
+    }): Promise<LoadOptionsResult> => {
+      const result = await fermentablesApi.findAllPaginated({
+        search: search || undefined,
+        page,
+        take: 20,
+        sortBy: FermentableSortBy.NAME,
+        order: SortOrder.ASC,
+      })
+      return {
+        options: result.data.map(f => ({
+          value: f.id,
+          label: f.name,
+        })),
+        hasMore: result.page < result.totalPages,
+      }
+    },
+    [],
+  )
 }

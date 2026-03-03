@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo } from 'react'
+import React, { useEffect } from 'react'
 import { View, StyleSheet, ScrollView } from 'react-native'
 import { useNavigate, useParams } from 'react-router'
 import { Controller, useForm } from 'react-hook-form'
@@ -22,9 +22,6 @@ import {
 } from '../hooks/useInventoryMutations'
 import { getInventoryItemById } from '../api/inventoryApi'
 import { useQuery } from '@tanstack/react-query'
-import { useFermentablesList } from '../../fermentable/hooks/useFermentables'
-import { useHopsList } from '../../hops/hooks/useHops'
-import { useYeastsList } from '../../yeast/hooks/useYeasts'
 import { CommonInventoryFields } from '../components/CommonInventoryFields'
 import { FermentableInventoryForm } from '../components/FermentableInventoryForm'
 import { HopInventoryForm } from '../components/HopInventoryForm'
@@ -233,37 +230,6 @@ export const SaveStock = () => {
     }
   }, [existingItem, reset, trigger])
 
-  const { fermentables } = useFermentablesList()
-  const { hops } = useHopsList()
-  const { yeasts } = useYeastsList()
-
-  const fermentableOptions = useMemo(
-    () =>
-      fermentables.map(f => ({
-        value: f.id,
-        label: f.name,
-      })),
-    [fermentables],
-  )
-
-  const hopOptions = useMemo(
-    () =>
-      hops.map(h => ({
-        value: h.id,
-        label: h.name,
-      })),
-    [hops],
-  )
-
-  const yeastOptions = useMemo(
-    () =>
-      yeasts.map(y => ({
-        value: y.id,
-        label: y.name,
-      })),
-    [yeasts],
-  )
-
   const onSubmit = (data: FormData) => {
     if (!data.type) return
 
@@ -382,27 +348,15 @@ export const SaveStock = () => {
           </View>
 
           {itemType === InventoryItemType.FERMENTABLE && (
-            <FermentableInventoryForm
-              control={control}
-              errors={errors}
-              fermentableOptions={fermentableOptions}
-            />
+            <FermentableInventoryForm control={control} errors={errors} />
           )}
 
           {itemType === InventoryItemType.HOP && (
-            <HopInventoryForm
-              control={control}
-              errors={errors}
-              hopOptions={hopOptions}
-            />
+            <HopInventoryForm control={control} errors={errors} />
           )}
 
           {itemType === InventoryItemType.YEAST && (
-            <YeastInventoryForm
-              control={control}
-              errors={errors}
-              yeastOptions={yeastOptions}
-            />
+            <YeastInventoryForm control={control} errors={errors} />
           )}
 
           {itemType && (

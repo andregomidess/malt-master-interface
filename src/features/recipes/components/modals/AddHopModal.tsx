@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react'
+import React, { useState } from 'react'
 import { View, StyleSheet } from 'react-native'
 import { RecipeModal } from '../Modal'
 import { InputText } from '../../../../shared/components/InputText'
@@ -6,7 +6,9 @@ import { Select } from '../Select'
 import { Button } from '../../../../shared/components/Button'
 import { Text } from '../../../../shared/components/Typography'
 import { COLORS } from '../../../../shared/styles/colors'
-import { useHopsList } from '../../../hops/hooks/useHops'
+import { useHopsLoadOptions } from '../../../hops/hooks/useHops'
+import { hopsApi } from '../../../hops/api/hopsApi'
+import type { Hop } from '../../../hops/interfaces/Hop'
 import { RecipeHop } from '../../context/RecipeContext'
 
 interface AddHopModalProps {
@@ -26,22 +28,18 @@ export const AddHopModal: React.FC<AddHopModalProps> = ({
   onClose,
   onAdd,
 }) => {
-  const { hops } = useHopsList()
+  const loadHopOptions = useHopsLoadOptions()
   const [selectedHopId, setSelectedHopId] = useState<string>('')
+  const [selectedHop, setSelectedHop] = useState<Hop | null>(null)
   const [amount, setAmount] = useState<string>('')
   const [boilTime, setBoilTime] = useState<string>('')
   const [stage, setStage] = useState<string>('boil')
 
-  const hopOptions = useMemo(() => {
-    return hops.map(h => ({
-      value: h.id,
-      label: h.name,
-    }))
-  }, [hops])
-
-  const selectedHop = useMemo(() => {
-    return hops.find(h => h.id === selectedHopId)
-  }, [hops, selectedHopId])
+  const handleSelectHop = async (id: string) => {
+    setSelectedHopId(id)
+    const hop = await hopsApi.findById(id)
+    setSelectedHop(hop)
+  }
 
   const handleAdd = () => {
     if (!selectedHopId || !amount) {
@@ -68,6 +66,7 @@ export const AddHopModal: React.FC<AddHopModalProps> = ({
 
     // Reset form
     setSelectedHopId('')
+    setSelectedHop(null)
     setAmount('')
     setBoilTime('')
     setStage('boil')
@@ -84,8 +83,10 @@ export const AddHopModal: React.FC<AddHopModalProps> = ({
             label="Lúpulo *"
             placeholder="Selecione um lúpulo"
             value={selectedHopId}
-            options={hopOptions}
-            onSelect={setSelectedHopId}
+            options={[]}
+            loadOptions={loadHopOptions}
+            selectedLabel={selectedHop?.name}
+            onSelect={handleSelectHop}
             error={!selectedHopId}
             errorMessage={!selectedHopId ? 'Selecione um lúpulo' : undefined}
           />
@@ -94,7 +95,7 @@ export const AddHopModal: React.FC<AddHopModalProps> = ({
         {selectedHop && (
           <View style={styles.info}>
             <Text variant="bodySmall" style={styles.infoText}>
-              Alfa Ácidos: {selectedHop.alphaAcids}%
+              Alfa Ácidos: {selectedHop.alphaAcids ?? '—'}%
             </Text>
           </View>
         )}

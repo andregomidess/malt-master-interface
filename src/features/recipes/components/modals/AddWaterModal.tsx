@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react'
+import React, { useState } from 'react'
 import { View, StyleSheet } from 'react-native'
 import { RecipeModal } from '../Modal'
 import { Select } from '../Select'
@@ -6,7 +6,9 @@ import { InputText } from '../../../../shared/components/InputText'
 import { Button } from '../../../../shared/components/Button'
 import { Text } from '../../../../shared/components/Typography'
 import { COLORS } from '../../../../shared/styles/colors'
-import { useWaterProfilesList } from '../../../water/hooks/useWaterProfiles'
+import { useWaterProfilesLoadOptions } from '../../../water/hooks/useWaterProfiles'
+import { waterProfilesApi } from '../../../water/api/waterProfilesApi'
+import type { WaterProfile } from '../../../water/interfaces/WaterProfile'
 import { RecipeWater } from '../../context/RecipeContext'
 
 interface AddWaterModalProps {
@@ -20,20 +22,16 @@ export const AddWaterModal: React.FC<AddWaterModalProps> = ({
   onClose,
   onAdd,
 }) => {
-  const { waterProfiles } = useWaterProfilesList()
+  const loadWaterOptions = useWaterProfilesLoadOptions()
   const [selectedWaterId, setSelectedWaterId] = useState<string>('')
+  const [selectedWater, setSelectedWater] = useState<WaterProfile | null>(null)
   const [amount, setAmount] = useState<string>('')
 
-  const waterOptions = useMemo(() => {
-    return waterProfiles.map(w => ({
-      value: w.id,
-      label: w.name,
-    }))
-  }, [waterProfiles])
-
-  const selectedWater = useMemo(() => {
-    return waterProfiles.find(w => w.id === selectedWaterId)
-  }, [waterProfiles, selectedWaterId])
+  const handleSelectWater = async (id: string) => {
+    setSelectedWaterId(id)
+    const water = await waterProfilesApi.findById(id)
+    setSelectedWater(water)
+  }
 
   const handleAdd = () => {
     if (!selectedWaterId || !amount) {
@@ -57,6 +55,7 @@ export const AddWaterModal: React.FC<AddWaterModalProps> = ({
 
     // Reset form
     setSelectedWaterId('')
+    setSelectedWater(null)
     setAmount('')
     onClose()
   }
@@ -71,8 +70,10 @@ export const AddWaterModal: React.FC<AddWaterModalProps> = ({
             label="Perfil de Água *"
             placeholder="Selecione um perfil de água"
             value={selectedWaterId}
-            options={waterOptions}
-            onSelect={setSelectedWaterId}
+            options={[]}
+            loadOptions={loadWaterOptions}
+            selectedLabel={selectedWater?.name}
+            onSelect={handleSelectWater}
             error={!selectedWaterId}
             errorMessage={
               !selectedWaterId ? 'Selecione um perfil de água' : undefined
@@ -83,7 +84,7 @@ export const AddWaterModal: React.FC<AddWaterModalProps> = ({
         {selectedWater && (
           <View style={styles.info}>
             <Text variant="bodySmall" style={styles.infoText}>
-              Origem: {selectedWater.origin || '—'}
+              Origem: {selectedWater.origin ?? '—'}
             </Text>
           </View>
         )}

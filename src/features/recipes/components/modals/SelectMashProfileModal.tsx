@@ -1,4 +1,4 @@
-import React, { useState, useMemo, useEffect } from 'react'
+import React, { useState, useEffect } from 'react'
 import { View, StyleSheet } from 'react-native'
 import { RecipeModal } from '../Modal'
 import { Select } from '../Select'
@@ -6,7 +6,7 @@ import { Button } from '../../../../shared/components/Button'
 import { Text } from '../../../../shared/components/Typography'
 import { COLORS } from '../../../../shared/styles/colors'
 import {
-  useMashProfiles,
+  useMashProfilesLoadOptions,
   useMashProfileById,
 } from '../../../profiles/hooks/useMashProfiles'
 import { RecipeMash } from '../../context/RecipeContext'
@@ -24,7 +24,7 @@ export const SelectMashProfileModal: React.FC<SelectMashProfileModalProps> = ({
   onSelect,
   currentMashProfileId,
 }) => {
-  const { data: mashProfiles } = useMashProfiles()
+  const loadMashOptions = useMashProfilesLoadOptions()
   const [selectedProfileId, setSelectedProfileId] = useState<string>(
     currentMashProfileId || '',
   )
@@ -38,14 +38,6 @@ export const SelectMashProfileModal: React.FC<SelectMashProfileModalProps> = ({
 
   const { data: selectedProfile } = useMashProfileById(selectedProfileId)
 
-  const mashProfileOptions = useMemo(() => {
-    if (!mashProfiles) return []
-    return mashProfiles.map(profile => ({
-      value: profile.id,
-      label: profile.name,
-    }))
-  }, [mashProfiles])
-
   const handleSelect = () => {
     if (!selectedProfileId || !selectedProfile) {
       return
@@ -57,6 +49,7 @@ export const SelectMashProfileModal: React.FC<SelectMashProfileModalProps> = ({
         id: selectedProfile.id,
         name: selectedProfile.name,
         estimatedEfficiency: selectedProfile.estimatedEfficiency,
+        mashThickness: selectedProfile.mashThickness ?? null,
       },
     })
 
@@ -85,7 +78,9 @@ export const SelectMashProfileModal: React.FC<SelectMashProfileModalProps> = ({
             label="Perfil de Mostura *"
             placeholder="Selecione um perfil"
             value={selectedProfileId}
-            options={mashProfileOptions}
+            options={[]}
+            loadOptions={loadMashOptions}
+            selectedLabel={selectedProfile?.name}
             onSelect={setSelectedProfileId}
             error={!selectedProfileId}
             errorMessage={

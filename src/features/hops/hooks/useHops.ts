@@ -1,7 +1,9 @@
 import { useInfiniteQuery } from '@tanstack/react-query'
+import { useCallback } from 'react'
 import { hopsApi } from '../api/hopsApi'
 import type { HopQueryParams } from '../interfaces/Hop'
 import { HopSortBy, SortOrder } from '../interfaces/Hop'
+import type { LoadOptionsResult } from '../../recipes/components/Select'
 import { useMemo } from 'react'
 import { addPublicFlag, HopWithPublicFlag } from '../interfaces/Hop'
 
@@ -58,4 +60,32 @@ export const useHopsList = (
     ...query,
     hops,
   }
+}
+
+export const useHopsLoadOptions = () => {
+  return useCallback(
+    async ({
+      search,
+      page,
+    }: {
+      search: string
+      page: number
+    }): Promise<LoadOptionsResult> => {
+      const result = await hopsApi.findAllPaginated({
+        search: search || undefined,
+        page,
+        take: 20,
+        sortBy: HopSortBy.NAME,
+        order: SortOrder.ASC,
+      })
+      return {
+        options: result.data.map(h => ({
+          value: h.id,
+          label: h.name,
+        })),
+        hasMore: result.page < result.totalPages,
+      }
+    },
+    [],
+  )
 }

@@ -60,10 +60,10 @@ export interface Batch {
   actualColor?: number | null
   actualAbv?: number | null
   actualEfficiency?: number | null
+  actualStrikeTemp?: number | null
   fermentationTemperature?: number | null
   fermentationTime?: number | null
   actualCarbonation?: number | null
-  // Valores medidos durante a sessão
   mashPh?: number | null
   preBoilGravity?: number | null
   preBoilVolume?: number | null

@@ -11,7 +11,6 @@ import { InputText } from '../../../../shared/components/InputText'
 import { DateInput } from '../../../../shared/components/DateInput'
 import { Select } from '../Select'
 import { Textarea } from '../Textarea'
-import { ImageUploader } from '../ImageUploader'
 import { useBeerStylesLoadOptions } from '../../../beer-style/hooks/useBeerStyles'
 import { beerStylesApi } from '../../../beer-style/api/beerStylesApi'
 import { useEquipments } from '../../../equipment/hooks/useEquipments'
@@ -165,25 +164,6 @@ export const BasicTab: React.FC<BasicTabProps> = ({
 
   return (
     <ScrollView style={styles.container} showsVerticalScrollIndicator={false}>
-      <View style={styles.section}>
-        <Text variant="body" style={styles.sectionTitle}>
-          Imagem da Receita
-        </Text>
-        <Controller
-          control={control}
-          name="imageUrl"
-          render={({ field: { value, onChange } }) => (
-            <ImageUploader
-              imageUrl={value || null}
-              onImageSelect={imageUrl => {
-                onChange(imageUrl)
-                updateRecipe({ imageUrl })
-              }}
-            />
-          )}
-        />
-      </View>
-
       <View style={styles.section}>
         <Controller
           control={control}

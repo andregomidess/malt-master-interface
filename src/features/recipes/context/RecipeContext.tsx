@@ -144,7 +144,7 @@ interface RecipeContextType {
 const initialState: RecipeFormState = {
   name: '',
   beerStyle: null,
-  type: '',
+  type: RecipeType.ALL_GRAIN,
   equipment: null,
   finalVolume: null,
   mashVolume: null,
@@ -290,7 +290,7 @@ export const RecipeProvider: React.FC<{ children: React.ReactNode }> = ({
       })),
       waters: recipe.waters.map(w => ({
         waterProfile: w.waterId,
-        volume: w.amount,
+        volume: w.amount > 0 ? w.amount : 0,
       })),
       mash: recipe.mash?.mashProfileId
         ? {

@@ -2,7 +2,6 @@ import React, { useState } from 'react'
 import { View, StyleSheet } from 'react-native'
 import { RecipeModal } from '../Modal'
 import { Select } from '../Select'
-import { InputText } from '../../../../shared/components/InputText'
 import { Button } from '../../../../shared/components/Button'
 import { Text } from '../../../../shared/components/Typography'
 import { COLORS } from '../../../../shared/styles/colors'
@@ -25,7 +24,6 @@ export const AddWaterModal: React.FC<AddWaterModalProps> = ({
   const loadWaterOptions = useWaterProfilesLoadOptions()
   const [selectedWaterId, setSelectedWaterId] = useState<string>('')
   const [selectedWater, setSelectedWater] = useState<WaterProfile | null>(null)
-  const [amount, setAmount] = useState<string>('')
 
   const handleSelectWater = async (id: string) => {
     setSelectedWaterId(id)
@@ -34,18 +32,11 @@ export const AddWaterModal: React.FC<AddWaterModalProps> = ({
   }
 
   const handleAdd = () => {
-    if (!selectedWaterId || !amount) {
-      return
-    }
-
-    const amountNum = parseFloat(amount)
-    if (isNaN(amountNum) || amountNum <= 0) {
-      return
-    }
+    if (!selectedWaterId) return
 
     onAdd({
       waterId: selectedWaterId,
-      amount: amountNum,
+      amount: 0,
       water: selectedWater
         ? {
             name: selectedWater.name,
@@ -53,14 +44,10 @@ export const AddWaterModal: React.FC<AddWaterModalProps> = ({
         : undefined,
     })
 
-    // Reset form
     setSelectedWaterId('')
     setSelectedWater(null)
-    setAmount('')
     onClose()
   }
-
-  const isValid = selectedWaterId && amount && parseFloat(amount) > 0
 
   return (
     <RecipeModal visible={visible} onClose={onClose} title="Adicionar Água">
@@ -86,24 +73,12 @@ export const AddWaterModal: React.FC<AddWaterModalProps> = ({
             <Text variant="bodySmall" style={styles.infoText}>
               Origem: {selectedWater.origin ?? '—'}
             </Text>
+            <Text variant="caption" style={styles.hint}>
+              O volume será calculado automaticamente com base nos fermentáveis,
+              perfil de mostura e equipamento.
+            </Text>
           </View>
         )}
-
-        <View style={styles.field}>
-          <InputText
-            label="Quantidade (L) *"
-            placeholder="Ex: 20"
-            value={amount}
-            onChangeText={setAmount}
-            keyboardType="numeric"
-            error={!amount || parseFloat(amount) <= 0}
-            errorMessage={
-              !amount || parseFloat(amount) <= 0
-                ? 'Quantidade deve ser maior que zero'
-                : undefined
-            }
-          />
-        </View>
 
         <View style={styles.actions}>
           <Button variant="ghost" size="medium" onPress={onClose}>
@@ -113,7 +88,7 @@ export const AddWaterModal: React.FC<AddWaterModalProps> = ({
             variant="primary"
             size="medium"
             onPress={handleAdd}
-            disabled={!isValid}
+            disabled={!selectedWaterId}
           >
             Adicionar
           </Button>
@@ -138,6 +113,11 @@ const styles = StyleSheet.create({
   },
   infoText: {
     color: COLORS.text.secondary,
+  },
+  hint: {
+    color: COLORS.text.secondary,
+    marginTop: 8,
+    fontStyle: 'italic',
   },
   actions: {
     flexDirection: 'row',

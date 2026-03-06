@@ -20,6 +20,7 @@ interface ImageUploaderProps {
   imageUrl?: string | null
   onImageSelect: (imageUrl: string) => void
   containerStyle?: ViewStyle
+  trigger?: (onPress: () => void) => React.ReactNode
 }
 
 const MAX_BASE64_SIZE = 80 * 1024
@@ -94,6 +95,7 @@ export const ImageUploader: React.FC<ImageUploaderProps> = ({
   imageUrl,
   onImageSelect,
   containerStyle,
+  trigger,
 }) => {
   const fileInputRef = useRef<HTMLInputElement>(null)
 
@@ -163,6 +165,21 @@ export const ImageUploader: React.FC<ImageUploaderProps> = ({
 
   const handleDragOver = (e: React.DragEvent) => {
     e.preventDefault()
+  }
+
+  if (trigger) {
+    return (
+      <View style={[styles.container, containerStyle]}>
+        {trigger(handleClick)}
+        <input
+          ref={fileInputRef}
+          type="file"
+          accept="image/*"
+          onChange={handleFileSelect}
+          style={{ display: 'none' }}
+        />
+      </View>
+    )
   }
 
   return (

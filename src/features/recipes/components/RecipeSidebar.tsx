@@ -20,6 +20,7 @@ import {
   BiDroplet,
   BiCheckCircle,
   BiErrorCircle,
+  BiImage,
 } from 'react-icons/bi'
 import { FaFlask, FaLeaf } from 'react-icons/fa'
 import { BeerStyle as FullBeerStyle } from '../../beer-style/interfaces/BeerStyle'
@@ -29,6 +30,7 @@ import {
   StyleValidationResult,
 } from '../utils/validateStyleRanges'
 import { StyleRangeBar } from './StyleRangeBar'
+import { ImageUploader } from './ImageUploader'
 
 interface CollapsibleSectionProps {
   title: string
@@ -166,7 +168,7 @@ const StatCard: React.FC<StatCardProps> = ({
 }
 
 export const RecipeSidebar: React.FC = () => {
-  const { recipe } = useRecipe()
+  const { recipe, updateRecipe } = useRecipe()
   const calculations = useRecipeCalculations()
 
   const hasWaterVolumes =
@@ -241,14 +243,29 @@ export const RecipeSidebar: React.FC = () => {
   return (
     <ScrollView style={styles.container} showsVerticalScrollIndicator={false}>
       <Card style={styles.previewCard}>
-        {recipe.imageUrl ? (
-          <Image
-            source={{ uri: recipe.imageUrl }}
-            style={styles.previewImage}
-          />
-        ) : (
-          <View style={styles.previewImagePlaceholder} />
-        )}
+        <ImageUploader
+          imageUrl={recipe.imageUrl}
+          onImageSelect={imageUrl => updateRecipe({ imageUrl })}
+          containerStyle={styles.previewImageUploader}
+          trigger={onPress => (
+            <TouchableOpacity
+              onPress={onPress}
+              activeOpacity={0.8}
+              style={styles.previewImageTouchable}
+            >
+              {recipe.imageUrl ? (
+                <Image
+                  source={{ uri: recipe.imageUrl }}
+                  style={styles.previewImage}
+                />
+              ) : (
+                <View style={styles.previewImagePlaceholder}>
+                  <BiImage size={24} color={COLORS.neutral.white} />
+                </View>
+              )}
+            </TouchableOpacity>
+          )}
+        />
         <Heading variant="h5" style={styles.previewName}>
           {recipe.name || 'Nome da Receita'}
         </Heading>
@@ -403,13 +420,21 @@ export const RecipeSidebar: React.FC = () => {
             </Text>
           ) : (
             <View style={styles.ingredientList}>
-              {recipe.waters.map(w => (
-                <View key={w.id} style={styles.ingredientItem}>
-                  <Text variant="bodySmall">
-                    {w.water?.name || 'Água'} - {w.amount} L
-                  </Text>
-                </View>
-              ))}
+              {recipe.waters.map(w => {
+                const vol =
+                  w.amount > 0
+                    ? `${w.amount} L`
+                    : calculations.totalWaterVolume != null
+                      ? `~${calculations.totalWaterVolume} L (calculado)`
+                      : '—'
+                return (
+                  <View key={w.id} style={styles.ingredientItem}>
+                    <Text variant="bodySmall">
+                      {w.water?.name || 'Água'} - {vol}
+                    </Text>
+                  </View>
+                )
+              })}
             </View>
           )}
         </CollapsibleSection>
@@ -468,11 +493,17 @@ const styles = StyleSheet.create({
     padding: 16,
     marginBottom: 24,
   },
+  previewImageUploader: {
+    alignItems: 'center',
+  },
+  previewImageTouchable: {
+    marginBottom: 12,
+    alignSelf: 'center',
+  },
   previewImage: {
     width: 60,
     height: 60,
     borderRadius: 60,
-    marginBottom: 12,
   },
   previewImagePlaceholder: {
     width: 60,
@@ -481,7 +512,6 @@ const styles = StyleSheet.create({
     backgroundColor: COLORS.brand.primary,
     alignItems: 'center',
     justifyContent: 'center',
-    marginBottom: 12,
   },
   previewName: {
     textAlign: 'center',

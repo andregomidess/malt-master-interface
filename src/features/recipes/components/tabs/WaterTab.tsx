@@ -1,14 +1,34 @@
 import React, { useState } from 'react'
 import { View, StyleSheet, ScrollView } from 'react-native'
 import { useRecipe } from '../../context/RecipeContext'
+import { useRecipeCalculations } from '../../hooks/useRecipeCalculations'
 import { Text } from '../../../../shared/components/Typography'
 import { Button } from '../../../../shared/components/Button'
 import { COLORS } from '../../../../shared/styles/colors'
 import { BiPlus } from 'react-icons/bi'
 import { AddWaterModal } from '../modals/AddWaterModal'
 
+function getDisplayVolume(
+  index: number,
+  total: number,
+  strikeWater: number | null,
+  spargeWater: number | null,
+  totalWater: number | null,
+  manualAmount: number,
+): string {
+  if (manualAmount > 0) return `${manualAmount} L`
+  if (totalWater == null) return '—'
+  if (total === 1) return `~${totalWater} L (calculado)`
+  if (total === 2) {
+    if (index === 0 && strikeWater != null) return `~${strikeWater} L (mostura)`
+    if (index === 1 && spargeWater != null) return `~${spargeWater} L (lavagem)`
+  }
+  return `~${totalWater} L`
+}
+
 export const WaterTab: React.FC = () => {
   const { recipe, addWater, removeWater } = useRecipe()
+  const calculations = useRecipeCalculations()
   const [isModalVisible, setIsModalVisible] = useState(false)
 
   const handleAddWater = () => {
@@ -39,14 +59,21 @@ export const WaterTab: React.FC = () => {
         </View>
       ) : (
         <View style={styles.list}>
-          {recipe.waters.map(water => (
+          {recipe.waters.map((water, index) => (
             <View key={water.id} style={styles.item}>
               <View style={styles.itemContent}>
                 <Text variant="body" style={styles.itemName}>
                   {water.water?.name || 'Água'}
                 </Text>
                 <Text variant="bodySmall" style={styles.itemAmount}>
-                  {water.amount} L
+                  {getDisplayVolume(
+                    index,
+                    recipe.waters.length,
+                    calculations.strikeWaterVolume ?? null,
+                    calculations.spargeWaterVolume ?? null,
+                    calculations.totalWaterVolume ?? null,
+                    water.amount,
+                  )}
                 </Text>
               </View>
               <Button

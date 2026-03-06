@@ -254,7 +254,7 @@ export function scaleRecipeForNewEquipment(
 
   const waters = (recipe.waters ?? []).map((w: RecipeWater) => ({
     ...w,
-    amount: round(safeNum(w.amount, 0) * factorVolume, 2),
+    amount: w.amount === 0 ? 0 : round(safeNum(w.amount, 0) * factorVolume, 2),
   }))
 
   const boilTimeMin = safeNum(recipe.boilTime, 60)

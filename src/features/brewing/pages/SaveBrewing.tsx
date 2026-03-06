@@ -14,6 +14,7 @@ import { Layout } from '../../../shared/components/Layout'
 import { Heading, Text } from '../../../shared/components/Typography'
 import { Card } from '../../../shared/components/Card'
 import { InputText } from '../../../shared/components/InputText'
+import { DecimalInput } from '../../../shared/components/DecimalInput'
 import { DateInput } from '../../../shared/components/DateInput'
 import { Button } from '../../../shared/components/Button'
 import { Select } from '../../recipes/components/Select'
@@ -261,6 +262,9 @@ export const SaveBrewing = () => {
           if (batch.preBoilGravity != null) {
             setValue('actualPreBoilGravity', Number(batch.preBoilGravity))
           }
+          if (batch.actualStrikeTemp != null) {
+            setValue('actualStrikeTemp', Number(batch.actualStrikeTemp))
+          }
         })
         .catch(error => {
           console.error('Erro ao carregar batch:', error)
@@ -397,9 +401,10 @@ export const SaveBrewing = () => {
       batchCode: data.batchCode || null,
       brewDate: data.brewDate || null,
       status: data.status,
-      plannedVolume: data.plannedVolume || null,
-      actualOriginalGravity: data.actualOriginalGravity || null,
-      actualEfficiency: data.actualEfficiency || null,
+      plannedVolume: data.plannedVolume ?? null,
+      actualOriginalGravity: data.actualOriginalGravity ?? null,
+      actualEfficiency: data.actualEfficiency ?? null,
+      actualStrikeTemp: data.actualStrikeTemp ?? null,
       preBoilVolume: data.actualPreBoilVolume ?? null,
       preBoilGravity: data.actualPreBoilGravity ?? null,
       observations: data.observations || null,
@@ -565,15 +570,11 @@ export const SaveBrewing = () => {
                   control={control}
                   name="plannedVolume"
                   render={({ field: { value, onChange } }) => (
-                    <InputText
+                    <DecimalInput
                       label="Volume Planejado (L)"
                       placeholder="Ex: 20"
-                      value={value?.toString() || ''}
-                      onChangeText={val => {
-                        const num = parseFloat(val)
-                        onChange(isNaN(num) ? undefined : num)
-                      }}
-                      keyboardType="numeric"
+                      value={value}
+                      onChange={onChange}
                     />
                   )}
                 />
@@ -848,15 +849,11 @@ export const SaveBrewing = () => {
                   control={control}
                   name="spargeVolume"
                   render={({ field: { value, onChange } }) => (
-                    <InputText
+                    <DecimalInput
                       label="Volume de Água de Sparge (L)"
                       placeholder={calculations.spargeVolume}
-                      value={value?.toString() || calculations.spargeVolume}
-                      onChangeText={val => {
-                        const num = parseFloat(val)
-                        onChange(isNaN(num) ? undefined : num)
-                      }}
-                      keyboardType="numeric"
+                      value={value ?? undefined}
+                      onChange={val => onChange(val ?? undefined)}
                     />
                   )}
                 />
@@ -866,15 +863,11 @@ export const SaveBrewing = () => {
                   control={control}
                   name="spargeTemperature"
                   render={({ field: { value, onChange } }) => (
-                    <InputText
+                    <DecimalInput
                       label="Temperatura da Água de Sparge (°C)"
                       placeholder="78"
-                      value={value?.toString() || ''}
-                      onChangeText={val => {
-                        const num = parseFloat(val)
-                        onChange(isNaN(num) ? 78 : num)
-                      }}
-                      keyboardType="numeric"
+                      value={value ?? undefined}
+                      onChange={val => onChange(val ?? undefined)}
                     />
                   )}
                 />
@@ -892,15 +885,11 @@ export const SaveBrewing = () => {
                   control={control}
                   name="actualStrikeTemp"
                   render={({ field: { value, onChange } }) => (
-                    <InputText
+                    <DecimalInput
                       label="Temperatura Real de Infusão (°C)"
                       placeholder={calculations.strikeTemp}
-                      value={value?.toString() || ''}
-                      onChangeText={val => {
-                        const num = parseFloat(val)
-                        onChange(isNaN(num) ? undefined : num)
-                      }}
-                      keyboardType="numeric"
+                      value={value}
+                      onChange={onChange}
                     />
                   )}
                 />
@@ -911,15 +900,11 @@ export const SaveBrewing = () => {
                     control={control}
                     name="actualPreBoilVolume"
                     render={({ field: { value, onChange } }) => (
-                      <InputText
+                      <DecimalInput
                         label="Volume Real Pré-Fervura (L)"
                         placeholder={calculations.preBoilVolume}
-                        value={value?.toString() || ''}
-                        onChangeText={val => {
-                          const num = parseFloat(val)
-                          onChange(isNaN(num) ? undefined : num)
-                        }}
-                        keyboardType="numeric"
+                        value={value}
+                        onChange={onChange}
                       />
                     )}
                   />
@@ -929,15 +914,11 @@ export const SaveBrewing = () => {
                     control={control}
                     name="actualPreBoilGravity"
                     render={({ field: { value, onChange } }) => (
-                      <InputText
+                      <DecimalInput
                         label="Densidade Real Pré-Fervura"
                         placeholder="1.045"
-                        value={value?.toString() || ''}
-                        onChangeText={val => {
-                          const num = parseFloat(val)
-                          onChange(isNaN(num) ? undefined : num)
-                        }}
-                        keyboardType="numeric"
+                        value={value}
+                        onChange={onChange}
                       />
                     )}
                   />
@@ -949,15 +930,11 @@ export const SaveBrewing = () => {
                     control={control}
                     name="actualOriginalGravity"
                     render={({ field: { value, onChange } }) => (
-                      <InputText
+                      <DecimalInput
                         label="OG Real"
                         placeholder="1.050"
-                        value={value?.toString() || ''}
-                        onChangeText={val => {
-                          const num = parseFloat(val)
-                          onChange(isNaN(num) ? undefined : num)
-                        }}
-                        keyboardType="numeric"
+                        value={value}
+                        onChange={onChange}
                       />
                     )}
                   />
@@ -967,15 +944,11 @@ export const SaveBrewing = () => {
                     control={control}
                     name="actualEfficiency"
                     render={({ field: { value, onChange } }) => (
-                      <InputText
+                      <DecimalInput
                         label="Eficiência Real (%)"
                         placeholder="75"
-                        value={value?.toString() || ''}
-                        onChangeText={val => {
-                          const num = parseFloat(val)
-                          onChange(isNaN(num) ? undefined : num)
-                        }}
-                        keyboardType="numeric"
+                        value={value}
+                        onChange={onChange}
                       />
                     )}
                   />

@@ -45,7 +45,6 @@ export const AddYeastModal: React.FC<AddYeastModalProps> = ({
       return
     }
 
-    // Converter atenuação para número se necessário
     let attenuationNum: number | undefined = undefined
     if (
       selectedYeast?.attenuation !== undefined &&
@@ -56,7 +55,6 @@ export const AddYeastModal: React.FC<AddYeastModalProps> = ({
       } else {
         attenuationNum = selectedYeast.attenuation
       }
-      // Garantir que não seja NaN
       if (isNaN(attenuationNum)) {
         attenuationNum = undefined
       }
@@ -74,7 +72,6 @@ export const AddYeastModal: React.FC<AddYeastModalProps> = ({
         : undefined,
     })
 
-    // Reset form
     setSelectedYeastId('')
     setSelectedYeast(null)
     setAmount('')
@@ -114,8 +111,8 @@ export const AddYeastModal: React.FC<AddYeastModalProps> = ({
 
         <View style={styles.field}>
           <InputText
-            label="Quantidade (g) - Opcional"
-            placeholder="Ex: 11"
+            label="Quantidade (pacotes) - Opcional"
+            placeholder="Ex: 1"
             value={amount}
             onChangeText={setAmount}
             keyboardType="numeric"

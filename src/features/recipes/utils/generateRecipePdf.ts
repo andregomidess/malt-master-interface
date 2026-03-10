@@ -434,39 +434,6 @@ export async function generateRecipePdf(data: RecipePdfData) {
 
   yPos = Math.max(leftY, rightY) + SPACING.sectionGap
 
-  yPos = addSectionHeader('Medidas', margin, yPos, pageWidth - 2 * margin)
-
-  const measures = [
-    'pH da Mostura:',
-    'Volume da Fervura:',
-    'Densidade Pré Fervura:',
-    'Volume Pós Fervura:',
-    'Densidade Original:',
-    'Água no Fermentador:',
-    'Volume do Fermentador:',
-    'Densidade Final:',
-    'Volume de Engarrafamento:',
-  ]
-
-  measures.forEach(measure => {
-    yPos = addText(
-      measure,
-      margin,
-      yPos,
-      9,
-      false,
-      colors.textLight,
-      pageWidth - 2 * margin,
-    )
-  })
-
-  yPos += SPACING.sectionGap
-
-  if (yPos > pageHeight - 60) {
-    doc.addPage()
-    yPos = margin
-  }
-
   if (recipe.fermentables.length > 0) {
     yPos = addSectionHeader(
       'Fermentáveis',
@@ -689,7 +656,7 @@ export async function generateRecipePdf(data: RecipePdfData) {
           : y.amount
             ? parseFloat(String(y.amount))
             : null
-      const amount = amountNum ? `${amountNum} pct` : '1 pct'
+      const amount = amountNum ? `${amountNum} pac.` : '1 pac.'
       yPos = addText(
         `${amount} - ${name}`,
         margin,

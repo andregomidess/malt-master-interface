@@ -48,7 +48,8 @@ export const YeastsTab: React.FC = () => {
                 <View style={styles.itemDetails}>
                   {yeast.amount && (
                     <Text variant="bodySmall" style={styles.itemAmount}>
-                      {yeast.amount} g
+                      {yeast.amount}{' '}
+                      {Number(yeast.amount) === 1 ? 'pacote' : 'pacotes'}
                     </Text>
                   )}
                   {yeast.stage && (

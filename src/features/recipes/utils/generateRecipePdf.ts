@@ -19,6 +19,8 @@ interface RecipeCalculations {
   strikeWaterVolume?: number | null
   spargeWaterVolume?: number | null
   totalWaterVolume?: number | null
+  plannedMashWater?: number | null
+  plannedSpargeWater?: number | null
 }
 
 interface RecipePdfData {
@@ -671,26 +673,6 @@ export async function generateRecipePdf(data: RecipePdfData) {
   }
 
   yPos = addSpace(yPos, SPACING.betweenItems)
-  yPos = addText(
-    'Células',
-    margin,
-    yPos,
-    11,
-    true,
-    colors.primary,
-    pageWidth - 2 * margin,
-  )
-  yPos += SPACING.afterHeader
-  yPos = addText(
-    '7 milhões células / ml',
-    margin,
-    yPos,
-    9,
-    false,
-    colors.text,
-    pageWidth - 2 * margin,
-  )
-  yPos += SPACING.subsectionGap
 
   if (recipe.notes) {
     yPos = addSpace(yPos, SPACING.betweenItems)

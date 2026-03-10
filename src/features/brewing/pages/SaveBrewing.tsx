@@ -115,7 +115,7 @@ export const SaveBrewing = () => {
   const recipeIdFromQuery = searchParams.get('recipeId')
 
   const [activeSection, setActiveSection] = useState<
-    'basic' | 'mash' | 'sparge' | 'brewday'
+    'basic' | 'mash' | 'sparge'
   >('basic')
   const [showCalculations, setShowCalculations] = useState(false)
   const lastLoadedRecipeIdRef = useRef<string | null>(null)
@@ -445,7 +445,6 @@ export const SaveBrewing = () => {
             { key: 'basic', label: 'Básico' },
             { key: 'mash', label: 'Mostura' },
             { key: 'sparge', label: 'Sparging' },
-            { key: 'brewday', label: 'Brew Day' },
           ].map(section => (
             <TouchableOpacity
               key={section.key}
@@ -868,104 +867,6 @@ export const SaveBrewing = () => {
                       placeholder="78"
                       value={value ?? undefined}
                       onChange={val => onChange(val ?? undefined)}
-                    />
-                  )}
-                />
-              </View>
-            </View>
-          )}
-
-          {activeSection === 'brewday' && (
-            <View style={styles.section}>
-              <Text style={styles.sectionTitle}>
-                Acompanhamento do Dia da Brassagem
-              </Text>
-              <View style={styles.field}>
-                <Controller
-                  control={control}
-                  name="actualStrikeTemp"
-                  render={({ field: { value, onChange } }) => (
-                    <DecimalInput
-                      label="Temperatura Real de Infusão (°C)"
-                      placeholder={calculations.strikeTemp}
-                      value={value}
-                      onChange={onChange}
-                    />
-                  )}
-                />
-              </View>
-              <View style={styles.row}>
-                <View style={[styles.field, styles.halfWidth]}>
-                  <Controller
-                    control={control}
-                    name="actualPreBoilVolume"
-                    render={({ field: { value, onChange } }) => (
-                      <DecimalInput
-                        label="Volume Real Pré-Fervura (L)"
-                        placeholder={calculations.preBoilVolume}
-                        value={value}
-                        onChange={onChange}
-                      />
-                    )}
-                  />
-                </View>
-                <View style={[styles.field, styles.halfWidth]}>
-                  <Controller
-                    control={control}
-                    name="actualPreBoilGravity"
-                    render={({ field: { value, onChange } }) => (
-                      <DecimalInput
-                        label="Densidade Real Pré-Fervura"
-                        placeholder="1.045"
-                        value={value}
-                        onChange={onChange}
-                      />
-                    )}
-                  />
-                </View>
-              </View>
-              <View style={styles.row}>
-                <View style={[styles.field, styles.halfWidth]}>
-                  <Controller
-                    control={control}
-                    name="actualOriginalGravity"
-                    render={({ field: { value, onChange } }) => (
-                      <DecimalInput
-                        label="OG Real"
-                        placeholder="1.050"
-                        value={value}
-                        onChange={onChange}
-                      />
-                    )}
-                  />
-                </View>
-                <View style={[styles.field, styles.halfWidth]}>
-                  <Controller
-                    control={control}
-                    name="actualEfficiency"
-                    render={({ field: { value, onChange } }) => (
-                      <DecimalInput
-                        label="Eficiência Real (%)"
-                        placeholder="75"
-                        value={value}
-                        onChange={onChange}
-                      />
-                    )}
-                  />
-                </View>
-              </View>
-              <View style={styles.field}>
-                <Controller
-                  control={control}
-                  name="observations"
-                  render={({ field: { value, onChange } }) => (
-                    <InputText
-                      label="Observações e Notas"
-                      placeholder="Anotações sobre o lote..."
-                      value={value || ''}
-                      onChangeText={onChange}
-                      multiline
-                      numberOfLines={4}
                     />
                   )}
                 />

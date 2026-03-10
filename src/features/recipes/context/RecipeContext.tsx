@@ -5,6 +5,8 @@ import {
   RecipeType,
   BeerStyle,
   Equipment,
+  FermentableUsageType,
+  WaterUsageType,
 } from '../interfaces/Recipe'
 import {
   FermentableForm,
@@ -15,6 +17,7 @@ export interface RecipeFermentable {
   id?: string
   fermentableId: string
   amount: number
+  usageType?: FermentableUsageType | null
   fermentable?: {
     name: string
     type?: FermentableType
@@ -31,6 +34,8 @@ export interface RecipeHop {
   amount: number
   boilTime?: number
   stage?: 'boil' | 'whirlpool' | 'dry_hop'
+  contactTime?: number | null
+  temperature?: number | null
   hop?: {
     name: string
     alphaAcids?: number
@@ -52,6 +57,7 @@ export interface RecipeWater {
   id?: string
   waterId: string
   amount: number
+  usageType?: WaterUsageType | null
   water?: {
     name: string
   }
@@ -123,6 +129,10 @@ export interface RecipeFormState {
   brewhouseEfficiency: number | null
   preBoilVolume: number | null
   postBoilVolume: number | null
+  /** v2 */
+  targetVolume?: number | null
+  volumeIntoFermenter?: number | null
+  packagedVolume?: number | null
 }
 
 interface RecipeContextType {
@@ -169,6 +179,9 @@ const initialState: RecipeFormState = {
   brewhouseEfficiency: null,
   preBoilVolume: null,
   postBoilVolume: null,
+  targetVolume: null,
+  volumeIntoFermenter: null,
+  packagedVolume: null,
 }
 
 const RecipeContext = createContext<RecipeContextType | undefined>(undefined)
@@ -255,6 +268,9 @@ export const RecipeProvider: React.FC<{ children: React.ReactNode }> = ({
       notes: recipe.notes || null,
       type: recipe.type as RecipeType,
       finalVolume: recipe.finalVolume ?? undefined,
+      targetVolume: recipe.targetVolume ?? undefined,
+      volumeIntoFermenter: recipe.volumeIntoFermenter ?? undefined,
+      packagedVolume: recipe.packagedVolume ?? undefined,
       mashVolume: recipe.mashVolume ?? undefined,
       boilTime: recipe.boilTime ?? undefined,
       originalGravity: recipe.originalGravity ?? undefined,
@@ -276,6 +292,7 @@ export const RecipeProvider: React.FC<{ children: React.ReactNode }> = ({
       fermentables: recipe.fermentables.map(f => ({
         fermentable: f.fermentableId,
         amount: f.amount,
+        usageType: f.usageType ?? undefined,
       })),
       hops: recipe.hops.map(h => ({
         hop: h.hopId,

@@ -10,6 +10,7 @@ import { useFermentablesLoadOptions } from '../../../fermentable/hooks/useFermen
 import { fermentablesApi } from '../../../fermentable/api/fermentablesApi'
 import type { Fermentable } from '../../../fermentable/interfaces/Fermentable'
 import { RecipeFermentable } from '../../context/RecipeContext'
+import { FermentableUsageType } from '../../interfaces/Recipe'
 
 interface AddFermentableModalProps {
   visible: boolean
@@ -27,6 +28,17 @@ export const AddFermentableModal: React.FC<AddFermentableModalProps> = ({
   const [selectedFermentable, setSelectedFermentable] =
     useState<Fermentable | null>(null)
   const [amount, setAmount] = useState<string>('')
+  const [usageType, setUsageType] = useState<FermentableUsageType>(
+    FermentableUsageType.MASH,
+  )
+
+  const usageTypeOptions = [
+    { value: FermentableUsageType.MASH, label: 'Mostura' },
+    { value: FermentableUsageType.STEEP, label: 'Steep' },
+    { value: FermentableUsageType.BOIL, label: 'Fervura' },
+    { value: FermentableUsageType.LATE_BOIL, label: 'Fervura tardia' },
+    { value: FermentableUsageType.FERMENTATION, label: 'Fermentação' },
+  ]
 
   const handleSelectFermentable = async (id: string) => {
     setSelectedFermentableId(id)
@@ -47,6 +59,7 @@ export const AddFermentableModal: React.FC<AddFermentableModalProps> = ({
     onAdd({
       fermentableId: selectedFermentableId,
       amount: amountNum,
+      usageType,
       fermentable: selectedFermentable
         ? {
             name: selectedFermentable.name,
@@ -63,6 +76,7 @@ export const AddFermentableModal: React.FC<AddFermentableModalProps> = ({
     setSelectedFermentableId('')
     setSelectedFermentable(null)
     setAmount('')
+    setUsageType(FermentableUsageType.MASH)
     onClose()
   }
 
@@ -99,6 +113,16 @@ export const AddFermentableModal: React.FC<AddFermentableModalProps> = ({
             </Text>
           </View>
         )}
+
+        <View style={styles.field}>
+          <Select
+            label="Uso"
+            placeholder="Selecione o uso"
+            value={usageType}
+            options={usageTypeOptions}
+            onSelect={v => setUsageType(v as FermentableUsageType)}
+          />
+        </View>
 
         <View style={styles.field}>
           <InputText

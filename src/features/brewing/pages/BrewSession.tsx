@@ -190,6 +190,9 @@ export function BrewSession({ batchId }: BrewSessionProps) {
   const isStepCompleted = activeStep ? completedSteps.has(activeStep.id) : false
 
   const handleToggleStepComplete = (stepId: string) => {
+    const isMarkingComplete = !completedSteps.has(stepId)
+    const isActiveStep = activeStep?.id === stepId
+
     setCompletedSteps(prev => {
       const next = new Set(prev)
       if (next.has(stepId)) {
@@ -199,6 +202,15 @@ export function BrewSession({ batchId }: BrewSessionProps) {
       }
       return next
     })
+
+    // Ao marcar a etapa ativa como concluída, avança para a próxima (timer atualiza)
+    if (
+      isMarkingComplete &&
+      isActiveStep &&
+      activeStepIndex < currentSteps.length - 1
+    ) {
+      setActiveStepIndex(prev => prev + 1)
+    }
   }
 
   const handleNextStep = () => {
@@ -306,14 +318,31 @@ export function BrewSession({ batchId }: BrewSessionProps) {
       name: detail.batch.name || null,
       batchCode: detail.batch.batchCode || null,
       brewDate: detail.batch.brewDate || null,
+      packagingDate:
+        finalValues.packagingDate ?? detail.batch.packagingDate ?? null,
+      readyDate: finalValues.readyDate ?? detail.batch.readyDate ?? null,
       status: detail.batch.status,
       plannedVolume: toNumberOrNull(detail.batch.plannedVolume),
+      finalVolume: toNumberOrNull(
+        finalValues.finalVolume ?? detail.batch.finalVolume,
+      ),
       ...(measuredValues.postBoilGravity && {
         actualOriginalGravity: measuredValues.postBoilGravity,
       }),
       actualFinalGravity: toNumberOrNull(measuredValues.actualFinalGravity),
       actualAbv: toNumberOrNull(finalValues.actualAbv),
+      actualIbu: toNumberOrNull(
+        finalValues.actualIbu ?? detail.batch.actualIbu,
+      ),
+      actualColor: toNumberOrNull(
+        finalValues.actualColor ?? detail.batch.actualColor,
+      ),
+      actualCarbonation: toNumberOrNull(finalValues.actualCarbonation),
       actualEfficiency: toNumberOrNull(detail.batch.actualEfficiency),
+      fermentationTemperature: toNumberOrNull(
+        finalValues.fermentationTemperature,
+      ),
+      fermentationTime: toNumberOrNull(finalValues.fermentationTime),
       // Valores medidos durante a sessão
       mashPh: toNumberOrNull(measuredValues.mashPh),
       preBoilGravity: toNumberOrNull(measuredValues.preBoilGravity),
@@ -1237,6 +1266,16 @@ export function BrewSession({ batchId }: BrewSessionProps) {
 
                 <View style={styles.completeButtonContainer}>
                   <Button
+                    variant="outline"
+                    size="medium"
+                    onPress={handleSaveBatchValues}
+                    disabled={isSaving}
+                    loading={isSaving}
+                    style={styles.saveFinalValuesButton}
+                  >
+                    {isSaving ? 'Salvando...' : 'Salvar Valores Finais'}
+                  </Button>
+                  <Button
                     variant="primary"
                     size="large"
                     onPress={handleCompleteBatch}
@@ -1656,6 +1695,9 @@ const styles = StyleSheet.create({
   completeButtonContainer: {
     marginTop: 24,
     gap: 8,
+  },
+  saveFinalValuesButton: {
+    marginBottom: 4,
   },
   completeButtonHint: {
     fontSize: 12,

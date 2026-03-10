@@ -16,6 +16,12 @@ export function BrewTimer({ duration, onComplete, onTick }: BrewTimerProps) {
   const [elapsedSeconds, setElapsedSeconds] = useState(0)
 
   useEffect(() => {
+    setRemainingSeconds(duration * 60)
+    setElapsedSeconds(0)
+    setIsRunning(false)
+  }, [duration])
+
+  useEffect(() => {
     if (remainingSeconds === 0 && isRunning) {
       setIsRunning(false)
       onComplete?.()

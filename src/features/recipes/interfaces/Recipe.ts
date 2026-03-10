@@ -22,6 +22,24 @@ export enum RecipeType {
   EXTRACT = 'extract',
 }
 
+/** Uso do fermentável na receita (v2). Eficiência aplicada apenas em MASH e STEEP. */
+export enum FermentableUsageType {
+  MASH = 'mash',
+  STEEP = 'steep',
+  BOIL = 'boil',
+  LATE_BOIL = 'late_boil',
+  FERMENTATION = 'fermentation',
+}
+
+/** Uso da água na receita (v2). Usado para plannedMashWater / plannedSpargeWater. */
+export enum WaterUsageType {
+  MASH = 'mash',
+  SPARGE = 'sparge',
+  DILUTION = 'dilution',
+  TOP_UP = 'top_up',
+  STARTER = 'starter',
+}
+
 export interface Recipe {
   id: string
   name: string
@@ -33,7 +51,6 @@ export interface Recipe {
   notes?: string | null
   type: RecipeType
   plannedVolume?: number | null
-  finalVolume?: number | null
   mashVolume?: number | null
   boilTime?: number | null
   originalGravity?: number | null
@@ -44,8 +61,18 @@ export interface Recipe {
   actualEfficiency?: number | null
   mashEfficiency?: number | null
   brewhouseEfficiency?: number | null
+  /** Pré-fervura (L). Usado com boilOffRate para calcular pós-fervura. */
   preBoilVolume?: number | null
+  /** Pós-fervura, antes da contração térmica (L). */
   postBoilVolume?: number | null
+  /** Volume alvo da receita (L). Fallback nos cálculos. */
+  targetVolume?: number | null
+  /** Volume que entra no fermentador (L). */
+  volumeIntoFermenter?: number | null
+  /** Volume envasado/embalado (L). */
+  packagedVolume?: number | null
+  /** @deprecated Preferir targetVolume. Volume final (L) — legado. */
+  finalVolume?: number | null
   brewDate?: string | null
   createdAt: string
   updatedAt: string
@@ -74,6 +101,9 @@ export interface RecipeInput {
   brewhouseEfficiency?: number
   preBoilVolume?: number
   postBoilVolume?: number
+  targetVolume?: number
+  volumeIntoFermenter?: number
+  packagedVolume?: number
   brewDate?: string | null
 }
 
@@ -104,6 +134,7 @@ export interface RecipeUpsertInput {
   fermentables: Array<{
     fermentable: string
     amount: number
+    usageType?: FermentableUsageType | null
   }>
   hops: Array<{
     hop: string

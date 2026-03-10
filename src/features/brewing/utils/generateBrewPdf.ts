@@ -678,7 +678,7 @@ export async function generateBrewPdf(data: BrewPdfData) {
     hopSchedule.forEach(hop => {
       const alphaAcid = hop.alphaAcid ? ` - ${hop.alphaAcid}%` : ''
       yPos = addText(
-        `${hop.time} min - ${hop.amount} ${hop.unit} - ${hop.name}${alphaAcid}`,
+        `${hop.time} min - ${hop.amount}g - ${hop.name}${alphaAcid}`,
         margin,
         yPos,
         9,

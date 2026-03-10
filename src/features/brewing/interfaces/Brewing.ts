@@ -155,6 +155,13 @@ export const BatchStatusColors: Record<BatchStatus, string> = {
 
 export function formatDate(date: string | null | undefined): string {
   if (!date) return '—'
+  const match = String(date).match(/^(\d{4})-(\d{2})-(\d{2})/)
+  if (match) {
+    const [, y, m, d] = match
+    return new Date(Number(y), Number(m) - 1, Number(d)).toLocaleDateString(
+      'pt-BR',
+    )
+  }
   return new Date(date).toLocaleDateString('pt-BR')
 }
 

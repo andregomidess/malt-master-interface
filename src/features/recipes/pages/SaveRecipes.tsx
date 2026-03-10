@@ -20,7 +20,7 @@ import { MashTab } from '../components/tabs/MashTab'
 import { FermentationTab } from '../components/tabs/FermentationTab'
 import { CarbonationTab } from '../components/tabs/CarbonationTab'
 import { recipesApi } from '../api/recipesApi'
-import { RecipeType } from '../interfaces/Recipe'
+import { RecipeType, FermentableUsageType } from '../interfaces/Recipe'
 import {
   FermentableType,
   FermentableForm,
@@ -305,11 +305,27 @@ const SaveRecipesContent: React.FC = () => {
             toNumber(loadedRecipe.brewhouseEfficiency) || null,
           preBoilVolume: toNumber(loadedRecipe.preBoilVolume) || null,
           postBoilVolume: toNumber(loadedRecipe.postBoilVolume) || null,
+          targetVolume:
+            toNumber(
+              (loadedRecipe as { targetVolume?: number }).targetVolume,
+            ) || null,
+          volumeIntoFermenter:
+            toNumber(
+              (loadedRecipe as { volumeIntoFermenter?: number })
+                .volumeIntoFermenter,
+            ) || null,
+          packagedVolume:
+            toNumber(
+              (loadedRecipe as { packagedVolume?: number }).packagedVolume,
+            ) || null,
           fermentables:
             loadedRecipe.fermentables?.map(f => ({
               id: f.id,
               fermentableId: f.fermentable?.id || '',
               amount: f.amount || 0,
+              usageType:
+                ((f as { usageType?: string })
+                  .usageType as FermentableUsageType) ?? null,
               fermentable: f.fermentable
                 ? {
                     name: f.fermentable.name || '',

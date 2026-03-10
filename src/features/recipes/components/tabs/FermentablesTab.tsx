@@ -6,6 +6,15 @@ import { Button } from '../../../../shared/components/Button'
 import { COLORS } from '../../../../shared/styles/colors'
 import { BiPlus } from 'react-icons/bi'
 import { AddFermentableModal } from '../modals/AddFermentableModal'
+import { FermentableUsageType } from '../../interfaces/Recipe'
+
+const usageTypeLabel: Record<FermentableUsageType, string> = {
+  [FermentableUsageType.MASH]: 'Mostura',
+  [FermentableUsageType.STEEP]: 'Steep',
+  [FermentableUsageType.BOIL]: 'Fervura',
+  [FermentableUsageType.LATE_BOIL]: 'Fervura tardia',
+  [FermentableUsageType.FERMENTATION]: 'Fermentação',
+}
 
 export const FermentablesTab: React.FC = () => {
   const { recipe, addFermentable, removeFermentable } = useRecipe()
@@ -45,9 +54,16 @@ export const FermentablesTab: React.FC = () => {
                 <Text variant="body" style={styles.itemName}>
                   {fermentable.fermentable?.name || 'Fermentável'}
                 </Text>
-                <Text variant="bodySmall" style={styles.itemAmount}>
-                  {fermentable.amount} kg
-                </Text>
+                <View style={styles.itemDetails}>
+                  <Text variant="bodySmall" style={styles.itemAmount}>
+                    {fermentable.amount} kg
+                  </Text>
+                  {fermentable.usageType && (
+                    <Text variant="bodySmall" style={styles.itemUsage}>
+                      · {usageTypeLabel[fermentable.usageType]}
+                    </Text>
+                  )}
+                </View>
               </View>
               <Button
                 variant="ghost"
@@ -112,12 +128,20 @@ const styles = StyleSheet.create({
   itemContent: {
     flex: 1,
   },
+  itemDetails: {
+    flexDirection: 'row',
+    gap: 4,
+    marginTop: 2,
+  },
+  itemAmount: {
+    color: COLORS.text.secondary,
+  },
+  itemUsage: {
+    color: COLORS.text.secondary,
+  },
   itemName: {
     fontWeight: '500',
     color: COLORS.text.primary,
     marginBottom: 4,
-  },
-  itemAmount: {
-    color: COLORS.text.secondary,
   },
 })

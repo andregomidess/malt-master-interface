@@ -265,6 +265,18 @@ export const SaveBrewing = () => {
           if (batch.actualStrikeTemp != null) {
             setValue('actualStrikeTemp', Number(batch.actualStrikeTemp))
           }
+          if (batch.spargeMethod) {
+            setValue(
+              'spargeMethod',
+              batch.spargeMethod as 'fly' | 'batch' | 'no_sparge',
+            )
+          }
+          if (batch.spargeVolume != null) {
+            setValue('spargeVolume', Number(batch.spargeVolume))
+          }
+          if (batch.spargeTemperature != null) {
+            setValue('spargeTemperature', Number(batch.spargeTemperature))
+          }
         })
         .catch(error => {
           console.error('Erro ao carregar batch:', error)
@@ -407,6 +419,9 @@ export const SaveBrewing = () => {
       actualStrikeTemp: data.actualStrikeTemp ?? null,
       preBoilVolume: data.actualPreBoilVolume ?? null,
       preBoilGravity: data.actualPreBoilGravity ?? null,
+      spargeMethod: data.spargeMethod || null,
+      spargeVolume: data.spargeVolume ?? null,
+      spargeTemperature: data.spargeTemperature ?? null,
       observations: data.observations || null,
     }
 
@@ -829,6 +844,12 @@ export const SaveBrewing = () => {
           {activeSection === 'sparge' && (
             <View style={styles.section}>
               <Text style={styles.sectionTitle}>Sparging (Lavagem)</Text>
+              <Text style={styles.sectionHint}>
+                Lavagem dos grãos com água quente após a mostura. Método, volume
+                e temperatura são salvos no lote para referência e
+                repetibilidade. Temperatura padrão vem do perfil de mostura da
+                receita.
+              </Text>
               <View style={styles.field}>
                 <Controller
                   control={control}
@@ -958,6 +979,12 @@ const styles = StyleSheet.create({
     fontWeight: '700',
     color: COLORS.text.primary,
     marginBottom: 8,
+  },
+  sectionHint: {
+    fontSize: 13,
+    color: COLORS.text.secondary,
+    marginBottom: 16,
+    lineHeight: 20,
   },
   readOnlyHint: {
     color: COLORS.text.secondary,

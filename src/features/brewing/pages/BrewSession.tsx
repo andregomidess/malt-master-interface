@@ -59,6 +59,7 @@ export function BrewSession({ batchId }: BrewSessionProps) {
   const [finalValues, setFinalValues] = useState({
     finalVolume: null as number | null,
     actualAbv: null as number | null,
+    actualEfficiency: null as number | null,
     actualIbu: null as number | null,
     actualColor: null as number | null,
     actualCarbonation: null as number | null,
@@ -117,6 +118,7 @@ export function BrewSession({ batchId }: BrewSessionProps) {
       setFinalValues({
         finalVolume: batch.finalVolume || null,
         actualAbv: batch.actualAbv || null,
+        actualEfficiency: batch.actualEfficiency ?? null,
         actualIbu: batch.actualIbu || null,
         actualColor: batch.actualColor || null,
         actualCarbonation: batch.actualCarbonation || null,
@@ -338,7 +340,9 @@ export function BrewSession({ batchId }: BrewSessionProps) {
         finalValues.actualColor ?? detail.batch.actualColor,
       ),
       actualCarbonation: toNumberOrNull(finalValues.actualCarbonation),
-      actualEfficiency: toNumberOrNull(detail.batch.actualEfficiency),
+      actualEfficiency: toNumberOrNull(
+        finalValues.actualEfficiency ?? detail.batch.actualEfficiency,
+      ),
       fermentationTemperature: toNumberOrNull(
         finalValues.fermentationTemperature,
       ),
@@ -427,7 +431,9 @@ export function BrewSession({ batchId }: BrewSessionProps) {
         finalValues.actualColor || detail.batch.actualColor,
       ),
       actualCarbonation: toNumberOrNull(finalValues.actualCarbonation),
-      actualEfficiency: toNumberOrNull(detail.batch.actualEfficiency),
+      actualEfficiency: toNumberOrNull(
+        finalValues.actualEfficiency ?? detail.batch.actualEfficiency,
+      ),
       fermentationTemperature: toNumberOrNull(
         finalValues.fermentationTemperature,
       ),
@@ -518,7 +524,9 @@ export function BrewSession({ batchId }: BrewSessionProps) {
       actualIbu: toNumberOrNull(finalValues.actualIbu),
       actualColor: toNumberOrNull(finalValues.actualColor),
       actualCarbonation: toNumberOrNull(finalValues.actualCarbonation),
-      actualEfficiency: toNumberOrNull(detail.batch.actualEfficiency),
+      actualEfficiency: toNumberOrNull(
+        finalValues.actualEfficiency ?? detail.batch.actualEfficiency,
+      ),
       fermentationTemperature: toNumberOrNull(
         finalValues.fermentationTemperature,
       ),
@@ -1156,6 +1164,24 @@ export function BrewSession({ batchId }: BrewSessionProps) {
                   </View>
                   <View style={styles.formFieldHalf}>
                     <InputText
+                      label="Eficiência Real (%)"
+                      placeholder="Ex: 75"
+                      value={finalValues.actualEfficiency?.toString() || ''}
+                      onChangeText={val => {
+                        const num = parseFloat(val)
+                        handleUpdateFinalValue(
+                          'actualEfficiency',
+                          isNaN(num) ? null : num,
+                        )
+                      }}
+                      keyboardType="numeric"
+                    />
+                  </View>
+                </View>
+
+                <View style={styles.formRow}>
+                  <View style={styles.formFieldHalf}>
+                    <InputText
                       label="IBU Real"
                       placeholder="Ex: 45"
                       value={finalValues.actualIbu?.toString() || ''}
@@ -1169,9 +1195,6 @@ export function BrewSession({ batchId }: BrewSessionProps) {
                       keyboardType="numeric"
                     />
                   </View>
-                </View>
-
-                <View style={styles.formRow}>
                   <View style={styles.formFieldHalf}>
                     <InputText
                       label="Cor Real (EBC)"

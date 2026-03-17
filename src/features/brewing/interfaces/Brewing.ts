@@ -72,6 +72,9 @@ export interface Batch {
   fermenterVolume?: number | null
   peakFermentationTemp?: number | null
   bottlingVolume?: number | null
+  spargeMethod?: string | null
+  spargeVolume?: number | null
+  spargeTemperature?: number | null
   observations?: string | null
   createdAt?: string
   updatedAt?: string

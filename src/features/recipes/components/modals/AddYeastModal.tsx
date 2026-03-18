@@ -1,4 +1,4 @@
-import React, { useState } from 'react'
+import React, { useState, useEffect } from 'react'
 import { View, StyleSheet } from 'react-native'
 import { RecipeModal } from '../Modal'
 import { Select } from '../Select'
@@ -15,18 +15,37 @@ interface AddYeastModalProps {
   visible: boolean
   onClose: () => void
   onAdd: (yeast: RecipeYeast) => void
+  initialValue?: RecipeYeast | null
 }
 
 export const AddYeastModal: React.FC<AddYeastModalProps> = ({
   visible,
   onClose,
   onAdd,
+  initialValue,
 }) => {
   const loadYeastOptions = useYeastsLoadOptions()
   const [selectedYeastId, setSelectedYeastId] = useState<string>('')
   const [selectedYeast, setSelectedYeast] = useState<Yeast | null>(null)
   const [amount, setAmount] = useState<string>('')
   const [stage, setStage] = useState<string>('primary')
+
+  useEffect(() => {
+    if (visible && initialValue) {
+      setSelectedYeastId(initialValue.yeastId)
+      setAmount(initialValue.amount != null ? String(initialValue.amount) : '')
+      setStage(initialValue.stage ?? 'primary')
+      yeastsApi
+        .findById(initialValue.yeastId)
+        .then(setSelectedYeast)
+        .catch(() => setSelectedYeast(null))
+    } else if (visible && !initialValue) {
+      setSelectedYeastId('')
+      setSelectedYeast(null)
+      setAmount('')
+      setStage('primary')
+    }
+  }, [visible, initialValue])
 
   const handleSelectYeast = async (id: string) => {
     setSelectedYeastId(id)
@@ -72,17 +91,24 @@ export const AddYeastModal: React.FC<AddYeastModalProps> = ({
         : undefined,
     })
 
-    setSelectedYeastId('')
-    setSelectedYeast(null)
-    setAmount('')
-    setStage('primary')
+    if (!initialValue) {
+      setSelectedYeastId('')
+      setSelectedYeast(null)
+      setAmount('')
+      setStage('primary')
+    }
     onClose()
   }
 
   const isValid = !!selectedYeastId
+  const isEditing = !!initialValue
 
   return (
-    <RecipeModal visible={visible} onClose={onClose} title="Adicionar Levedura">
+    <RecipeModal
+      visible={visible}
+      onClose={onClose}
+      title={isEditing ? 'Editar Levedura' : 'Adicionar Levedura'}
+    >
       <View style={styles.form}>
         <View style={styles.field}>
           <Select
@@ -139,7 +165,7 @@ export const AddYeastModal: React.FC<AddYeastModalProps> = ({
             onPress={handleAdd}
             disabled={!isValid}
           >
-            Adicionar
+            {isEditing ? 'Salvar' : 'Adicionar'}
           </Button>
         </View>
       </View>

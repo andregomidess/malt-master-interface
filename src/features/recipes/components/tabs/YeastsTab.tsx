@@ -5,14 +5,38 @@ import { Text } from '../../../../shared/components/Typography'
 import { Button } from '../../../../shared/components/Button'
 import { COLORS } from '../../../../shared/styles/colors'
 import { BiPlus } from 'react-icons/bi'
+import type { RecipeYeast } from '../../context/RecipeContext'
 import { AddYeastModal } from '../modals/AddYeastModal'
 
 export const YeastsTab: React.FC = () => {
-  const { recipe, addYeast, removeYeast } = useRecipe()
+  const { recipe, addYeast, updateYeast, removeYeast } = useRecipe()
   const [isModalVisible, setIsModalVisible] = useState(false)
+  const [editingYeast, setEditingYeast] = useState<
+    (typeof recipe.yeasts)[0] | null
+  >(null)
 
   const handleAddYeast = () => {
+    setEditingYeast(null)
     setIsModalVisible(true)
+  }
+
+  const handleEditYeast = (yeast: (typeof recipe.yeasts)[0]) => {
+    setEditingYeast(yeast)
+    setIsModalVisible(true)
+  }
+
+  const handleCloseModal = () => {
+    setIsModalVisible(false)
+    setEditingYeast(null)
+  }
+
+  const handleSaveYeast = (yeast: RecipeYeast) => {
+    if (editingYeast?.id) {
+      updateYeast(editingYeast.id, yeast)
+    } else {
+      addYeast(yeast)
+    }
+    handleCloseModal()
   }
 
   return (
@@ -64,15 +88,29 @@ export const YeastsTab: React.FC = () => {
                   )}
                 </View>
               </View>
-              <Button
-                variant="ghost"
-                size="small"
-                onPress={() => yeast.id && removeYeast(yeast.id)}
-              >
-                <Text variant="button" style={{ color: COLORS.status.error }}>
-                  Remover
-                </Text>
-              </Button>
+              <View style={styles.itemActions}>
+                <Button
+                  variant="ghost"
+                  size="small"
+                  onPress={() => handleEditYeast(yeast)}
+                >
+                  <Text
+                    variant="button"
+                    style={{ color: COLORS.status.warning }}
+                  >
+                    Editar
+                  </Text>
+                </Button>
+                <Button
+                  variant="ghost"
+                  size="small"
+                  onPress={() => yeast.id && removeYeast(yeast.id)}
+                >
+                  <Text variant="button" style={{ color: COLORS.status.error }}>
+                    Remover
+                  </Text>
+                </Button>
+              </View>
             </View>
           ))}
         </View>
@@ -80,8 +118,9 @@ export const YeastsTab: React.FC = () => {
 
       <AddYeastModal
         visible={isModalVisible}
-        onClose={() => setIsModalVisible(false)}
-        onAdd={addYeast}
+        onClose={handleCloseModal}
+        onAdd={handleSaveYeast}
+        initialValue={editingYeast}
       />
     </ScrollView>
   )
@@ -124,6 +163,11 @@ const styles = StyleSheet.create({
   },
   itemContent: {
     flex: 1,
+  },
+  itemActions: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
   },
   itemName: {
     fontWeight: '500',

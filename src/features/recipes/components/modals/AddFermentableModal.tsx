@@ -1,4 +1,4 @@
-import React, { useState } from 'react'
+import React, { useState, useEffect } from 'react'
 import { View, StyleSheet } from 'react-native'
 import { RecipeModal } from '../Modal'
 import { InputText } from '../../../../shared/components/InputText'
@@ -16,12 +16,14 @@ interface AddFermentableModalProps {
   visible: boolean
   onClose: () => void
   onAdd: (fermentable: RecipeFermentable) => void
+  initialValue?: RecipeFermentable | null
 }
 
 export const AddFermentableModal: React.FC<AddFermentableModalProps> = ({
   visible,
   onClose,
   onAdd,
+  initialValue,
 }) => {
   const loadFermentableOptions = useFermentablesLoadOptions()
   const [selectedFermentableId, setSelectedFermentableId] = useState<string>('')
@@ -31,6 +33,23 @@ export const AddFermentableModal: React.FC<AddFermentableModalProps> = ({
   const [usageType, setUsageType] = useState<FermentableUsageType>(
     FermentableUsageType.MASH,
   )
+
+  useEffect(() => {
+    if (visible && initialValue) {
+      setSelectedFermentableId(initialValue.fermentableId)
+      setAmount(String(initialValue.amount))
+      setUsageType(initialValue.usageType ?? FermentableUsageType.MASH)
+      fermentablesApi
+        .findById(initialValue.fermentableId)
+        .then(setSelectedFermentable)
+        .catch(() => setSelectedFermentable(null))
+    } else if (visible && !initialValue) {
+      setSelectedFermentableId('')
+      setSelectedFermentable(null)
+      setAmount('')
+      setUsageType(FermentableUsageType.MASH)
+    }
+  }, [visible, initialValue])
 
   const usageTypeOptions = [
     { value: FermentableUsageType.MASH, label: 'Mostura' },
@@ -72,21 +91,23 @@ export const AddFermentableModal: React.FC<AddFermentableModalProps> = ({
         : undefined,
     })
 
-    // Reset form
-    setSelectedFermentableId('')
-    setSelectedFermentable(null)
-    setAmount('')
-    setUsageType(FermentableUsageType.MASH)
+    if (!initialValue) {
+      setSelectedFermentableId('')
+      setSelectedFermentable(null)
+      setAmount('')
+      setUsageType(FermentableUsageType.MASH)
+    }
     onClose()
   }
 
   const isValid = selectedFermentableId && amount && parseFloat(amount) > 0
+  const isEditing = !!initialValue
 
   return (
     <RecipeModal
       visible={visible}
       onClose={onClose}
-      title="Adicionar Fermentável"
+      title={isEditing ? 'Editar Fermentável' : 'Adicionar Fermentável'}
     >
       <View style={styles.form}>
         <View style={styles.field}>
@@ -150,7 +171,7 @@ export const AddFermentableModal: React.FC<AddFermentableModalProps> = ({
             onPress={handleAdd}
             disabled={!isValid}
           >
-            Adicionar
+            {isEditing ? 'Salvar' : 'Adicionar'}
           </Button>
         </View>
       </View>

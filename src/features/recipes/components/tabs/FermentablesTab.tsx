@@ -7,6 +7,7 @@ import { COLORS } from '../../../../shared/styles/colors'
 import { BiPlus } from 'react-icons/bi'
 import { AddFermentableModal } from '../modals/AddFermentableModal'
 import { FermentableUsageType } from '../../interfaces/Recipe'
+import type { RecipeFermentable } from '../../context/RecipeContext'
 
 const usageTypeLabel: Record<FermentableUsageType, string> = {
   [FermentableUsageType.MASH]: 'Mostura',
@@ -17,11 +18,37 @@ const usageTypeLabel: Record<FermentableUsageType, string> = {
 }
 
 export const FermentablesTab: React.FC = () => {
-  const { recipe, addFermentable, removeFermentable } = useRecipe()
+  const { recipe, addFermentable, updateFermentable, removeFermentable } =
+    useRecipe()
   const [isModalVisible, setIsModalVisible] = useState(false)
+  const [editingFermentable, setEditingFermentable] = useState<
+    (typeof recipe.fermentables)[0] | null
+  >(null)
 
   const handleAddFermentable = () => {
+    setEditingFermentable(null)
     setIsModalVisible(true)
+  }
+
+  const handleEditFermentable = (
+    fermentable: (typeof recipe.fermentables)[0],
+  ) => {
+    setEditingFermentable(fermentable)
+    setIsModalVisible(true)
+  }
+
+  const handleCloseModal = () => {
+    setIsModalVisible(false)
+    setEditingFermentable(null)
+  }
+
+  const handleSaveFermentable = (fermentable: RecipeFermentable) => {
+    if (editingFermentable?.id) {
+      updateFermentable(editingFermentable.id, fermentable)
+    } else {
+      addFermentable(fermentable)
+    }
+    handleCloseModal()
   }
 
   return (
@@ -65,17 +92,31 @@ export const FermentablesTab: React.FC = () => {
                   )}
                 </View>
               </View>
-              <Button
-                variant="ghost"
-                size="small"
-                onPress={() =>
-                  fermentable.id && removeFermentable(fermentable.id)
-                }
-              >
-                <Text variant="button" style={{ color: COLORS.status.error }}>
-                  Remover
-                </Text>
-              </Button>
+              <View style={styles.itemActions}>
+                <Button
+                  variant="ghost"
+                  size="small"
+                  onPress={() => handleEditFermentable(fermentable)}
+                >
+                  <Text
+                    variant="button"
+                    style={{ color: COLORS.status.warning }}
+                  >
+                    Editar
+                  </Text>
+                </Button>
+                <Button
+                  variant="ghost"
+                  size="small"
+                  onPress={() =>
+                    fermentable.id && removeFermentable(fermentable.id)
+                  }
+                >
+                  <Text variant="button" style={{ color: COLORS.status.error }}>
+                    Remover
+                  </Text>
+                </Button>
+              </View>
             </View>
           ))}
         </View>
@@ -83,8 +124,9 @@ export const FermentablesTab: React.FC = () => {
 
       <AddFermentableModal
         visible={isModalVisible}
-        onClose={() => setIsModalVisible(false)}
-        onAdd={addFermentable}
+        onClose={handleCloseModal}
+        onAdd={handleSaveFermentable}
+        initialValue={editingFermentable}
       />
     </ScrollView>
   )
@@ -127,6 +169,11 @@ const styles = StyleSheet.create({
   },
   itemContent: {
     flex: 1,
+  },
+  itemActions: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
   },
   itemDetails: {
     flexDirection: 'row',

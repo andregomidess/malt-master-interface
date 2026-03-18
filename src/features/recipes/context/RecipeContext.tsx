@@ -139,10 +139,13 @@ interface RecipeContextType {
   recipe: RecipeFormState
   updateRecipe: (updates: Partial<RecipeFormState>) => void
   addFermentable: (fermentable: RecipeFermentable) => void
+  updateFermentable: (id: string, fermentable: RecipeFermentable) => void
   removeFermentable: (id: string) => void
   addHop: (hop: RecipeHop) => void
+  updateHop: (id: string, hop: RecipeHop) => void
   removeHop: (id: string) => void
   addYeast: (yeast: RecipeYeast) => void
+  updateYeast: (id: string, yeast: RecipeYeast) => void
   removeYeast: (id: string) => void
   addWater: (water: RecipeWater) => void
   removeWater: (id: string) => void
@@ -205,6 +208,18 @@ export const RecipeProvider: React.FC<{ children: React.ReactNode }> = ({
     }))
   }, [])
 
+  const updateFermentable = useCallback(
+    (id: string, fermentable: RecipeFermentable) => {
+      setRecipe(prev => ({
+        ...prev,
+        fermentables: prev.fermentables.map(f =>
+          f.id === id ? { ...fermentable, id } : f,
+        ),
+      }))
+    },
+    [],
+  )
+
   const removeFermentable = useCallback((id: string) => {
     setRecipe(prev => ({
       ...prev,
@@ -219,6 +234,13 @@ export const RecipeProvider: React.FC<{ children: React.ReactNode }> = ({
     }))
   }, [])
 
+  const updateHop = useCallback((id: string, hop: RecipeHop) => {
+    setRecipe(prev => ({
+      ...prev,
+      hops: prev.hops.map(h => (h.id === id ? { ...hop, id } : h)),
+    }))
+  }, [])
+
   const removeHop = useCallback((id: string) => {
     setRecipe(prev => ({
       ...prev,
@@ -230,6 +252,13 @@ export const RecipeProvider: React.FC<{ children: React.ReactNode }> = ({
     setRecipe(prev => ({
       ...prev,
       yeasts: [...prev.yeasts, { ...yeast, id: Date.now().toString() }],
+    }))
+  }, [])
+
+  const updateYeast = useCallback((id: string, yeast: RecipeYeast) => {
+    setRecipe(prev => ({
+      ...prev,
+      yeasts: prev.yeasts.map(y => (y.id === id ? { ...yeast, id } : y)),
     }))
   }, [])
 
@@ -340,10 +369,13 @@ export const RecipeProvider: React.FC<{ children: React.ReactNode }> = ({
         recipe,
         updateRecipe,
         addFermentable,
+        updateFermentable,
         removeFermentable,
         addHop,
+        updateHop,
         removeHop,
         addYeast,
+        updateYeast,
         removeYeast,
         addWater,
         removeWater,

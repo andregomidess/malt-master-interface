@@ -5,14 +5,38 @@ import { Text } from '../../../../shared/components/Typography'
 import { Button } from '../../../../shared/components/Button'
 import { COLORS } from '../../../../shared/styles/colors'
 import { BiPlus } from 'react-icons/bi'
+import type { RecipeHop } from '../../context/RecipeContext'
 import { AddHopModal } from '../modals/AddHopModal'
 
 export const HopsTab: React.FC = () => {
-  const { recipe, addHop, removeHop } = useRecipe()
+  const { recipe, addHop, updateHop, removeHop } = useRecipe()
   const [isModalVisible, setIsModalVisible] = useState(false)
+  const [editingHop, setEditingHop] = useState<(typeof recipe.hops)[0] | null>(
+    null,
+  )
 
   const handleAddHop = () => {
+    setEditingHop(null)
     setIsModalVisible(true)
+  }
+
+  const handleEditHop = (hop: (typeof recipe.hops)[0]) => {
+    setEditingHop(hop)
+    setIsModalVisible(true)
+  }
+
+  const handleCloseModal = () => {
+    setIsModalVisible(false)
+    setEditingHop(null)
+  }
+
+  const handleSaveHop = (hop: RecipeHop) => {
+    if (editingHop?.id) {
+      updateHop(editingHop.id, hop)
+    } else {
+      addHop(hop)
+    }
+    handleCloseModal()
   }
 
   return (
@@ -49,15 +73,29 @@ export const HopsTab: React.FC = () => {
                   {hop.amount} g - {hop.boilTime || 0} min
                 </Text>
               </View>
-              <Button
-                variant="ghost"
-                size="small"
-                onPress={() => hop.id && removeHop(hop.id)}
-              >
-                <Text variant="button" style={{ color: COLORS.status.error }}>
-                  Remover
-                </Text>
-              </Button>
+              <View style={styles.itemActions}>
+                <Button
+                  variant="ghost"
+                  size="small"
+                  onPress={() => handleEditHop(hop)}
+                >
+                  <Text
+                    variant="button"
+                    style={{ color: COLORS.status.warning }}
+                  >
+                    Editar
+                  </Text>
+                </Button>
+                <Button
+                  variant="ghost"
+                  size="small"
+                  onPress={() => hop.id && removeHop(hop.id)}
+                >
+                  <Text variant="button" style={{ color: COLORS.status.error }}>
+                    Remover
+                  </Text>
+                </Button>
+              </View>
             </View>
           ))}
         </View>
@@ -65,8 +103,9 @@ export const HopsTab: React.FC = () => {
 
       <AddHopModal
         visible={isModalVisible}
-        onClose={() => setIsModalVisible(false)}
-        onAdd={addHop}
+        onClose={handleCloseModal}
+        onAdd={handleSaveHop}
+        initialValue={editingHop}
       />
     </ScrollView>
   )
@@ -109,6 +148,11 @@ const styles = StyleSheet.create({
   },
   itemContent: {
     flex: 1,
+  },
+  itemActions: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
   },
   itemName: {
     fontWeight: '500',

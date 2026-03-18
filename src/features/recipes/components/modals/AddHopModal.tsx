@@ -1,4 +1,4 @@
-import React, { useState } from 'react'
+import React, { useState, useEffect } from 'react'
 import { View, StyleSheet } from 'react-native'
 import { RecipeModal } from '../Modal'
 import { InputText } from '../../../../shared/components/InputText'
@@ -15,6 +15,7 @@ interface AddHopModalProps {
   visible: boolean
   onClose: () => void
   onAdd: (hop: RecipeHop) => void
+  initialValue?: RecipeHop | null
 }
 
 const stageOptions = [
@@ -27,6 +28,7 @@ export const AddHopModal: React.FC<AddHopModalProps> = ({
   visible,
   onClose,
   onAdd,
+  initialValue,
 }) => {
   const loadHopOptions = useHopsLoadOptions()
   const [selectedHopId, setSelectedHopId] = useState<string>('')
@@ -34,6 +36,25 @@ export const AddHopModal: React.FC<AddHopModalProps> = ({
   const [amount, setAmount] = useState<string>('')
   const [boilTime, setBoilTime] = useState<string>('')
   const [stage, setStage] = useState<string>('boil')
+
+  useEffect(() => {
+    if (visible && initialValue) {
+      setSelectedHopId(initialValue.hopId)
+      setAmount(String(initialValue.amount))
+      setBoilTime(initialValue.boilTime != null ? String(initialValue.boilTime) : '')
+      setStage(initialValue.stage ?? 'boil')
+      hopsApi
+        .findById(initialValue.hopId)
+        .then(setSelectedHop)
+        .catch(() => setSelectedHop(null))
+    } else if (visible && !initialValue) {
+      setSelectedHopId('')
+      setSelectedHop(null)
+      setAmount('')
+      setBoilTime('')
+      setStage('boil')
+    }
+  }, [visible, initialValue])
 
   const handleSelectHop = async (id: string) => {
     setSelectedHopId(id)
@@ -64,19 +85,25 @@ export const AddHopModal: React.FC<AddHopModalProps> = ({
         : undefined,
     })
 
-    // Reset form
-    setSelectedHopId('')
-    setSelectedHop(null)
-    setAmount('')
-    setBoilTime('')
-    setStage('boil')
+    if (!initialValue) {
+      setSelectedHopId('')
+      setSelectedHop(null)
+      setAmount('')
+      setBoilTime('')
+      setStage('boil')
+    }
     onClose()
   }
 
   const isValid = selectedHopId && amount && parseFloat(amount) > 0
+  const isEditing = !!initialValue
 
   return (
-    <RecipeModal visible={visible} onClose={onClose} title="Adicionar Lúpulo">
+    <RecipeModal
+      visible={visible}
+      onClose={onClose}
+      title={isEditing ? 'Editar Lúpulo' : 'Adicionar Lúpulo'}
+    >
       <View style={styles.form}>
         <View style={styles.field}>
           <Select
@@ -148,7 +175,7 @@ export const AddHopModal: React.FC<AddHopModalProps> = ({
             onPress={handleAdd}
             disabled={!isValid}
           >
-            Adicionar
+            {isEditing ? 'Salvar' : 'Adicionar'}
           </Button>
         </View>
       </View>

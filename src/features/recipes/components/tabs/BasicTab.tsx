@@ -387,7 +387,7 @@ export const BasicTab: React.FC<BasicTabProps> = ({
           render={({ field: { value, onChange } }) => (
             <DecimalInput
               label="Tempo de Fervura (Minutos)"
-              placeholder="75"
+              placeholder="60"
               value={value}
               onChange={numValue => {
                 onChange(numValue)

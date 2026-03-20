@@ -230,7 +230,7 @@ const SaveRecipesContent: React.FC = () => {
       finalVolume: undefined,
       mashVolume: undefined,
       preBoilVolume: undefined,
-      boilTime: undefined,
+      boilTime: 60,
       postBoilVolume: undefined,
       mashEfficiency: undefined,
       brewDate: new Date().toISOString().split('T')[0],

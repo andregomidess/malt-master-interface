@@ -161,7 +161,7 @@ const initialState: RecipeFormState = {
   equipment: null,
   finalVolume: null,
   mashVolume: null,
-  boilTime: null,
+  boilTime: 60,
   brewDate: new Date().toISOString().split('T')[0],
   imageUrl: null,
   about: null,

@@ -184,9 +184,8 @@ export interface PaginatedRecipes {
   totalPages: number
 }
 
-// Traduções
 export const recipeTypeLabels: Record<RecipeType, string> = {
-  [RecipeType.ALL_GRAIN]: 'All Grain',
-  [RecipeType.PARTIAL_MASH]: 'Partial Mash',
-  [RecipeType.EXTRACT]: 'Extract',
+  [RecipeType.ALL_GRAIN]: 'Somente grão',
+  [RecipeType.PARTIAL_MASH]: 'Mostura parcial',
+  [RecipeType.EXTRACT]: 'Extrato',
 }

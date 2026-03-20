@@ -7,6 +7,7 @@ import { z } from 'zod/v3'
 import { Layout } from '../../../shared/components/Layout'
 import { Heading, Text } from '../../../shared/components/Typography'
 import { InputText } from '../../../shared/components/InputText'
+import { DecimalInput } from '../../../shared/components/DecimalInput'
 import { Button } from '../../../shared/components/Button'
 import { Select } from '../../recipes/components/Select'
 import { COLORS } from '../../../shared/styles/colors'
@@ -550,14 +551,11 @@ export const SaveEquipment = () => {
                   control={control}
                   name="totalCapacity"
                   render={({ field: { value, onChange } }) => (
-                    <InputText
+                    <DecimalInput
                       label="Capacidade Total (L) *"
                       placeholder="Ex: 50"
-                      value={value?.toString() || ''}
-                      onChangeText={value =>
-                        onChange(value ? parseFloat(value) : undefined)
-                      }
-                      keyboardType="numeric"
+                      value={value}
+                      onChange={onChange}
                       error={!!errors.totalCapacity}
                       errorMessage={errors.totalCapacity?.message}
                     />
@@ -570,14 +568,11 @@ export const SaveEquipment = () => {
                   control={control}
                   name="usableVolume"
                   render={({ field: { value, onChange } }) => (
-                    <InputText
+                    <DecimalInput
                       label="Volume Utilizável (L) *"
                       placeholder="Ex: 45"
-                      value={value?.toString() || ''}
-                      onChangeText={value =>
-                        onChange(value ? parseFloat(value) : undefined)
-                      }
-                      keyboardType="numeric"
+                      value={value}
+                      onChange={onChange}
                       error={!!errors.usableVolume}
                       errorMessage={errors.usableVolume?.message}
                     />
@@ -594,14 +589,11 @@ export const SaveEquipment = () => {
                   control={control}
                   name="kettleLoss"
                   render={({ field: { value, onChange } }) => (
-                    <InputText
+                    <DecimalInput
                       label="Perda na Panela (L) *"
                       placeholder="Ex: 2.5"
-                      value={value?.toString() || ''}
-                      onChangeText={value =>
-                        onChange(value ? parseFloat(value) : undefined)
-                      }
-                      keyboardType="numeric"
+                      value={value}
+                      onChange={onChange}
                       error={!!errors.kettleLoss}
                       errorMessage={errors.kettleLoss?.message}
                     />
@@ -614,14 +606,11 @@ export const SaveEquipment = () => {
                   control={control}
                   name="evaporationRate"
                   render={({ field: { value, onChange } }) => (
-                    <InputText
+                    <DecimalInput
                       label="Taxa de Evaporação (%/h) *"
                       placeholder="Ex: 8.5"
-                      value={value?.toString() || ''}
-                      onChangeText={value =>
-                        onChange(value ? parseFloat(value) : undefined)
-                      }
-                      keyboardType="numeric"
+                      value={value}
+                      onChange={onChange}
                       error={!!errors.evaporationRate}
                       errorMessage={errors.evaporationRate?.message}
                     />
@@ -634,14 +623,11 @@ export const SaveEquipment = () => {
                   control={control}
                   name="boilOffRate"
                   render={({ field: { value, onChange } }) => (
-                    <InputText
+                    <DecimalInput
                       label="Taxa de Boil Off (%/h) *"
                       placeholder="Ex: 6.0"
-                      value={value?.toString() || ''}
-                      onChangeText={value =>
-                        onChange(value ? parseFloat(value) : undefined)
-                      }
-                      keyboardType="numeric"
+                      value={value}
+                      onChange={onChange}
                       error={!!errors.boilOffRate}
                       errorMessage={errors.boilOffRate?.message}
                     />
@@ -654,14 +640,11 @@ export const SaveEquipment = () => {
                   control={control}
                   name="heatingPower"
                   render={({ field: { value, onChange } }) => (
-                    <InputText
+                    <DecimalInput
                       label="Potência de Aquecimento (W) *"
                       placeholder="Ex: 3500"
-                      value={value?.toString() || ''}
-                      onChangeText={value =>
-                        onChange(value ? parseFloat(value) : undefined)
-                      }
-                      keyboardType="numeric"
+                      value={value}
+                      onChange={onChange}
                       error={!!errors.heatingPower}
                       errorMessage={errors.heatingPower?.message}
                     />
@@ -692,14 +675,11 @@ export const SaveEquipment = () => {
                   control={control}
                   name="thermalShrinkagePercent"
                   render={({ field: { value, onChange } }) => (
-                    <InputText
+                    <DecimalInput
                       label="Contração Térmica (%)"
                       placeholder="Ex: 4 (mosto quente→frio)"
-                      value={value?.toString() ?? ''}
-                      onChangeText={val =>
-                        onChange(val ? parseFloat(val) : undefined)
-                      }
-                      keyboardType="numeric"
+                      value={value}
+                      onChange={onChange}
                       error={!!errors.thermalShrinkagePercent}
                       errorMessage={errors.thermalShrinkagePercent?.message}
                     />
@@ -716,14 +696,11 @@ export const SaveEquipment = () => {
                   control={control}
                   name="fermenterLoss"
                   render={({ field: { value, onChange } }) => (
-                    <InputText
+                    <DecimalInput
                       label="Perda no Fermentador (L) *"
                       placeholder="Ex: 1.5"
-                      value={value?.toString() || ''}
-                      onChangeText={value =>
-                        onChange(value ? parseFloat(value) : undefined)
-                      }
-                      keyboardType="numeric"
+                      value={value}
+                      onChange={onChange}
                       error={!!errors.fermenterLoss}
                       errorMessage={errors.fermenterLoss?.message}
                     />
@@ -736,14 +713,11 @@ export const SaveEquipment = () => {
                   control={control}
                   name="coneBottomVolume"
                   render={({ field: { value, onChange } }) => (
-                    <InputText
+                    <DecimalInput
                       label="Volume do Fundo Cônico (L) *"
                       placeholder="Ex: 2.0"
-                      value={value?.toString() || ''}
-                      onChangeText={value =>
-                        onChange(value ? parseFloat(value) : undefined)
-                      }
-                      keyboardType="numeric"
+                      value={value}
+                      onChange={onChange}
                       error={!!errors.coneBottomVolume}
                       errorMessage={errors.coneBottomVolume?.message}
                     />
@@ -781,14 +755,11 @@ export const SaveEquipment = () => {
                   control={control}
                   name="maxPressure"
                   render={({ field: { value, onChange } }) => (
-                    <InputText
+                    <DecimalInput
                       label="Pressão Máxima (bar) *"
                       placeholder="Ex: 2.5"
-                      value={value?.toString() || ''}
-                      onChangeText={value =>
-                        onChange(value ? parseFloat(value) : undefined)
-                      }
-                      keyboardType="numeric"
+                      value={value}
+                      onChange={onChange}
                       error={!!errors.maxPressure}
                       errorMessage={errors.maxPressure?.message}
                     />
@@ -819,14 +790,11 @@ export const SaveEquipment = () => {
                   control={control}
                   name="minTemperature"
                   render={({ field: { value, onChange } }) => (
-                    <InputText
+                    <DecimalInput
                       label="Temperatura Mínima (°C) *"
                       placeholder="Ex: 0"
-                      value={value?.toString() || ''}
-                      onChangeText={value =>
-                        onChange(value ? parseFloat(value) : undefined)
-                      }
-                      keyboardType="numeric"
+                      value={value}
+                      onChange={onChange}
                       error={!!errors.minTemperature}
                       errorMessage={errors.minTemperature?.message}
                     />
@@ -839,14 +807,11 @@ export const SaveEquipment = () => {
                   control={control}
                   name="maxTemperature"
                   render={({ field: { value, onChange } }) => (
-                    <InputText
+                    <DecimalInput
                       label="Temperatura Máxima (°C) *"
                       placeholder="Ex: 30"
-                      value={value?.toString() || ''}
-                      onChangeText={value =>
-                        onChange(value ? parseFloat(value) : undefined)
-                      }
-                      keyboardType="numeric"
+                      value={value}
+                      onChange={onChange}
                       error={!!errors.maxTemperature}
                       errorMessage={errors.maxTemperature?.message}
                     />
@@ -863,14 +828,11 @@ export const SaveEquipment = () => {
                   control={control}
                   name="coolingCapacity"
                   render={({ field: { value, onChange } }) => (
-                    <InputText
+                    <DecimalInput
                       label="Capacidade de Resfriamento (W) *"
                       placeholder="Ex: 5000"
-                      value={value?.toString() || ''}
-                      onChangeText={value =>
-                        onChange(value ? parseFloat(value) : undefined)
-                      }
-                      keyboardType="numeric"
+                      value={value}
+                      onChange={onChange}
                       error={!!errors.coolingCapacity}
                       errorMessage={errors.coolingCapacity?.message}
                     />
@@ -883,14 +845,11 @@ export const SaveEquipment = () => {
                   control={control}
                   name="flowRate"
                   render={({ field: { value, onChange } }) => (
-                    <InputText
+                    <DecimalInput
                       label="Taxa de Fluxo (L/min) *"
                       placeholder="Ex: 15.5"
-                      value={value?.toString() || ''}
-                      onChangeText={value =>
-                        onChange(value ? parseFloat(value) : undefined)
-                      }
-                      keyboardType="numeric"
+                      value={value}
+                      onChange={onChange}
                       error={!!errors.flowRate}
                       errorMessage={errors.flowRate?.message}
                     />
@@ -903,14 +862,11 @@ export const SaveEquipment = () => {
                   control={control}
                   name="inletTemperature"
                   render={({ field: { value, onChange } }) => (
-                    <InputText
+                    <DecimalInput
                       label="Temperatura de Entrada (°C) *"
                       placeholder="Ex: 95"
-                      value={value?.toString() || ''}
-                      onChangeText={value =>
-                        onChange(value ? parseFloat(value) : undefined)
-                      }
-                      keyboardType="numeric"
+                      value={value}
+                      onChange={onChange}
                       error={!!errors.inletTemperature}
                       errorMessage={errors.inletTemperature?.message}
                     />
@@ -923,14 +879,11 @@ export const SaveEquipment = () => {
                   control={control}
                   name="outletTemperature"
                   render={({ field: { value, onChange } }) => (
-                    <InputText
+                    <DecimalInput
                       label="Temperatura de Saída (°C) *"
                       placeholder="Ex: 20"
-                      value={value?.toString() || ''}
-                      onChangeText={value =>
-                        onChange(value ? parseFloat(value) : undefined)
-                      }
-                      keyboardType="numeric"
+                      value={value}
+                      onChange={onChange}
                       error={!!errors.outletTemperature}
                       errorMessage={errors.outletTemperature?.message}
                     />
@@ -961,14 +914,11 @@ export const SaveEquipment = () => {
                   control={control}
                   name="tubeLength"
                   render={({ field: { value, onChange } }) => (
-                    <InputText
+                    <DecimalInput
                       label="Comprimento do Tubo (m) *"
                       placeholder="Ex: 15.0"
-                      value={value?.toString() || ''}
-                      onChangeText={value =>
-                        onChange(value ? parseFloat(value) : undefined)
-                      }
-                      keyboardType="numeric"
+                      value={value}
+                      onChange={onChange}
                       error={!!errors.tubeLength}
                       errorMessage={errors.tubeLength?.message}
                     />
@@ -981,14 +931,11 @@ export const SaveEquipment = () => {
                   control={control}
                   name="tubeDiameter"
                   render={({ field: { value, onChange } }) => (
-                    <InputText
+                    <DecimalInput
                       label="Diâmetro do Tubo (mm) *"
                       placeholder="Ex: 12.5"
-                      value={value?.toString() || ''}
-                      onChangeText={value =>
-                        onChange(value ? parseFloat(value) : undefined)
-                      }
-                      keyboardType="numeric"
+                      value={value}
+                      onChange={onChange}
                       error={!!errors.tubeDiameter}
                       errorMessage={errors.tubeDiameter?.message}
                     />

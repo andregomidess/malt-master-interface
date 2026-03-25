@@ -31,7 +31,10 @@ const hopSchema = z.object({
     .min(0, 'Ácidos beta devem ser >= 0'),
   cohumulone: z.number().min(0, 'Cohumulone deve ser >= 0').optional(),
   totalOils: z.number().min(0, 'Óleos totais devem ser >= 0').optional(),
-  form: z.nativeEnum(HopForm).optional(),
+  form: z.nativeEnum(HopForm, {
+    required_error: 'Forma é obrigatória',
+    invalid_type_error: 'Selecione uma forma válida',
+  }),
   uses: z.array(z.nativeEnum(HopUse)).optional(),
   aromaFlavor: z.string().optional(),
   harvestYear: z.number().int().positive().optional(),
@@ -76,6 +79,7 @@ export const SaveHops = () => {
       name: '',
       alphaAcids: 0,
       betaAcids: 0,
+      form: HopForm.PELLET,
       uses: [],
       aromaFlavor: '',
       storageCondition: '',
@@ -185,7 +189,7 @@ export const SaveHops = () => {
       betaAcids: data.betaAcids,
       ...(data.cohumulone && { cohumulone: data.cohumulone }),
       ...(data.totalOils && { totalOils: data.totalOils }),
-      ...(data.form && { form: data.form }),
+      form: data.form,
       uses: data.uses || [],
       ...(data.aromaFlavor && { aromaFlavor: data.aromaFlavor }),
       ...(data.harvestYear && { harvestYear: data.harvestYear }),
@@ -236,7 +240,6 @@ export const SaveHops = () => {
         </View>
 
         <View style={styles.form}>
-          {/* Informações Básicas */}
           <View style={styles.section}>
             <Text style={styles.sectionTitle}>Informações Básicas</Text>
           </View>
@@ -357,7 +360,6 @@ export const SaveHops = () => {
             />
           </View>
 
-          {/* Forma e Usos */}
           <View style={styles.section}>
             <Text style={styles.sectionTitle}>Forma e Usos</Text>
           </View>
@@ -366,13 +368,18 @@ export const SaveHops = () => {
             <Controller
               control={control}
               name="form"
-              render={({ field: { value, onChange } }) => (
+              render={({
+                field: { value, onChange },
+                fieldState: { error },
+              }) => (
                 <Select
-                  label="Forma"
+                  label="Forma *"
                   placeholder="Selecione a forma"
                   value={value || ''}
                   options={formOptions}
-                  onSelect={value => onChange(value || undefined)}
+                  onSelect={selected => onChange(selected as HopForm)}
+                  error={!!error}
+                  errorMessage={error?.message}
                 />
               )}
             />

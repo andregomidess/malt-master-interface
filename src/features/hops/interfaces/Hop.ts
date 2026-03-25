@@ -47,7 +47,7 @@ export interface HopInput {
   betaAcids: number
   cohumulone?: number
   totalOils?: number
-  form?: HopForm
+  form: HopForm
   uses?: HopUse[]
   aromaFlavor?: string
   harvestYear?: number

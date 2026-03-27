@@ -12,6 +12,7 @@ import {
   FermentableForm,
   FermentableType,
 } from '../../fermentable/interfaces/Fermentable'
+import { computeRecipeIsDraft } from '../utils/recipeDraft'
 
 export interface RecipeFermentable {
   id?: string
@@ -135,6 +136,11 @@ export interface RecipeFormState {
   packagedVolume?: number | null
 }
 
+/** Opções ao montar o payload de API (ex.: forçar rascunho mesmo com receita “completa”). */
+export type RecipeUpsertOptions = {
+  forceDraft?: boolean
+}
+
 interface RecipeContextType {
   recipe: RecipeFormState
   updateRecipe: (updates: Partial<RecipeFormState>) => void
@@ -150,8 +156,14 @@ interface RecipeContextType {
   addWater: (water: RecipeWater) => void
   removeWater: (id: string) => void
   resetRecipe: () => void
-  getRecipeInput: () => RecipeInput
-  getRecipeUpsertInput: () => RecipeUpsertInput
+  getRecipeInput: (
+    override?: Partial<RecipeFormState>,
+    options?: RecipeUpsertOptions,
+  ) => RecipeInput
+  getRecipeUpsertInput: (
+    override?: Partial<RecipeFormState>,
+    options?: RecipeUpsertOptions,
+  ) => RecipeUpsertInput
 }
 
 const initialState: RecipeFormState = {
@@ -287,81 +299,105 @@ export const RecipeProvider: React.FC<{ children: React.ReactNode }> = ({
     setRecipe(initialState)
   }, [])
 
-  const getRecipeInput = useCallback((): RecipeInput => {
-    return {
-      name: recipe.name,
-      beerStyle: recipe.beerStyle?.id || '',
-      equipment: recipe.equipment?.id || null,
-      imageUrl: recipe.imageUrl || null,
-      about: recipe.about || null,
-      notes: recipe.notes || null,
-      type: recipe.type as RecipeType,
-      finalVolume: recipe.finalVolume ?? undefined,
-      targetVolume: recipe.targetVolume ?? undefined,
-      volumeIntoFermenter: recipe.volumeIntoFermenter ?? undefined,
-      packagedVolume: recipe.packagedVolume ?? undefined,
-      mashVolume: recipe.mashVolume ?? undefined,
-      boilTime: recipe.boilTime ?? undefined,
-      originalGravity: recipe.originalGravity ?? undefined,
-      finalGravity: recipe.finalGravity ?? undefined,
-      estimatedIbu: recipe.estimatedIbu ?? undefined,
-      estimatedColor: recipe.estimatedColor ?? undefined,
-      estimatedAbv: recipe.estimatedAbv ?? undefined,
-      mashEfficiency: recipe.mashEfficiency ?? undefined,
-      brewhouseEfficiency: recipe.brewhouseEfficiency ?? undefined,
-      preBoilVolume: recipe.preBoilVolume ?? undefined,
-      postBoilVolume: recipe.postBoilVolume ?? undefined,
-      brewDate: recipe.brewDate || null,
-    }
-  }, [recipe])
+  const getRecipeInput = useCallback(
+    (
+      override?: Partial<RecipeFormState>,
+      options?: RecipeUpsertOptions,
+    ): RecipeInput => {
+      const r = override ? { ...recipe, ...override } : recipe
+      const styleId = r.beerStyle?.id
+      return {
+        name: r.name.trim(),
+        ...(styleId ? { beerStyle: styleId } : { beerStyle: null }),
+        isDraft: options?.forceDraft ? true : computeRecipeIsDraft(r),
+        equipment: r.equipment?.id || null,
+        imageUrl: r.imageUrl || null,
+        about: r.about || null,
+        notes: r.notes || null,
+        type: r.type as RecipeType,
+        finalVolume: r.finalVolume ?? undefined,
+        targetVolume: r.targetVolume ?? undefined,
+        volumeIntoFermenter: r.volumeIntoFermenter ?? undefined,
+        packagedVolume: r.packagedVolume ?? undefined,
+        mashVolume: r.mashVolume ?? undefined,
+        boilTime: r.boilTime ?? undefined,
+        originalGravity: r.originalGravity ?? undefined,
+        finalGravity: r.finalGravity ?? undefined,
+        estimatedIbu: r.estimatedIbu ?? undefined,
+        estimatedColor: r.estimatedColor ?? undefined,
+        estimatedAbv: r.estimatedAbv ?? undefined,
+        mashEfficiency: r.mashEfficiency ?? undefined,
+        brewhouseEfficiency: r.brewhouseEfficiency ?? undefined,
+        preBoilVolume: r.preBoilVolume ?? undefined,
+        postBoilVolume: r.postBoilVolume ?? undefined,
+        brewDate: r.brewDate || null,
+      }
+    },
+    [recipe],
+  )
 
-  const getRecipeUpsertInput = useCallback((): RecipeUpsertInput => {
-    return {
-      recipe: getRecipeInput(),
-      fermentables: recipe.fermentables.map(f => ({
-        fermentable: f.fermentableId,
-        amount: f.amount,
-        usageType: f.usageType ?? undefined,
-      })),
-      hops: recipe.hops.map(h => ({
-        hop: h.hopId,
-        amount: h.amount,
-        boilTime: h.boilTime ?? null,
-        stage: h.stage,
-      })),
-      yeasts: recipe.yeasts.map(y => ({
-        yeast: y.yeastId,
-        amount: y.amount ? String(y.amount) : null,
-        stage: y.stage || 'primary',
-      })),
-      waters: recipe.waters.map(w => ({
-        waterProfile: w.waterId,
-        volume: w.amount > 0 ? w.amount : 0,
-      })),
-      mash: recipe.mash?.mashProfileId
-        ? {
-            mashProfile: recipe.mash.mashProfileId,
-            actualEfficiency: recipe.mash.actualEfficiency ?? null,
-          }
-        : undefined,
-      fermentation: recipe.fermentation?.fermentationProfileId
-        ? {
-            fermentationProfile: recipe.fermentation.fermentationProfileId,
-            actualAttenuation: recipe.fermentation.actualAttenuation ?? null,
-            finalAbv: recipe.fermentation.finalAbv ?? null,
-            observations: recipe.fermentation.observations ?? null,
-          }
-        : undefined,
-      carbonation: recipe.carbonation?.carbonationProfileId
-        ? {
-            carbonationProfile: recipe.carbonation.carbonationProfileId,
-            amountUsed: recipe.carbonation.amountUsed ?? null,
-            temperature: recipe.carbonation.temperature ?? null,
-            co2Volumes: recipe.carbonation.co2Volumes ?? null,
-          }
-        : undefined,
-    }
-  }, [recipe, getRecipeInput])
+  const getRecipeUpsertInput = useCallback(
+    (
+      override?: Partial<RecipeFormState>,
+      options?: RecipeUpsertOptions,
+    ): RecipeUpsertInput => {
+      const r = override ? { ...recipe, ...override } : recipe
+      return {
+        recipe: getRecipeInput(override, options),
+        fermentables: r.fermentables
+          .filter(f => f.fermentableId?.trim())
+          .map(f => ({
+            fermentable: f.fermentableId,
+            amount: f.amount,
+            usageType: f.usageType ?? undefined,
+          })),
+        hops: r.hops
+          .filter(h => h.hopId?.trim())
+          .map(h => ({
+            hop: h.hopId,
+            amount: h.amount,
+            boilTime: h.boilTime ?? null,
+            stage: h.stage,
+          })),
+        yeasts: r.yeasts
+          .filter(y => y.yeastId?.trim())
+          .map(y => ({
+            yeast: y.yeastId,
+            amount: y.amount ? String(y.amount) : null,
+            stage: y.stage || 'primary',
+          })),
+        waters: r.waters
+          .filter(w => w.waterId?.trim())
+          .map(w => ({
+            waterProfile: w.waterId,
+            volume: w.amount > 0 ? w.amount : 0,
+          })),
+        mash: r.mash?.mashProfileId
+          ? {
+              mashProfile: r.mash.mashProfileId,
+              actualEfficiency: r.mash.actualEfficiency ?? null,
+            }
+          : undefined,
+        fermentation: r.fermentation?.fermentationProfileId
+          ? {
+              fermentationProfile: r.fermentation.fermentationProfileId,
+              actualAttenuation: r.fermentation.actualAttenuation ?? null,
+              finalAbv: r.fermentation.finalAbv ?? null,
+              observations: r.fermentation.observations ?? null,
+            }
+          : undefined,
+        carbonation: r.carbonation?.carbonationProfileId
+          ? {
+              carbonationProfile: r.carbonation.carbonationProfileId,
+              amountUsed: r.carbonation.amountUsed ?? null,
+              temperature: r.carbonation.temperature ?? null,
+              co2Volumes: r.carbonation.co2Volumes ?? null,
+            }
+          : undefined,
+      }
+    },
+    [recipe, getRecipeInput],
+  )
 
   return (
     <RecipeContext.Provider

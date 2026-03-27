@@ -7,6 +7,11 @@ import { COLORS } from '../../../../shared/styles/colors'
 import { BiPlus } from 'react-icons/bi'
 import type { RecipeHop } from '../../context/RecipeContext'
 import { AddHopModal } from '../modals/AddHopModal'
+import {
+  RecipeQuantityStepper,
+  HOP_AMOUNT_STEP_G,
+  HOP_AMOUNT_MIN_G,
+} from '../RecipeQuantityStepper'
 
 export const HopsTab: React.FC = () => {
   const { recipe, addHop, updateHop, removeHop } = useRecipe()
@@ -69,9 +74,30 @@ export const HopsTab: React.FC = () => {
                 <Text variant="body" style={styles.itemName}>
                   {hop.hop?.name || 'Lúpulo'}
                 </Text>
-                <Text variant="bodySmall" style={styles.itemAmount}>
-                  {hop.amount} g - {hop.boilTime || 0} min
-                </Text>
+                <View style={styles.amountRow}>
+                  <RecipeQuantityStepper
+                    value={Number(hop.amount) || 0}
+                    unit="g"
+                    step={HOP_AMOUNT_STEP_G}
+                    min={HOP_AMOUNT_MIN_G}
+                    labelForA11y={hop.hop?.name || 'Lúpulo'}
+                    onChange={next => {
+                      if (!hop.id) return
+                      updateHop(hop.id, {
+                        ...hop,
+                        amount: next,
+                      })
+                    }}
+                  />
+                  <Text variant="bodySmall" style={styles.itemMeta}>
+                    {hop.boilTime != null ? `${hop.boilTime} min` : '— min'} ·{' '}
+                    {hop.stage === 'whirlpool'
+                      ? 'Whirlpool'
+                      : hop.stage === 'dry_hop'
+                        ? 'Dry hop'
+                        : 'Fervura'}
+                  </Text>
+                </View>
               </View>
               <View style={styles.itemActions}>
                 <Button
@@ -136,10 +162,17 @@ const styles = StyleSheet.create({
   list: {
     gap: 12,
   },
+  amountRow: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    alignItems: 'center',
+    gap: 10,
+    marginTop: 8,
+  },
   item: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    alignItems: 'center',
+    alignItems: 'flex-start',
     backgroundColor: COLORS.neutral.white,
     padding: 16,
     borderRadius: 8,
@@ -159,7 +192,8 @@ const styles = StyleSheet.create({
     color: COLORS.text.primary,
     marginBottom: 4,
   },
-  itemAmount: {
+  itemMeta: {
     color: COLORS.text.secondary,
+    flexShrink: 1,
   },
 })

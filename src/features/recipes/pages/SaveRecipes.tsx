@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react'
+import React, { useState, useEffect, useMemo } from 'react'
 import { View, StyleSheet, ActivityIndicator } from 'react-native'
 import { useNavigate, useParams } from 'react-router'
 import { useForm } from 'react-hook-form'
@@ -20,7 +20,11 @@ import { MashTab } from '../components/tabs/MashTab'
 import { FermentationTab } from '../components/tabs/FermentationTab'
 import { CarbonationTab } from '../components/tabs/CarbonationTab'
 import { recipesApi } from '../api/recipesApi'
-import { RecipeType, FermentableUsageType } from '../interfaces/Recipe'
+import {
+  RecipeType,
+  FermentableUsageType,
+  Equipment,
+} from '../interfaces/Recipe'
 import {
   FermentableType,
   FermentableForm,
@@ -29,6 +33,9 @@ import { COLORS } from '../../../shared/styles/colors'
 import toast from 'react-hot-toast'
 import { generateRecipePdf } from '../utils/generateRecipePdf'
 import { BiDownload } from 'react-icons/bi'
+import { useEquipments } from '../../equipment/hooks/useEquipments'
+import { beerStylesApi } from '../../beer-style/api/beerStylesApi'
+import type { EquipmentWithPublicFlag } from '../../equipment/interfaces/equipment'
 
 const toNumber = (
   value: number | string | null | undefined,
@@ -48,12 +55,16 @@ const toNumber = (
 
 const recipeBasicSchema = z.object({
   name: z.string().min(1, 'Nome é obrigatório'),
-  beerStyle: z.string().min(1, 'Estilo de cerveja é obrigatório'),
+  beerStyle: z.string().optional(),
   type: z.nativeEnum(RecipeType, {
     required_error: 'Tipo de receita é obrigatório',
   }),
-  equipmentId: z.string().min(1, 'Equipamento é obrigatório').nullable(),
-  finalVolume: z.number().positive('Volume final deve ser positivo'),
+  equipmentId: z.union([z.string(), z.null()]).optional(),
+  finalVolume: z
+    .number()
+    .positive('Volume final deve ser positivo')
+    .optional()
+    .nullable(),
   mashVolume: z
     .number()
     .positive('Volume de mostura deve ser positivo')
@@ -112,6 +123,7 @@ interface LoadedRecipe {
   imageUrl: string | null
   about: string | null
   notes: string | null
+  isDraft?: boolean
   originalGravity: number | string | null
   finalGravity: number | string | null
   estimatedIbu: number | string | null
@@ -214,11 +226,18 @@ const SaveRecipesContent: React.FC = () => {
   const [isSaving, setIsSaving] = useState(false)
   const [isLoadingRecipe, setIsLoadingRecipe] = useState(false)
 
+  const { data: equipmentsData } = useEquipments()
+  const allEquipments = useMemo((): EquipmentWithPublicFlag[] => {
+    return equipmentsData?.pages?.flatMap(p => p.data) ?? []
+  }, [equipmentsData])
+
   const {
     control,
     setValue,
     reset: resetForm,
-    formState: { errors, isValid },
+    getValues,
+    watch,
+    formState: { errors },
   } = useForm<RecipeBasicFormData>({
     resolver: zodResolver(recipeBasicSchema),
     mode: 'onChange',
@@ -240,6 +259,8 @@ const SaveRecipesContent: React.FC = () => {
     },
   })
 
+  const watchedName = watch('name')
+
   useEffect(() => {
     const loadRecipe = async () => {
       if (!isEditMode || !id) return
@@ -249,11 +270,13 @@ const SaveRecipesContent: React.FC = () => {
         const loadedRecipe = (await recipesApi.findById(id)) as LoadedRecipe
 
         const beerStyleId =
-          typeof loadedRecipe.beerStyle === 'string'
-            ? loadedRecipe.beerStyle
-            : loadedRecipe.beerStyle?.id || ''
+          loadedRecipe.beerStyle == null
+            ? ''
+            : typeof loadedRecipe.beerStyle === 'string'
+              ? loadedRecipe.beerStyle
+              : loadedRecipe.beerStyle.id || ''
         const beerStyleObj =
-          typeof loadedRecipe.beerStyle === 'object' && loadedRecipe.beerStyle
+          loadedRecipe.beerStyle && typeof loadedRecipe.beerStyle === 'object'
             ? loadedRecipe.beerStyle
             : null
 
@@ -461,36 +484,55 @@ const SaveRecipesContent: React.FC = () => {
     })
   }, [calculations, updateRecipe])
 
-  const validations = {
-    basic: isValid && !!recipe.beerStyle && !!recipe.equipment,
-    fermentables: recipe.fermentables.length > 0,
-    hops: recipe.hops.length > 0,
-    yeasts: recipe.yeasts.length > 0,
-    waters: recipe.waters.length > 0,
-    mash: !!recipe.mash,
-    fermentation: !!recipe.fermentation,
-    carbonation: !!recipe.carbonation,
-  }
-
-  const allValid = Object.values(validations).every(v => v)
-
-  const handleSave = async () => {
-    if (!allValid) {
-      toast.error('Preencha todos os campos obrigatórios')
+  const persistRecipe = async ({ forceDraft }: { forceDraft: boolean }) => {
+    const nameVal = getValues('name')?.trim()
+    if (!nameVal) {
+      toast.error('Informe pelo menos o nome da receita')
       return
     }
 
     try {
       setIsSaving(true)
-      updateRecipe({
+      const v = getValues()
+
+      let nextBeerStyle = recipe.beerStyle
+      if (!v.beerStyle?.trim()) {
+        nextBeerStyle = null
+      } else if (recipe.beerStyle?.id !== v.beerStyle) {
+        nextBeerStyle = await beerStylesApi.findById(v.beerStyle)
+      }
+
+      let nextEquipment: Equipment | null = recipe.equipment
+      if (!v.equipmentId?.trim()) {
+        nextEquipment = null
+      } else if (recipe.equipment?.id !== v.equipmentId) {
+        const found = allEquipments.find(e => e.id === v.equipmentId)
+        nextEquipment = found ? { id: found.id, name: found.name } : null
+      }
+
+      const override = {
+        name: nameVal,
+        beerStyle: nextBeerStyle,
+        equipment: nextEquipment,
+        type: v.type,
+        finalVolume: v.finalVolume ?? null,
+        mashVolume: v.mashVolume ?? null,
+        preBoilVolume: v.preBoilVolume ?? null,
+        postBoilVolume: v.postBoilVolume ?? null,
+        boilTime: v.boilTime ?? null,
+        mashEfficiency: v.mashEfficiency ?? null,
+        brewDate: v.brewDate ?? null,
+        imageUrl: v.imageUrl ?? null,
+        about: v.about ?? null,
+        notes: v.notes ?? null,
         originalGravity: calculations.originalGravity,
         finalGravity: calculations.finalGravity,
         estimatedIbu: calculations.estimatedIbu,
         estimatedColor: calculations.estimatedColor,
         estimatedAbv: calculations.estimatedAbv,
-      })
+      }
 
-      const recipeInput = getRecipeUpsertInput()
+      const recipeInput = getRecipeUpsertInput(override, { forceDraft })
 
       recipeInput.recipe.originalGravity =
         calculations.originalGravity ?? recipeInput.recipe.originalGravity
@@ -506,10 +548,16 @@ const SaveRecipesContent: React.FC = () => {
       if (isEditMode && id) {
         recipeInput.recipe.id = id
         await recipesApi.update(id, recipeInput)
-        toast.success('Receita atualizada com sucesso!')
+        toast.success(
+          forceDraft ? 'Rascunho atualizado.' : 'Receita atualizada ',
+        )
       } else {
         await recipesApi.create(recipeInput)
-        toast.success('Receita salva com sucesso!')
+        toast.success(
+          forceDraft
+            ? 'Rascunho salvo — você pode continuar depois.'
+            : 'Receita salva — você pode continuar editando depois.',
+        )
       }
 
       resetRecipe()
@@ -523,6 +571,10 @@ const SaveRecipesContent: React.FC = () => {
       setIsSaving(false)
     }
   }
+
+  const handleSave = () => persistRecipe({ forceDraft: false })
+
+  // const handleSaveDraft = () => persistRecipe({ forceDraft: true })
 
   const handleCancel = () => {
     resetRecipe()
@@ -603,6 +655,7 @@ const SaveRecipesContent: React.FC = () => {
                 </View>
               </Button>
             )}
+
             <Button
               variant="outline"
               size="medium"
@@ -630,14 +683,14 @@ const SaveRecipesContent: React.FC = () => {
               variant="primary"
               size="large"
               onPress={handleSave}
-              disabled={!allValid || isSaving}
+              disabled={isSaving || !watchedName?.trim()}
               style={styles.saveButton}
             >
               {isSaving
                 ? 'Salvando...'
                 : isEditMode
-                  ? 'Atualizar Receita'
-                  : 'Salvar Receita'}
+                  ? 'Salvar alterações'
+                  : 'Salvar receita'}
             </Button>
           </View>
         </View>
@@ -680,6 +733,9 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 8,
+  },
+  draftHeaderButton: {
+    borderStyle: 'dashed',
   },
   buttonContent: {
     flexDirection: 'row',

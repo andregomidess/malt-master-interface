@@ -8,6 +8,11 @@ import { BiPlus } from 'react-icons/bi'
 import { AddFermentableModal } from '../modals/AddFermentableModal'
 import { FermentableUsageType } from '../../interfaces/Recipe'
 import type { RecipeFermentable } from '../../context/RecipeContext'
+import {
+  RecipeQuantityStepper,
+  FERMENTABLE_AMOUNT_STEP_KG,
+  FERMENTABLE_AMOUNT_MIN_KG,
+} from '../RecipeQuantityStepper'
 
 const usageTypeLabel: Record<FermentableUsageType, string> = {
   [FermentableUsageType.MASH]: 'Mostura',
@@ -81,15 +86,28 @@ export const FermentablesTab: React.FC = () => {
                 <Text variant="body" style={styles.itemName}>
                   {fermentable.fermentable?.name || 'Fermentável'}
                 </Text>
-                <View style={styles.itemDetails}>
-                  <Text variant="bodySmall" style={styles.itemAmount}>
-                    {fermentable.amount} kg
-                  </Text>
-                  {fermentable.usageType && (
+                <View style={styles.amountRow}>
+                  <RecipeQuantityStepper
+                    value={Number(fermentable.amount) || 0}
+                    unit="kg"
+                    step={FERMENTABLE_AMOUNT_STEP_KG}
+                    min={FERMENTABLE_AMOUNT_MIN_KG}
+                    labelForA11y={
+                      fermentable.fermentable?.name || 'Fermentável'
+                    }
+                    onChange={next => {
+                      if (!fermentable.id) return
+                      updateFermentable(fermentable.id, {
+                        ...fermentable,
+                        amount: next,
+                      })
+                    }}
+                  />
+                  {fermentable.usageType ? (
                     <Text variant="bodySmall" style={styles.itemUsage}>
-                      · {usageTypeLabel[fermentable.usageType]}
+                      {usageTypeLabel[fermentable.usageType]}
                     </Text>
-                  )}
+                  ) : null}
                 </View>
               </View>
               <View style={styles.itemActions}>
@@ -157,10 +175,17 @@ const styles = StyleSheet.create({
   list: {
     gap: 12,
   },
+  amountRow: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    alignItems: 'center',
+    gap: 10,
+    marginTop: 8,
+  },
   item: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    alignItems: 'center',
+    alignItems: 'flex-start',
     backgroundColor: COLORS.neutral.white,
     padding: 16,
     borderRadius: 8,
@@ -174,14 +199,6 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 4,
-  },
-  itemDetails: {
-    flexDirection: 'row',
-    gap: 4,
-    marginTop: 2,
-  },
-  itemAmount: {
-    color: COLORS.text.secondary,
   },
   itemUsage: {
     color: COLORS.text.secondary,

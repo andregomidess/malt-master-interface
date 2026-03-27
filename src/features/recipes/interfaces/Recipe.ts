@@ -44,7 +44,8 @@ export interface Recipe {
   id: string
   name: string
   user?: User | null
-  beerStyle: BeerStyle
+  beerStyle: BeerStyle | null
+  isDraft?: boolean
   equipment?: Equipment | null
   imageUrl?: string | null
   about?: string | null
@@ -81,7 +82,8 @@ export interface Recipe {
 export interface RecipeInput {
   id?: string
   name: string
-  beerStyle: string
+  beerStyle?: string | null
+  isDraft?: boolean
   equipment?: string | null
   imageUrl?: string | null
   about?: string | null

@@ -8,6 +8,7 @@ interface RecipeCardProps {
   style: string
   lastModified: string
   imageUrl?: string
+  badge?: string
   onEdit?: () => void
   onDelete?: () => void
 }
@@ -17,6 +18,7 @@ export const ListCard = ({
   style: beerStyle,
   lastModified,
   imageUrl,
+  badge,
   onEdit,
   onDelete,
 }: RecipeCardProps) => {
@@ -30,7 +32,14 @@ export const ListCard = ({
           source={{ uri: imageUrl || defaultImageUrl }}
           style={styles.image}
         />
-        <Text style={styles.title}>{title}</Text>
+        <View style={styles.titleRow}>
+          <Text style={styles.title}>{title}</Text>
+          {badge ? (
+            <View style={styles.badge}>
+              <Text style={styles.badgeText}>{badge}</Text>
+            </View>
+          ) : null}
+        </View>
       </View>
 
       <View style={styles.content}>
@@ -90,11 +99,30 @@ const styles = StyleSheet.create({
     borderRadius: 20,
     backgroundColor: COLORS.neutral.gray[200],
   },
-  title: {
+  titleRow: {
     flex: 1,
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    alignItems: 'center',
+    gap: 8,
+  },
+  title: {
+    flexShrink: 1,
     fontSize: 16,
     fontWeight: '700',
     color: COLORS.text.primary,
+  },
+  badge: {
+    backgroundColor: COLORS.neutral.gray[200],
+    paddingHorizontal: 8,
+    paddingVertical: 2,
+    borderRadius: 4,
+    alignSelf: 'flex-start',
+  },
+  badgeText: {
+    fontSize: 11,
+    fontWeight: '600',
+    color: COLORS.text.secondary,
   },
   content: {
     paddingHorizontal: 16,

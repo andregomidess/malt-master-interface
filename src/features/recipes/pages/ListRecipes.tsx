@@ -192,9 +192,11 @@ export const ListRecipes = () => {
                   <View key={recipe.id} style={styles.cardWrapper}>
                     <ListCard
                       title={recipe.name}
-                      style={recipe.beerStyle.name}
+                      style={recipe.beerStyle?.name ?? 'Estilo não definido'}
                       lastModified={formatDate(recipe.updatedAt)}
                       imageUrl={recipe.imageUrl || undefined}
+                      // badge={recipe.isDraft ? 'Rascunho' : undefined}
+                      badge={undefined}
                       onEdit={() => handleEdit(recipe.id)}
                       onDelete={() => handleDelete(recipe.id)}
                     />

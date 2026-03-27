@@ -178,20 +178,22 @@ export const RecipeSidebar: React.FC = () => {
 
   const validations = {
     basic:
-      !!recipe.name &&
-      !!recipe.beerStyle &&
+      !!recipe.name?.trim() &&
       !!recipe.type &&
+      !!recipe.beerStyle &&
       !!recipe.equipment &&
       !!recipe.finalVolume &&
       (recipe.type === 'extract' || hasWaterVolumes) &&
       !!recipe.boilTime,
-    fermentables: recipe.fermentables.length > 0,
-    hops: recipe.hops.length > 0,
-    yeasts: recipe.yeasts.length > 0,
-    waters: recipe.waters.length > 0,
-    mash: !!recipe.mash,
-    fermentation: !!recipe.fermentation,
-    carbonation: !!recipe.carbonation,
+    fermentables: recipe.fermentables.some(
+      f => Boolean(f.fermentableId?.trim()) && f.amount > 0,
+    ),
+    hops: recipe.hops.some(h => Boolean(h.hopId?.trim()) && h.amount > 0),
+    yeasts: recipe.yeasts.some(y => Boolean(y.yeastId?.trim())),
+    waters: recipe.waters.some(w => Boolean(w.waterId?.trim())),
+    mash: !!recipe.mash?.mashProfileId,
+    fermentation: !!recipe.fermentation?.fermentationProfileId,
+    carbonation: !!recipe.carbonation?.carbonationProfileId,
   }
 
   const styleValidations = useMemo(() => {
@@ -440,7 +442,6 @@ export const RecipeSidebar: React.FC = () => {
         </CollapsibleSection>
       </View>
 
-      {/* Validação */}
       <View style={styles.validationSection}>
         <Text variant="body" style={styles.sectionTitle}>
           Validação
